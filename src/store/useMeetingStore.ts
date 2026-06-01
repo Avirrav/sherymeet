@@ -28,10 +28,12 @@ interface MeetingState {
   isHandRaised: boolean;
   activeSidebar: 'chat' | 'participants' | null;
   unreadChatCount: number;
+  captionsEnabled: boolean;
 
   // Sync state from LiveKit events
   chatMessages: ChatMessage[];
   raisedHands: string[]; // List of participant identities who raised their hand
+  transcriptions: Record<string, string>; // Maps participant identity -> current transcription text
 
   // Actions
   setUsername: (name: string) => void;
@@ -50,6 +52,8 @@ interface MeetingState {
   clearChat: () => void;
   addRaisedHand: (identity: string) => void;
   removeRaisedHand: (identity: string) => void;
+  toggleCaptions: (active?: boolean) => void;
+  setTranscription: (identity: string, text: string) => void;
   resetMeetingStore: () => void;
 }
 
@@ -73,10 +77,12 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   isHandRaised: false,
   activeSidebar: null,
   unreadChatCount: 0,
+  captionsEnabled: false,
 
   // Event sync states defaults
   chatMessages: [],
   raisedHands: [],
+  transcriptions: {},
 
   // Actions
   setUsername: (name) => set({ username: name }),
@@ -127,6 +133,15 @@ export const useMeetingStore = create<MeetingState>((set) => ({
     set((state) => ({
       raisedHands: state.raisedHands.filter((id) => id !== identity),
     })),
+  toggleCaptions: (active) =>
+    set((state) => ({ captionsEnabled: active !== undefined ? active : !state.captionsEnabled })),
+  setTranscription: (identity, text) =>
+    set((state) => ({
+      transcriptions: {
+        ...state.transcriptions,
+        [identity]: text,
+      },
+    })),
   resetMeetingStore: () =>
     set({
       roomId: '',
@@ -140,5 +155,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       unreadChatCount: 0,
       chatMessages: [],
       raisedHands: [],
+      captionsEnabled: false,
+      transcriptions: {},
     }),
 }));

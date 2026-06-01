@@ -1,10 +1,18 @@
-import { useCallback, useEffect } from 'react';
-import { Room, RoomEvent } from 'livekit-client';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import { toast } from 'sonner';
+import { useCallback, useEffect } from "react";
+import { Room, RoomEvent } from "livekit-client";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { toast } from "sonner";
+import { toAppError } from "@/app/backend/types/error";
 
 export function useChat(room: Room | null) {
-  const { addChatMessage, addRaisedHand, removeRaisedHand, chatMessages, isHandRaised, toggleHandRaise } = useMeetingStore();
+  const {
+    addChatMessage,
+    addRaisedHand,
+    removeRaisedHand,
+    chatMessages,
+    isHandRaised,
+    toggleHandRaise,
+  } = useMeetingStore();
 
   const sendData = useCallback(
     async (type: string, payload: any) => {
@@ -15,48 +23,49 @@ export function useChat(room: Room | null) {
           JSON.stringify({
             type,
             payload,
-            senderName: room.localParticipant.name || 'Anonymous',
+            senderName: room.localParticipant.name || "Anonymous",
             senderIdentity: room.localParticipant.identity,
-          })
+          }),
         );
         await room.localParticipant.publishData(data, { reliable: true });
-      } catch (err) {
-        console.error('Failed to send data:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Failed to send data:", err.message);
       }
     },
-    [room]
+    [room],
   );
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!room || !text.trim()) return;
-      
+
       // 1. Send via data channel
-      await sendData('chat', { text });
-      
+      await sendData("chat", { text });
+
       // 2. Add locally in store
       addChatMessage({
-        senderName: room.localParticipant.name || 'You',
+        senderName: room.localParticipant.name || "You",
         senderIdentity: room.localParticipant.identity,
         text,
       });
     },
-    [room, sendData, addChatMessage]
+    [room, sendData, addChatMessage],
   );
 
   const raiseHand = useCallback(
     async (raised: boolean) => {
       toggleHandRaise(raised);
-      await sendData('hand-raise', { raised });
-      
+      await sendData("hand-raise", { raised });
+
       if (raised) {
         if (room) addRaisedHand(room.localParticipant.identity);
-        toast.info('You raised your hand');
+        toast.info("You raised your hand");
       } else {
         if (room) removeRaisedHand(room.localParticipant.identity);
       }
     },
-    [room, sendData, toggleHandRaise, addRaisedHand, removeRaisedHand]
+    [room, sendData, toggleHandRaise, addRaisedHand, removeRaisedHand],
   );
 
   useEffect(() => {
@@ -70,15 +79,15 @@ export function useChat(room: Room | null) {
         const data = JSON.parse(dataStr);
 
         const senderIdentity = participant?.identity || data.senderIdentity;
-        const senderName = participant?.name || data.senderName || 'Anonymous';
+        const senderName = participant?.name || data.senderName || "Anonymous";
 
-        if (data.type === 'chat') {
+        if (data.type === "chat") {
           addChatMessage({
             senderName,
             senderIdentity,
             text: data.payload.text,
           });
-        } else if (data.type === 'hand-raise') {
+        } else if (data.type === "hand-raise") {
           if (data.payload.raised) {
             addRaisedHand(senderIdentity);
             toast.info(`${senderName} raised their hand ✋`);
@@ -86,8 +95,9 @@ export function useChat(room: Room | null) {
             removeRaisedHand(senderIdentity);
           }
         }
-      } catch (err) {
-        console.error('Error parsing data channel payload:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Error parsing data channel payload:", err.message);
       }
     };
 

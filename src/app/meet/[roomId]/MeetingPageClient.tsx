@@ -7,6 +7,7 @@ import PreJoinScreen from '@/features/meet/PreJoinScreen';
 import ConferenceRoom from '@/features/meet/ConferenceRoom';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { toAppError } from '@/app/backend/types/error';
 
 interface MeetingPageClientProps {
   roomId: string;
@@ -50,17 +51,18 @@ export default function MeetingPageClient({ roomId }: MeetingPageClientProps) {
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        setServerUrl(data.serverUrl);
-        setMeetingInfo(roomId, data.token);
+      if (response.ok && data.success && data.data) {
+        setServerUrl(data.data.serverUrl);
+        setMeetingInfo(roomId, data.data.token);
         setHasEntered(true);
       } else {
         throw new Error(data.error || 'Token generation failed');
       }
-    } catch (err: any) {
+    } catch (unknownErr) {
+      const err = toAppError(unknownErr);
       console.error('Error generating token:', err);
-      setConnectionStatus(false, false, err?.message || 'Token generation failed');
-      toast.error(err?.message || 'Token generation failed');
+      setConnectionStatus(false, false, err.message || 'Token generation failed');
+      toast.error(err.message || 'Token generation failed');
     }
   };
 
@@ -74,7 +76,7 @@ export default function MeetingPageClient({ roomId }: MeetingPageClientProps) {
   useEffect(() => {
     if (error) {
       toast.error(`Connection Error: ${error}`);
-      setHasEntered(false);
+        setHasEntered(false);
     }
   }, [error]);
 

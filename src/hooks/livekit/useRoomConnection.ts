@@ -1,53 +1,63 @@
-import { useEffect, useState, useRef } from 'react';
-import { Room, RoomEvent, ConnectionState, VideoPresets } from 'livekit-client';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import { toast } from 'sonner';
+import { useEffect, useState, useRef } from "react";
+import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { toast } from "sonner";
+import { toAppError } from "@/app/backend/types/error";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;
   token: string;
 }
 
-export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions) {
+export function useRoomConnection({
+  serverUrl,
+  token,
+}: UseRoomConnectionOptions) {
   const [room, setRoom] = useState<Room | null>(null);
-  const { setConnectionStatus, audioEnabled, videoEnabled, audioDeviceId, videoDeviceId } = useMeetingStore();
+  const {
+    setConnectionStatus,
+    audioEnabled,
+    videoEnabled,
+    audioDeviceId,
+    videoDeviceId,
+  } = useMeetingStore();
   const connectingRef = useRef(false);
 
   useEffect(() => {
+    console.log('useRoomConnection Effect triggered:', { serverUrl: !!serverUrl, token: !!token, hasRoom: !!room, connecting: connectingRef.current });
     if (!serverUrl || !token || room || connectingRef.current) return;
 
     connectingRef.current = true;
     setConnectionStatus(true, false, null);
+    console.log('Starting LiveKit room connection sequence to:', serverUrl);
 
     const r = new Room({
       adaptiveStream: true,
       dynacast: true,
       publishDefaults: {
-        videoSimulcastLayers: [
-          VideoPresets.h720,
-          VideoPresets.h360
-        ],
+        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h360],
       },
     });
 
     const handleConnected = () => {
+      console.log('RoomEvent.Connected event handler triggered');
       setConnectionStatus(false, true, null);
-      toast.success('Successfully connected to meeting');
+      toast.success("Successfully connected to meeting");
     };
 
     const handleDisconnected = () => {
       setConnectionStatus(false, false, null);
-      toast.info('Disconnected from meeting');
+      toast.info("Disconnected from meeting");
     };
 
     const handleReconnecting = () => {
       setConnectionStatus(true, true, null);
-      toast.warning('Network unstable, reconnecting...');
+      toast.warning("Network unstable, reconnecting...");
     };
 
     const handleReconnected = () => {
       setConnectionStatus(false, true, null);
-      toast.success('Reconnected to meeting');
+      toast.success("Reconnected to meeting");
     };
 
     r.on(RoomEvent.Connected, handleConnected);
@@ -57,43 +67,53 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
 
     async function connect() {
       try {
+        console.log('Calling r.connect(serverUrl, token)...', { serverUrl, token: token.substring(0, 15) + '...' });
         await r.connect(serverUrl, token);
+        console.log('r.connect completed successfully! Room status:', r.state);
         setRoom(r);
         connectingRef.current = false;
 
         // Publish camera track if enabled
         if (videoEnabled) {
           try {
+            console.log('Publishing camera track...');
             await r.localParticipant.setCameraEnabled(true, {
               deviceId: videoDeviceId || undefined,
             });
-          } catch (err) {
-            console.error('Failed to publish camera:', err);
-            toast.error('Failed to enable camera in meeting');
+            console.log('Camera track published successfully.');
+          } catch (unknownErr) {
+            const err = toAppError(unknownErr);
+            console.error("Failed to publish camera:", err.message);
+            toast.error("Failed to enable camera in meeting");
           }
         }
 
         // Publish microphone track if enabled
         if (audioEnabled) {
           try {
+            console.log('Publishing microphone track...');
             await r.localParticipant.setMicrophoneEnabled(true, {
               deviceId: audioDeviceId || undefined,
             });
-          } catch (err) {
-            console.error('Failed to publish microphone:', err);
-            toast.error('Failed to enable microphone in meeting');
+            console.log('Microphone track published successfully.');
+          } catch (unknownErr) {
+            const err = toAppError(unknownErr);
+            console.error("Failed to publish microphone:", err.message);
+            toast.error("Failed to enable microphone in meeting");
           }
         }
-      } catch (err: any) {
-        console.error('Connection failed:', err);
-        const errMsg = err?.message || 'Connection failed';
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Connection failed inside catch block:", err);
+        const errMsg = err.message || "Connection failed";
         let userFriendlyMsg = errMsg;
         if (
-          errMsg.toLowerCase().includes('full') ||
-          errMsg.toLowerCase().includes('limit') ||
-          errMsg.toLowerCase().includes('max')
+          errMsg.toLowerCase().includes("full") ||
+          errMsg.toLowerCase().includes("limit") ||
+          errMsg.toLowerCase().includes("max")
         ) {
-          userFriendlyMsg = 'Room is full. Participant limit (2) reached for this meeting.';
+          userFriendlyMsg =
+            "Room is full. Participant limit (2) reached for this meeting.";
         }
         setConnectionStatus(false, false, userFriendlyMsg);
         connectingRef.current = false;
@@ -128,8 +148,9 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         } else {
           await room.localParticipant.setCameraEnabled(false);
         }
-      } catch (err) {
-        console.error('Error toggling camera in room:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Error toggling camera in room:", err.message);
       }
     };
     syncMedia();
@@ -147,8 +168,9 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         } else {
           await room.localParticipant.setMicrophoneEnabled(false);
         }
-      } catch (err) {
-        console.error('Error toggling mic in room:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Error toggling mic in room:", err.message);
       }
     };
     syncMedia();

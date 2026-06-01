@@ -1,16 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateToken } from '@/services/livekit/generate-token';
-import { RoomServiceClient } from 'livekit-server-sdk';
+import { NextRequest } from "next/server";
+import { generateToken } from "@/app/backend/services/generate-token";
+import { RoomServiceClient } from "livekit-server-sdk";
+import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 
 export async function POST(request: NextRequest) {
   try {
     const { roomName, participantName } = await request.json();
 
     if (!roomName || !participantName) {
-      return NextResponse.json(
-        { error: 'Missing roomName or participantName' },
-        { status: 400 }
-      );
+      throw new ApiError("Missing roomName or participantName", 400);
     }
 
     const serverUrl = process.env.LIVEKIT_URL;
@@ -18,27 +16,32 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.LIVEKIT_API_SECRET;
 
     if (!serverUrl || !apiKey || !apiSecret) {
-      return NextResponse.json(
-        { error: 'LiveKit server config is not set' },
-        { status: 500 }
-      );
+      throw new ApiError("LiveKit server config is not set", 500);
     }
 
     // Verify room size before generating a token
     try {
-      const host = serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const host = serverUrl
+        .replace("wss://", "https://")
+        .replace("ws://", "http://");
       const roomService = new RoomServiceClient(host, apiKey, apiSecret);
       const activeParticipants = await roomService.listParticipants(roomName);
-      
+
       if (activeParticipants && activeParticipants.length >= 2) {
-        return NextResponse.json(
-          { error: 'Room is full. Participant limit (2) reached for this meeting.' },
-          { status: 400 }
+        throw new ApiError(
+          "Room is full. Participant limit (2) reached for this meeting.",
+          400,
         );
       }
-    } catch (e) {
+    } catch (unknownErr) {
+      if (unknownErr instanceof ApiError) {
+        throw unknownErr;
+      }
       // Room might not exist yet on the server (first person joining), ignore
-      console.log('Room capacity check skipped:', e);
+      console.log(
+        "Room capacity check skipped:",
+        unknownErr instanceof Error ? unknownErr.message : String(unknownErr),
+      );
     }
 
     // Generate secure participant identity
@@ -51,17 +54,23 @@ export async function POST(request: NextRequest) {
       identity,
     });
 
-    return NextResponse.json({
-      success: true,
+    return ApiResponse.success({
       token,
       serverUrl,
       roomId: roomName,
     });
-  } catch (err: any) {
-    console.error('Token generation API error:', err);
-    return NextResponse.json(
-      { error: err?.message || 'Token generation failed' },
-      { status: 500 }
-    );
+  } catch (unknownErr) {
+    if (unknownErr instanceof ApiError) {
+      console.error("Token generation API error:", unknownErr.message);
+      return ApiResponse.failure(
+        unknownErr.message,
+        unknownErr.statusCode,
+        unknownErr.errors,
+      );
+    }
+    const err =
+      unknownErr instanceof Error ? unknownErr : new Error(String(unknownErr));
+    console.error("Token generation API error:", err);
+    return ApiResponse.failure(err.message || "Token generation failed", 500);
   }
 }

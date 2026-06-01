@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Room, RoomEvent, LocalTrackPublication } from 'livekit-client';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import { toast } from 'sonner';
+import { useState, useCallback, useEffect } from "react";
+import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { toast } from "sonner";
+import { toAppError } from "@/app/backend/types/error";
 
 export function useScreenShare(room: Room | null) {
   const { isScreenSharing, toggleScreenShare } = useMeetingStore();
-  const [screenSharePublication, setScreenSharePublication] = useState<LocalTrackPublication | null>(null);
+  const [screenSharePublication, setScreenSharePublication] =
+    useState<LocalTrackPublication | null>(null);
 
   const startScreenShare = useCallback(async () => {
     if (!room) return;
@@ -15,11 +17,15 @@ export function useScreenShare(room: Room | null) {
       });
       setScreenSharePublication(pub || null);
       toggleScreenShare(true);
-      toast.success('Screen sharing started');
-    } catch (err: any) {
-      console.error('Failed to start screen share:', err);
+      toast.success("Screen sharing started");
+    } catch (unknownErr) {
+      const err = toAppError(unknownErr);
+      console.error("Failed to start screen share:", err);
       toggleScreenShare(false);
-      toast.error('Could not start screen sharing: ' + (err?.message || 'Permission denied'));
+      toast.error(
+        "Could not start screen sharing: " +
+          (err.message || "Permission denied"),
+      );
     }
   }, [room, toggleScreenShare]);
 
@@ -29,10 +35,11 @@ export function useScreenShare(room: Room | null) {
       await room.localParticipant.setScreenShareEnabled(false);
       setScreenSharePublication(null);
       toggleScreenShare(false);
-      toast.success('Screen sharing stopped');
-    } catch (err: any) {
-      console.error('Failed to stop screen share:', err);
-      toast.error('Failed to stop screen sharing');
+      toast.success("Screen sharing stopped");
+    } catch (unknownErr) {
+      const err = toAppError(unknownErr);
+      console.error("Failed to stop screen share:", err.message);
+      toast.error("Failed to stop screen sharing");
     }
   }, [room, toggleScreenShare]);
 
@@ -49,17 +56,26 @@ export function useScreenShare(room: Room | null) {
     if (!room) return;
 
     const handleLocalTrackUnpublished = (publication: any) => {
-      if (publication.trackName === 'screen_share' || publication.source === 'screen_share') {
+      if (
+        publication.trackName === "screen_share" ||
+        publication.source === "screen_share"
+      ) {
         setScreenSharePublication(null);
         toggleScreenShare(false);
-        toast.info('Screen sharing stopped from browser');
+        toast.info("Screen sharing stopped from browser");
       }
     };
 
-    room.localParticipant.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
+    room.localParticipant.on(
+      RoomEvent.LocalTrackUnpublished,
+      handleLocalTrackUnpublished,
+    );
 
     return () => {
-      room.localParticipant.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
+      room.localParticipant.off(
+        RoomEvent.LocalTrackUnpublished,
+        handleLocalTrackUnpublished,
+      );
     };
   }, [room, toggleScreenShare]);
 

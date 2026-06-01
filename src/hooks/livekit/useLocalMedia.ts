@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   createLocalVideoTrack,
   createLocalAudioTrack,
   LocalVideoTrack,
   LocalAudioTrack,
   Room,
-} from 'livekit-client';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import { toast } from 'sonner';
+} from "livekit-client";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { toast } from "sonner";
+import { toAppError } from "@/app/backend/types/error";
 
 export function useLocalMedia() {
   const {
@@ -25,8 +26,9 @@ export function useLocalMedia() {
   const [audioTrack, setAudioTrack] = useState<LocalAudioTrack | null>(null);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  
-  const [isCameraPermissionDenied, setIsCameraPermissionDenied] = useState(false);
+
+  const [isCameraPermissionDenied, setIsCameraPermissionDenied] =
+    useState(false);
   const [isMicPermissionDenied, setIsMicPermissionDenied] = useState(false);
 
   const videoTrackRef = useRef<LocalVideoTrack | null>(null);
@@ -43,9 +45,9 @@ export function useLocalMedia() {
 
   const loadDevices = useCallback(async () => {
     try {
-      const vDevices = await Room.getLocalDevices('videoinput');
-      const aDevices = await Room.getLocalDevices('audioinput');
-      
+      const vDevices = await Room.getLocalDevices("videoinput");
+      const aDevices = await Room.getLocalDevices("audioinput");
+
       setVideoDevices(vDevices);
       setAudioDevices(aDevices);
 
@@ -56,8 +58,9 @@ export function useLocalMedia() {
       if (aDevices.length > 0 && !audioDeviceId) {
         setAudioDeviceId(aDevices[0].deviceId);
       }
-    } catch (err) {
-      console.error('Error listing devices:', err);
+    } catch (unknownErr) {
+      const err = toAppError(unknownErr);
+      console.error("Error listing devices:", err.message);
     }
   }, [videoDeviceId, audioDeviceId, setVideoDeviceId, setAudioDeviceId]);
 
@@ -68,21 +71,22 @@ export function useLocalMedia() {
         if (videoTrackRef.current) {
           videoTrackRef.current.stop();
         }
-        
+
         const constraints: any = {};
         if (videoDeviceId) {
           constraints.deviceId = { exact: videoDeviceId };
         }
-        
+
         const track = await createLocalVideoTrack(constraints);
         setVideoTrack(track);
         setIsCameraPermissionDenied(false);
-      } catch (err: any) {
-        console.error('Error creating video track:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Error creating video track:", err.message);
         setIsCameraPermissionDenied(true);
         setVideoEnabled(false);
         setVideoTrack(null);
-        toast.warning('Camera permission denied or camera unavailable');
+        toast.warning("Camera permission denied or camera unavailable");
       }
     } else {
       if (videoTrackRef.current) {
@@ -106,12 +110,13 @@ export function useLocalMedia() {
         const track = await createLocalAudioTrack(constraints);
         setAudioTrack(track);
         setIsMicPermissionDenied(false);
-      } catch (err: any) {
-        console.error('Error creating audio track:', err);
+      } catch (unknownErr) {
+        const err = toAppError(unknownErr);
+        console.error("Error creating audio track:", err.message);
         setIsMicPermissionDenied(true);
         setAudioEnabled(false);
         setAudioTrack(null);
-        toast.warning('Microphone permission denied or microphone unavailable');
+        toast.warning("Microphone permission denied or microphone unavailable");
       }
     } else {
       if (audioTrackRef.current) {
@@ -122,7 +127,15 @@ export function useLocalMedia() {
 
     // Enumerate devices again after getting permissions to get names/labels
     await loadDevices();
-  }, [videoEnabled, audioEnabled, videoDeviceId, audioDeviceId, setVideoEnabled, setAudioEnabled, loadDevices]);
+  }, [
+    videoEnabled,
+    audioEnabled,
+    videoDeviceId,
+    audioDeviceId,
+    setVideoEnabled,
+    setAudioEnabled,
+    loadDevices,
+  ]);
 
   const stopPreview = useCallback(() => {
     if (videoTrackRef.current) {

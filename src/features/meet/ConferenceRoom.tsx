@@ -14,6 +14,8 @@ import WaitingState from './WaitingState';
 import LeaveConfirmModal from './LeaveConfirmModal';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTranscribe } from '@/hooks/livekit/useTranscribe';
+import CaptionOverlay from './CaptionOverlay';
 
 import {
   Mic,
@@ -27,7 +29,7 @@ import {
   Users,
   LogOut,
   Clock,
-  Radio,
+  Subtitles,
 } from 'lucide-react';
 
 interface ConferenceRoomProps {
@@ -45,12 +47,17 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     activeSidebar,
     toggleSidebar,
     unreadChatCount,
+    captionsEnabled,
+    toggleCaptions,
   } = useMeetingStore();
 
   const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
   const { isScreenSharing, toggleScreenShare } = useScreenShare(room);
   const { raiseHand, isHandRaised } = useChat(room);
   const qualities = useConnectionQuality(room);
+
+  // Initialize and run the auto-transcription / live captions hook
+  useTranscribe(room);
 
   // States
   const [duration, setDuration] = useState(0);
@@ -245,6 +252,8 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             </div>
           )}
 
+          {/* Real-time Captions Overlay */}
+          <CaptionOverlay room={room} />
         </div>
 
         {/* Sidebar panel */}
@@ -313,6 +322,19 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             title="Raise Hand"
           >
             <Hand className="w-5 h-5" />
+          </button>
+
+          {/* Captions Toggle */}
+          <button
+            onClick={() => toggleCaptions()}
+            className={`p-3.5 rounded-xl transition-all border ${
+              captionsEnabled
+                ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
+                : 'bg-brand-surface hover:bg-brand-border text-brand-text-secondary hover:text-white border-brand-border'
+            }`}
+            title={captionsEnabled ? 'Disable Captions' : 'Enable Captions'}
+          >
+            <Subtitles className="w-5 h-5" />
           </button>
 
           <span className="text-brand-border mx-1">|</span>
