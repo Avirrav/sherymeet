@@ -7,18 +7,19 @@ import PreJoinScreen from '@/features/meet/PreJoinScreen';
 import ConferenceRoom from '@/features/meet/ConferenceRoom';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { toAppError } from '@/app/backend/types/error';
 
 interface MeetingPageClientProps {
   roomId: string;
+  token: string;
+  userName?: string;
 }
 
-export default function MeetingPageClient({ roomId }: MeetingPageClientProps) {
+export default function MeetingPageClient({ roomId, token, userName }: MeetingPageClientProps) {
   const {
-    token,
+    username,
     isConnected,
     isConnecting,
-    error,
+    setUsername,
     setMeetingInfo,
     setConnectionStatus,
     resetMeetingStore,
@@ -26,59 +27,59 @@ export default function MeetingPageClient({ roomId }: MeetingPageClientProps) {
 
   const [serverUrl, setServerUrl] = useState('');
   const [hasEntered, setHasEntered] = useState(false);
+  const [activeToken, setActiveToken] = useState('');
 
-  // Reset the meeting store state when landing/leaving
+  // Reset the meeting store state, extract parameters from search or hash, and prefill username
   useEffect(() => {
     resetMeetingStore();
+    let resolvedUserName = userName || '';
+    let resolvedToken = token || '';
+    if (typeof window !== 'undefined') {
+      // 1. Check hash fragment (prevents parameter logging in server-side logs)
+      const hash = window.location.hash.substring(1);
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        resolvedToken = params.get('token') || resolvedToken;
+        resolvedUserName = params.get('userName') || resolvedUserName;
+      }    
+    }
+
+    const timer = setTimeout(() => {
+      if (resolvedUserName) {
+        setUsername(resolvedUserName);
+      }
+      if (resolvedToken) {
+        setActiveToken(resolvedToken);
+      }
+    }, 0);
+
     return () => {
+      clearTimeout(timer);
       resetMeetingStore();
     };
-  }, [resetMeetingStore]);
+  }, [resetMeetingStore, userName, token, setUsername]);
 
-  const handleJoin = async (username: string) => {
+  const handleJoin = async () => {
     setConnectionStatus(true, false, null);
-    try {
-      const response = await fetch('/api/meet/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roomName: roomId,
-          participantName: username,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success && data.data) {
-        setServerUrl(data.data.serverUrl);
-        setMeetingInfo(roomId, data.data.token);
+    if (activeToken) {
+        const envUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+        if (!envUrl) {
+          throw new Error('NEXT_PUBLIC_LIVEKIT_URL environment variable is not defined on the client');
+        }
+        setServerUrl(envUrl);
+        setMeetingInfo(roomId, activeToken);
         setHasEntered(true);
-      } else {
-        throw new Error(data.error || 'Token generation failed');
-      }
-    } catch (unknownErr) {
-      const err = toAppError(unknownErr);
-      console.error('Error generating token:', err);
-      setConnectionStatus(false, false, err.message || 'Token generation failed');
-      toast.error(err.message || 'Token generation failed');
+    } else {
+      toast.error("Token is not available, not access to join meeting.")
+      setHasEntered(false);
+      setConnectionStatus(false, false, null);
     }
   };
 
-  // Connect to the room once token is fetched and user has hit Enter Meet
   const room = useRoomConnection({
     serverUrl,
-    token: hasEntered ? token : '',
+    token: hasEntered ? activeToken : '',
   });
-
-  // Handle connection errors
-  useEffect(() => {
-    if (error) {
-      toast.error(`Connection Error: ${error}`);
-        setHasEntered(false);
-    }
-  }, [error]);
 
   if (hasEntered) {
     if (isConnecting && !isConnected) {
@@ -97,5 +98,5 @@ export default function MeetingPageClient({ roomId }: MeetingPageClientProps) {
   }
 
   // Render the pre-join preview screen by default
-  return <PreJoinScreen roomId={roomId} onJoin={handleJoin} />;
+  return <PreJoinScreen roomId={roomId} onJoin={handleJoin} userName={username} />;
 }

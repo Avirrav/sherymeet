@@ -9,7 +9,6 @@ import {
   VideoOff,
   Mic,
   MicOff,
-  Settings,
   User,
   ArrowRight,
   Sparkles,
@@ -18,11 +17,11 @@ import {
 interface PreJoinScreenProps {
   roomId: string;
   onJoin: (username: string) => void;
+  userName?: string;
 }
 
-export default function PreJoinScreen({ roomId, onJoin }: PreJoinScreenProps) {
+export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScreenProps) {
   const {
-    username,
     setUsername,
     audioEnabled,
     videoEnabled,
@@ -32,7 +31,6 @@ export default function PreJoinScreen({ roomId, onJoin }: PreJoinScreenProps) {
 
   const {
     videoTrack,
-    audioTrack,
     videoDevices,
     audioDevices,
     isCameraPermissionDenied,
@@ -45,8 +43,15 @@ export default function PreJoinScreen({ roomId, onJoin }: PreJoinScreenProps) {
     selectMicrophone,
   } = useLocalMedia();
 
-  const [inputName, setInputName] = useState(username);
+  const [inputName, setInputName] = useState(userName || '');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Sync userName prop changes to local inputName state
+  useEffect(() => {
+    if (userName) {
+      setInputName(userName);
+    }
+  }, [userName]);
 
   // Initialize media previews
   useEffect(() => {
@@ -236,7 +241,11 @@ export default function PreJoinScreen({ roomId, onJoin }: PreJoinScreenProps) {
                   placeholder="Enter username"
                   value={inputName}
                   onChange={(e) => setInputName(e.target.value)}
-                  className="w-full bg-brand-dark border border-brand-border focus:border-brand-orange/50 pl-10 pr-4 py-3 rounded-xl text-sm text-white outline-none transition-colors duration-200"
+                  disabled={!!userName}
+                  readOnly={!!userName}
+                  className={`w-full bg-brand-dark border border-brand-border focus:border-brand-orange/50 pl-10 pr-4 py-3 rounded-xl text-sm text-white outline-none transition-colors duration-200 ${
+                    userName ? 'opacity-60 cursor-not-allowed select-none' : ''
+                  }`}
                 />
               </div>
             </div>
