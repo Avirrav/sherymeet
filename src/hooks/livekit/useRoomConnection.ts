@@ -100,6 +100,9 @@ export function useRoomConnection({
             console.log('Publishing microphone track...');
             await r.localParticipant.setMicrophoneEnabled(true, {
               deviceId: audioDeviceId || undefined,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
             });
             console.log('Microphone track published successfully.');
           } catch (unknownErr) {
@@ -170,6 +173,9 @@ export function useRoomConnection({
         if (audioEnabled) {
           await room.localParticipant.setMicrophoneEnabled(true, {
             deviceId: audioDeviceId || undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
           });
         } else {
           await room.localParticipant.setMicrophoneEnabled(false);

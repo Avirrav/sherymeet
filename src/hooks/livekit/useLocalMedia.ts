@@ -98,9 +98,12 @@ export function useLocalMedia() {
         if (audioTrackRef.current) {
           audioTrackRef.current.stop();
         }
-        const track = await createLocalAudioTrack(
-          audioDeviceId ? { deviceId: audioDeviceId } : undefined
-        );
+        const track = await createLocalAudioTrack({
+          deviceId: audioDeviceId || undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        });
         setAudioTrack(track);
         setIsMicPermissionDenied(false);
       } catch (unknownErr) {
