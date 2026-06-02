@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       "X-Amz-Expires=300",
       //'identify-multiple-languages=true',
       //'language-options=en-US,hi-IN',
-      "language-code=en-US",
+      "language-code=hi-IN",
       "media-encoding=pcm",
       "sample-rate=16000",
     ].join("&");

@@ -24,7 +24,10 @@ export function useParticipants(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    updateParticipantsList();
+    // Defer the initial participants list load to a microtask to avoid synchronous setState inside the effect body.
+    Promise.resolve().then(() => {
+      updateParticipantsList();
+    });
 
     const handleParticipantConnected = (p: RemoteParticipant) => {
       updateParticipantsList();
@@ -67,10 +70,6 @@ export function useParticipants(room: Room | null) {
     room.on(RoomEvent.TrackMuted, handleTrackMuted);
     room.on(RoomEvent.TrackUnmuted, handleTrackUnmuted);
     room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
-
-    // Initial load
-    setLocalParticipant(room.localParticipant);
-    setRemoteParticipants(Array.from(room.remoteParticipants.values()));
 
     return () => {
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);

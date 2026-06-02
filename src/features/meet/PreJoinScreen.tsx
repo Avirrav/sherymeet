@@ -48,9 +48,15 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
 
   // Sync userName prop changes to local inputName state
   useEffect(() => {
+    let active = true;
     if (userName) {
-      setInputName(userName);
+      Promise.resolve().then(() => {
+        if (active) setInputName(userName);
+      });
     }
+    return () => {
+      active = false;
+    };
   }, [userName]);
 
   // Initialize media previews

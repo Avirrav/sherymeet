@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Room, RoomEvent } from "livekit-client";
+import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error";
@@ -178,7 +178,7 @@ export function useTranscribe(room: Room | null) {
           const emptyAudioEvent = encodeEventStreamMessage(new Uint8Array(0));
           wsRef.current.send(emptyAudioEvent);
         } catch (unknownErr) {
-          // Ignore if sending fails
+          console.log("AWS",unknownErr)
         }
       }
       wsRef.current.close();
@@ -210,13 +210,13 @@ export function useTranscribe(room: Room | null) {
     try {
       // 1. Retrieve signed URL from Next.js server route
       const response = await fetch("/api/meet/transcribe-url");
-      const data = await response.json();
-      if (!response.ok || !data.url) {
-        throw new Error(data.error || "Failed to sign transcription URL");
+      const json = await response.json();
+      if (!response.ok || !json.success || !json.data?.url) {
+        throw new Error(json.message || "Failed to sign transcription URL");
       }
 
       // 2. Open AWS Transcribe WebSocket
-      const ws = new WebSocket(data.url);
+      const ws = new WebSocket(json.data.url);
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 
@@ -231,7 +231,13 @@ export function useTranscribe(room: Room | null) {
           const mediaStream = new MediaStream([mediaStreamTrack]);
 
           const AudioContextClass =
-            window.AudioContext || (window as any).webkitAudioContext;
+            window.AudioContext ||
+            (window as typeof window & {
+              webkitAudioContext?: typeof AudioContext;
+            }).webkitAudioContext;
+          if (!AudioContextClass) {
+            throw new Error("Web Audio API is not supported in this browser");
+          }
           const audioCtx = new AudioContextClass();
           audioContextRef.current = audioCtx;
 
@@ -303,16 +309,14 @@ export function useTranscribe(room: Room | null) {
             if (results && results.length > 0) {
               const result = results[0];
               const transcript = result.Alternatives?.[0]?.Transcript;
-
               if (transcript !== undefined) {
                 // Update local Zustand state
                 setTranscription(room.localParticipant.identity, transcript);
-
-                // Broadcast raw text to remote participant
+                // Broadcast the transliterated text to the remote participant
                 broadcastTranscription(transcript, !result.IsPartial);
               }
             }
-          } catch (unknownErr) {
+          } catch {
             // Ignore parse errors (like exception envelopes)
           }
 
@@ -343,12 +347,20 @@ export function useTranscribe(room: Room | null) {
 
   // Sync transcription hook activation with captionsEnabled toggle state
   useEffect(() => {
-    if (captionsEnabled) {
-      startTranscription();
-    } else {
-      stopTranscription();
-    }
+    let active = true;
+    // Defer execution to a microtask to avoid calling setState synchronously within the effect body.
+    // This prevents cascading renders and aligns with React 19 standards.
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (captionsEnabled) {
+        startTranscription();
+      } else {
+        stopTranscription();
+      }
+    });
+
     return () => {
+      active = false;
       stopTranscription();
     };
   }, [captionsEnabled, startTranscription, stopTranscription]);
@@ -357,7 +369,7 @@ export function useTranscribe(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    const handleDataReceived = (payload: Uint8Array, participant?: any) => {
+    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
       try {
         const textDecoder = new TextDecoder();
         const jsonStr = textDecoder.decode(payload);
@@ -369,6 +381,7 @@ export function useTranscribe(room: Room | null) {
         }
       } catch (unknownErr) {
         // Ignore non-transcription packets
+        console.log("AWS data error", unknownErr);
       }
     };
 

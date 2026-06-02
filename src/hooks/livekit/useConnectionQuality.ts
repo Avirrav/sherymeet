@@ -5,8 +5,12 @@ export function useConnectionQuality(room: Room | null) {
   const [qualities, setQualities] = useState<Record<string, ConnectionQuality>>({});
 
   useEffect(() => {
+    let active = true;
+
     if (!room) {
-      setQualities({});
+      Promise.resolve().then(() => {
+        if (active) setQualities({});
+      });
       return;
     }
 
@@ -25,7 +29,9 @@ export function useConnectionQuality(room: Room | null) {
     room.remoteParticipants.forEach((p) => {
       initialQualities[p.identity] = p.connectionQuality;
     });
-    setQualities(initialQualities);
+    Promise.resolve().then(() => {
+      if (active) setQualities(initialQualities);
+    });
 
     const handleConnectionQualityChanged = (quality: ConnectionQuality, participant: Participant) => {
       updateQuality(participant);
@@ -34,6 +40,7 @@ export function useConnectionQuality(room: Room | null) {
     room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQualityChanged);
 
     return () => {
+      active = false;
       room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQualityChanged);
     };
   }, [room]);

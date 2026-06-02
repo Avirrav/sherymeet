@@ -3,6 +3,7 @@ import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error";
+import { ApiError } from "next/dist/server/api-utils";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;
@@ -24,13 +25,18 @@ export function useRoomConnection({
   const connectingRef = useRef(false);
 
   useEffect(() => {
-    console.log('useRoomConnection Effect triggered:', { serverUrl: !!serverUrl, token: !!token, hasRoom: !!room, connecting: connectingRef.current });
-    if (!serverUrl || !token || room || connectingRef.current) return;
-
+    // Return early if connection parameters are not yet loaded.
+    // This prevents the LiveKit client from attempting to connect with empty strings,
+    // which throws an "Invalid URL" TypeError.
+    if (!serverUrl || !token) {
+      console.log("Connection parameters missing. Waiting for serverUrl and token...");
+      return;
+    }
+    if (room || connectingRef.current) {
+      return;
+    }
     connectingRef.current = true;
     setConnectionStatus(true, false, null);
-    console.log('Starting LiveKit room connection sequence to:', serverUrl);
-
     const r = new Room({
       adaptiveStream: true,
       dynacast: true,

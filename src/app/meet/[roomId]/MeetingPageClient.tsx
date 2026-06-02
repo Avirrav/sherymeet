@@ -43,7 +43,6 @@ export default function MeetingPageClient({ roomId, token, userName }: MeetingPa
         resolvedUserName = params.get('userName') || resolvedUserName;
       }    
     }
-
     const timer = setTimeout(() => {
       if (resolvedUserName) {
         setUsername(resolvedUserName);
@@ -52,7 +51,6 @@ export default function MeetingPageClient({ roomId, token, userName }: MeetingPa
         setActiveToken(resolvedToken);
       }
     }, 0);
-
     return () => {
       clearTimeout(timer);
       resetMeetingStore();

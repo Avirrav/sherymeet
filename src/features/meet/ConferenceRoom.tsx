@@ -37,7 +37,7 @@ interface ConferenceRoomProps {
 }
 
 export default function ConferenceRoom({ room }: ConferenceRoomProps) {
-  const router = useRouter();
+  const router = useRouter(); 
   const {
     roomId,
     audioEnabled,
@@ -50,21 +50,16 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     captionsEnabled,
     toggleCaptions,
   } = useMeetingStore();
-
-  const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
+  const { localParticipant, remoteParticipants, activeSpeaker, } = useParticipants(room);
   const { isScreenSharing, toggleScreenShare } = useScreenShare(room);
   const { raiseHand, isHandRaised } = useChat(room);
   const qualities = useConnectionQuality(room);
-
   // Initialize and run the auto-transcription / live captions hook
   useTranscribe(room);
-
   // States
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-
   const screenShareVideoRef = useRef<HTMLVideoElement | null>(null);
-
   // Timer effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -78,40 +73,32 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-
   // Find screen share track (from remote or local) directly during render
   const remoteSharePub = remoteParticipants
     .flatMap((p) => Array.from(p.videoTrackPublications.values()))
     .find((pub) => pub.source === 'screen_share' && pub.track);
-
   const localSharePub = Array.from(room.localParticipant.videoTrackPublications.values()).find(
     (pub) => pub.source === 'screen_share' && pub.track
   );
-
   const activeScreenShareTrack = remoteSharePub?.track || localSharePub?.track || null;
-
   // Bind screen share video element
   useEffect(() => {
     const el = screenShareVideoRef.current;
     if (!el || !activeScreenShareTrack) return;
-
     activeScreenShareTrack.attach(el);
     return () => {
-      activeScreenShareTrack.detach(el);
+    activeScreenShareTrack.detach(el);
     };
   }, [activeScreenShareTrack]);
-
   const handleLeaveConfirm = () => {
     room.disconnect();
     toast.info('Left the meeting');
     router.push('/');
   };
-
   const getTopParticipantQuality = () => {
     if (!localParticipant) return 'excellent';
     return qualities[localParticipant.identity] || localParticipant.connectionQuality;
   };
-
   const renderQualityBadge = () => {
     const quality = getTopParticipantQuality();
     let text = 'Connection: Stable';
@@ -132,7 +119,6 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       </div>
     );
   };
-
   return (
     <div className="h-screen w-screen flex flex-col justify-between bg-brand-dark text-white overflow-hidden relative font-sans">
       

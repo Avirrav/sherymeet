@@ -21,8 +21,8 @@ export default function ParticipantTile({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [videoTrack, setVideoTrack] = useState<any>(null);
-  const [audioTrack, setAudioTrack] = useState<any>(null);
+  const [videoTrack, setVideoTrack] = useState<Track | null>(null);
+  const [audioTrack, setAudioTrack] = useState<Track | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(!participant.isMicrophoneEnabled);
   const [isVideoMuted, setIsVideoMuted] = useState(!participant.isCameraEnabled);
   

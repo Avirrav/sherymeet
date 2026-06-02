@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { Room, RoomEvent } from "livekit-client";
+import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error";
@@ -15,7 +15,7 @@ export function useChat(room: Room | null) {
   } = useMeetingStore();
 
   const sendData = useCallback(
-    async (type: string, payload: any) => {
+    async (type: string, payload: unknown) => {
       if (!room) return;
       try {
         const encoder = new TextEncoder();
@@ -73,7 +73,7 @@ export function useChat(room: Room | null) {
 
     const decoder = new TextDecoder();
 
-    const handleDataReceived = (payload: Uint8Array, participant?: any) => {
+    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
       try {
         const dataStr = decoder.decode(payload);
         const data = JSON.parse(dataStr);

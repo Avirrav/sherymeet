@@ -72,12 +72,9 @@ export function useLocalMedia() {
           videoTrackRef.current.stop();
         }
 
-        const constraints: any = {};
-        if (videoDeviceId) {
-          constraints.deviceId = { exact: videoDeviceId };
-        }
-
-        const track = await createLocalVideoTrack(constraints);
+        const track = await createLocalVideoTrack(
+          videoDeviceId ? { deviceId: videoDeviceId } : undefined
+        );
         setVideoTrack(track);
         setIsCameraPermissionDenied(false);
       } catch (unknownErr) {
@@ -101,13 +98,9 @@ export function useLocalMedia() {
         if (audioTrackRef.current) {
           audioTrackRef.current.stop();
         }
-
-        const constraints: any = {};
-        if (audioDeviceId) {
-          constraints.deviceId = { exact: audioDeviceId };
-        }
-
-        const track = await createLocalAudioTrack(constraints);
+        const track = await createLocalAudioTrack(
+          audioDeviceId ? { deviceId: audioDeviceId } : undefined
+        );
         setAudioTrack(track);
         setIsMicPermissionDenied(false);
       } catch (unknownErr) {
@@ -150,16 +143,28 @@ export function useLocalMedia() {
 
   // Update track if device changes while enabled
   useEffect(() => {
+    let active = true;
     if (videoEnabled) {
-      startPreview();
+      Promise.resolve().then(() => {
+        if (active) startPreview();
+      });
     }
-  }, [videoDeviceId]);
+    return () => {
+      active = false;
+    };
+  }, [videoDeviceId, videoEnabled, startPreview]);
 
   useEffect(() => {
+    let active = true;
     if (audioEnabled) {
-      startPreview();
+      Promise.resolve().then(() => {
+        if (active) startPreview();
+      });
     }
-  }, [audioDeviceId]);
+    return () => {
+      active = false;
+    };
+  }, [audioDeviceId, audioEnabled, startPreview]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -188,13 +193,20 @@ export function useLocalMedia() {
 
   // Force restart when toggled on
   useEffect(() => {
-    if (videoEnabled && !videoTrack) {
-      startPreview();
-    }
-    if (audioEnabled && !audioTrack) {
-      startPreview();
-    }
-  }, [videoEnabled, audioEnabled, videoTrack, audioTrack]);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (videoEnabled && !videoTrack) {
+        startPreview();
+      }
+      if (audioEnabled && !audioTrack) {
+        startPreview();
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [videoEnabled, audioEnabled, videoTrack, audioTrack, startPreview]);
 
   return {
     videoTrack,

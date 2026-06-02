@@ -55,7 +55,7 @@ export function useScreenShare(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    const handleLocalTrackUnpublished = (publication: any) => {
+    const handleLocalTrackUnpublished = (publication: LocalTrackPublication) => {
       if (
         publication.trackName === "screen_share" ||
         publication.source === "screen_share"

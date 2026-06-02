@@ -5,10 +5,13 @@ import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 
 export async function POST(request: NextRequest) {
   try {
-    const { roomName, participantName } = await request.json();
+    const { roomName, user, participant } = await request.json();
 
-    if (!roomName || !participantName) {
-      throw new ApiError("Missing roomName or participantName", 400);
+    if (!roomName) {
+      throw new ApiError("Missing roomName", 400);
+    }
+    if (!user || !participant) {
+      throw new ApiError("Missing user or participant details", 400);
     }
 
     const serverUrl = process.env.LIVEKIT_URL;
@@ -44,14 +47,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate secure participant identity
-    const identity = `${participantName}_${Math.random().toString(36).substring(2, 6)}`;
-
     // Call service layer to generate token
     const token = await generateToken({
       roomName,
-      participantName,
-      identity,
+      user,
+      participant,
     });
 
     return ApiResponse.success({

@@ -19,44 +19,54 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
 
   // Sync state when transcriptions in the store change
   useEffect(() => {
-    if (!captionsEnabled) {
-      setActiveCaptions({});
-      return;
-    }
+    let active = true;
 
-    const now = Date.now();
-    setActiveCaptions((prev) => {
-      const next = { ...prev };
-      
-      Object.entries(transcriptions).forEach(([identity, text]) => {
-        // If empty transcription, skip/delete
-        if (!text.trim()) {
-          delete next[identity];
-          return;
-        }
+    Promise.resolve().then(() => {
+      if (!active) return;
 
-        const isLocal = identity === room?.localParticipant?.identity;
-        let name = 'Participant';
-        if (isLocal) {
-          name = 'You';
-        } else {
-          const remote = room?.remoteParticipants?.get(identity);
-          name = remote?.name || remote?.identity || 'Remote Participant';
-        }
+      if (!captionsEnabled) {
+        setActiveCaptions({});
+        return;
+      }
 
-        // Only update if text has changed or is new, to avoid resetting duration timer
-        if (!prev[identity] || prev[identity].text !== text) {
-          next[identity] = {
-            text,
-            name,
-            isLocal,
-            timestamp: now,
-          };
-        }
+      const now = Date.now();
+      setActiveCaptions((prev) => {
+        const next = { ...prev };
+        
+        Object.entries(transcriptions).forEach(([identity, text]) => {
+          // If empty transcription, skip/delete
+          if (!text.trim()) {
+            delete next[identity];
+            return;
+          }
+
+          const isLocal = identity === room?.localParticipant?.identity;
+          let name = 'Participant';
+          if (isLocal) {
+            name = 'You';
+          } else {
+            const remote = room?.remoteParticipants?.get(identity);
+            name = remote?.name || remote?.identity || 'Remote Participant';
+          }
+
+          // Only update if text has changed or is new, to avoid resetting duration timer
+          if (!prev[identity] || prev[identity].text !== text) {
+            next[identity] = {
+              text,
+              name,
+              isLocal,
+              timestamp: now,
+            };
+          }
+        });
+
+        return next;
       });
-
-      return next;
     });
+
+    return () => {
+      active = false;
+    };
   }, [transcriptions, room, captionsEnabled]);
 
   // Periodically clean up stale captions (older than 4 seconds)
