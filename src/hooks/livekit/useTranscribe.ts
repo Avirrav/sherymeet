@@ -209,7 +209,7 @@ export function useTranscribe(room: Room | null) {
 
     try {
       // 1. Retrieve signed URL from Next.js server route
-      const response = await fetch("/api/meet/transcribe-url");
+      const response = await fetch("/api/private/meet/transcribe-url");
       const json = await response.json();
       if (!response.ok || !json.success || !json.data?.url) {
         throw new Error(json.message || "Failed to sign transcription URL");

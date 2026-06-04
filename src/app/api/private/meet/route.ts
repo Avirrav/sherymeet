@@ -3,7 +3,7 @@ import { createRoom } from "@/app/backend/services/create-room";
 import { generateToken } from "@/app/backend/services/generate-token";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 
-// GET /api/meet - Returns the public LiveKit server URL
+// GET /api/private/meet - Returns the public LiveKit server URL
 export async function GET() {
   const serverUrl = process.env.LIVEKIT_URL;
   if (!serverUrl) {
@@ -12,7 +12,7 @@ export async function GET() {
   return ApiResponse.success({ serverUrl });
 }
 
-// POST /api/meet - Generates room and returns two tokens (Host and Participant)
+// POST /api/private/meet - Generates room and returns two tokens (Host and Participant)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -70,8 +70,6 @@ export async function POST(request: NextRequest) {
 
     return ApiResponse.success({
       roomName,
-      hostToken,
-      participantToken,
       hostLink,
       participantLink,
       serverUrl,
