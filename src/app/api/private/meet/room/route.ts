@@ -1,15 +1,12 @@
 import { NextRequest } from "next/server";
-import { createRoom } from "@/app/backend/services/create-room";
+import { createRoom } from "@/app/backend/services/media-server-services/create-room";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-
-
 
 // Create room API endpoint
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { maxParticipants } = body;
-
 
     if (!maxParticipants) {
       throw new ApiError("Max participants is required", 400);

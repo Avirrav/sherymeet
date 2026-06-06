@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { generateToken } from "@/app/backend/services/generate-token";
+import { generateToken } from "@/app/backend/services/media-server-services/generate-token";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 

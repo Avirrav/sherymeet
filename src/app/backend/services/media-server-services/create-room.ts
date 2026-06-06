@@ -1,5 +1,5 @@
 import { RoomServiceClient, Room } from "livekit-server-sdk";
-import { ApiError } from "../utils/api-helper";
+import { ApiError } from "../../utils/api-helper";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -18,15 +18,14 @@ function generateRoomCode(): string {
 }
 
 // Create Room Service
-export async function createRoom(maxParticipants: number): Promise<Room> {
+export async function createRoom(roomName?: string, maxParticipants: number = 10): Promise<Room> {
   if (!apiKey || !apiSecret || !livekitUrl) {
     throw new Error(
       "LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set",
     );
   }
-  const roomName = generateRoomCode();
   if (!roomName) {
-    throw new ApiError("Failed to generate room code", 500);
+    roomName = generateRoomCode();
   }
   // Convert wss:// to https://
   const host = livekitUrl
