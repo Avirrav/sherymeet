@@ -11,9 +11,11 @@
   "dependencies": {
     "@tanstack/react-query": "^5.100.14",
     "aws4": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "livekit-client": "^2.19.0",
     "livekit-server-sdk": "^2.15.4",
     "lucide-react": "^1.17.0",
+    "mongoose": "^9.6.3",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -23,6 +25,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/aws4": "^1.11.6",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

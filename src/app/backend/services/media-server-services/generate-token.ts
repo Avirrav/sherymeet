@@ -1,6 +1,10 @@
-import { AccessToken } from 'livekit-server-sdk';
-import { IParticipant, IUser, RoleHierarchy } from '../interfaces/userInterface';
-import { UserRole } from '../interfaces/userInterface';
+import { AccessToken } from "livekit-server-sdk";
+import {
+  IParticipant,
+  IUser,
+  RoleHierarchy,
+} from "@/app/backend/interfaces/user-interface";
+import { UserRole } from "@/app/backend/interfaces/user-interface";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -8,29 +12,31 @@ const apiSecret = process.env.LIVEKIT_API_SECRET;
 interface GenerateTokenOptions {
   roomName: string;
   metadata?: string;
-  user:IUser,
-  participant:IParticipant,
+  user: IUser;
+  participant: IParticipant;
 }
 
-export async function generateToken(options: GenerateTokenOptions ): Promise<string> {
+export async function generateToken(
+  options: GenerateTokenOptions,
+): Promise<string> {
   if (!apiKey || !apiSecret) {
-    throw new Error('LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set');
+    throw new Error("LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set");
   }
-  const { roomName,user,participant } = options;
+  const { roomName, user, participant } = options;
   // Generate the secure identity
   const identity = `${participant.participantName}_${Math.random().toString(36).substring(2, 6)}`;
   // Create an AccessToken
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
-    metadata:JSON.stringify({
+    metadata: JSON.stringify({
       user,
       participant,
-      roomName
+      roomName,
     }),
     name: participant.participantName,
-    ttl: '2h', // Token valid for 2 hours
+    ttl: "2h", // Token valid for 2 hours
   });
-  if(RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR]){
+  if (RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR]) {
     at.addGrant({
       roomJoin: true,
       room: roomName,
@@ -39,7 +45,7 @@ export async function generateToken(options: GenerateTokenOptions ): Promise<str
       canSubscribe: true,
       canPublishData: true,
     });
-  }else{
+  } else {
     at.addGrant({
       room: roomName,
       roomJoin: true,
@@ -48,7 +54,6 @@ export async function generateToken(options: GenerateTokenOptions ): Promise<str
       canSubscribe: true,
     });
   }
-
 
   return await at.toJwt();
 }
