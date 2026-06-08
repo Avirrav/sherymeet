@@ -36,6 +36,7 @@ export async function generateToken(
     name: participant.participantName,
     ttl: "2h", // Token valid for 2 hours
   });
+  console.log(RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR])
   if (RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR]) {
     at.addGrant({
       roomJoin: true,

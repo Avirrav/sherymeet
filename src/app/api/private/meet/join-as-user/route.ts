@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError("LiveKit server URL is not configured", 500);
     }
 
-    const meetLink = `${process.env.NEXT_PUBLIC_LIVEKIT_URL}/meet/${roomId}`;
+    const meetLink = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}?token=${token}`;
 
     return ApiResponse.success(
       {

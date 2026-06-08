@@ -37,7 +37,7 @@ export class MeetDao {
           startedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -47,5 +47,22 @@ export class MeetDao {
   static async getMeetByRoomId(roomId: string) {
     await dbConnect();
     return await Meet.findOne({ roomId });
+  }
+
+  /**
+   * Updates the meeting status to 'ended' and records the endedAt timestamp.
+   */
+  static async endMeet(roomId: string) {
+    await dbConnect();
+    return await Meet.findOneAndUpdate(
+      { roomId },
+      {
+        $set: {
+          status: "ended",
+          endedAt: new Date(),
+        },
+      },
+      { returnDocument: "after" }
+    );
   }
 }

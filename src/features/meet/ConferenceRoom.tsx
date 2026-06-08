@@ -30,6 +30,7 @@ import {
   LogOut,
   Clock,
   Subtitles,
+  XCircle,
 } from 'lucide-react';
 
 interface ConferenceRoomProps {
@@ -90,10 +91,51 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     activeScreenShareTrack.detach(el);
     };
   }, [activeScreenShareTrack]);
+  const getIsHost = () => {
+    try {
+      const metaStr = room.localParticipant?.metadata;
+      if (metaStr) {
+        const meta = JSON.parse(metaStr);
+        console.log("Participant Meta:", meta);
+        const role = meta.user?.role || meta.participant?.role;
+        return role === 'MENTOR' || role === 'ADMIN';
+      }
+    } catch (err) {
+      console.error('Error parsing participant metadata:', err);
+    }
+    return false;
+  };
+
+  const isHost = getIsHost();
+
   const handleLeaveConfirm = () => {
     room.disconnect();
     toast.info('Left the meeting');
     router.push('/');
+  };
+  const handleEndMeeting = async () => {
+    if (confirm("Are you sure you want to end the meeting for everyone?")) {
+      try {
+        const res = await fetch("/api/private/meet/end-meet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ roomId }),
+        });
+
+        if (res.ok) {
+          toast.success("Meeting ended successfully");
+          room.disconnect();
+          router.push("/");
+        } else {
+          toast.error("Failed to end meeting");
+        }
+      } catch (err) {
+        console.error("Error ending meeting:", err);
+        toast.error("Error ending meeting");
+      }
+    }
   };
   const getTopParticipantQuality = () => {
     if (!localParticipant) return 'excellent';
@@ -150,14 +192,27 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           {renderQualityBadge()}
         </div>
 
-        {/* Leave */}
-        <button
-          onClick={() => setShowLeaveModal(true)}
-          className="flex items-center gap-1.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Leave</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* End Meeting for Host */}
+          {isHost && (
+            <button
+              onClick={handleEndMeeting}
+              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border border-red-700 py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>End Meeting</span>
+            </button>
+          )}
+
+          {/* Leave */}
+          <button
+            onClick={() => setShowLeaveModal(true)}
+            className="flex items-center gap-1.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Leave</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Grid + Sidebar Container */}

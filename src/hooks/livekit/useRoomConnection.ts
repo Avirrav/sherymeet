@@ -3,7 +3,6 @@ import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error";
-import { ApiError } from "next/dist/server/api-utils";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;
@@ -21,6 +20,8 @@ export function useRoomConnection({
     videoEnabled,
     audioDeviceId,
     videoDeviceId,
+    setVideoDeviceId,
+    setAudioDeviceId,
   } = useMeetingStore();
   const connectingRef = useRef(false);
 
@@ -79,23 +80,67 @@ export function useRoomConnection({
         setRoom(r);
         connectingRef.current = false;
 
+        // Wait a short moment for any Pre-Join preview tracks to fully release their media handles
+        await new Promise((resolve) => setTimeout(resolve, 400));
+
         // Publish camera track if enabled
         if (videoEnabled) {
+          let success = false;
           try {
-            console.log('Publishing camera track...');
+            console.log('Publishing camera track in HD quality...');
             await r.localParticipant.setCameraEnabled(true, {
-              deviceId: videoDeviceId || undefined,
+              deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+              resolution: VideoPresets.h720.resolution, // Publish in HD
             });
             console.log('Camera track published successfully.');
+            success = true;
           } catch (unknownErr) {
             const err = toAppError(unknownErr);
-            console.error("Failed to publish camera:", err.message);
-            toast.error("Failed to enable camera in meeting");
+            console.warn("First camera publication attempt failed. Trying fallback devices...", err.message);
+          }
+
+          if (!success) {
+            try {
+              const vDevices = await Room.getLocalDevices("videoinput");
+              const otherCameras = vDevices.filter(
+                (d) => d.deviceId !== videoDeviceId && d.deviceId !== ""
+              );
+              if (otherCameras.length > 0) {
+                console.log("Publishing fallback camera device:", otherCameras[0].deviceId);
+                await r.localParticipant.setCameraEnabled(true, {
+                  deviceId: { exact: otherCameras[0].deviceId },
+                  resolution: VideoPresets.h720.resolution,
+                });
+                setVideoDeviceId(otherCameras[0].deviceId);
+                success = true;
+                toast.info("Selected camera was busy. Switched to fallback camera.", {
+                  id: "room-cam-fallback",
+                });
+              }
+            } catch (fallbackErr) {
+              console.error("Fallback camera failed:", fallbackErr);
+            }
+          }
+
+          if (!success) {
+            try {
+              await new Promise((resolve) => setTimeout(resolve, 600));
+              await r.localParticipant.setCameraEnabled(true, {
+                deviceId: videoDeviceId || undefined,
+                resolution: VideoPresets.h720.resolution,
+              });
+              console.log('Camera track published successfully on second attempt.');
+            } catch (retryErr) {
+              const err = toAppError(retryErr);
+              console.error("Failed to publish camera on retry:", err.message);
+              toast.error("Failed to enable camera. Please make sure your camera is not in use by another app.");
+            }
           }
         }
 
         // Publish microphone track if enabled
         if (audioEnabled) {
+          let success = false;
           try {
             console.log('Publishing microphone track...');
             await r.localParticipant.setMicrophoneEnabled(true, {
@@ -105,10 +150,52 @@ export function useRoomConnection({
               autoGainControl: true,
             });
             console.log('Microphone track published successfully.');
+            success = true;
           } catch (unknownErr) {
             const err = toAppError(unknownErr);
-            console.error("Failed to publish microphone:", err.message);
-            toast.error("Failed to enable microphone in meeting");
+            console.warn("First microphone publication attempt failed. Trying fallback devices...", err.message);
+          }
+
+          if (!success) {
+            try {
+              const aDevices = await Room.getLocalDevices("audioinput");
+              const otherMics = aDevices.filter(
+                (d) => d.deviceId !== audioDeviceId && d.deviceId !== ""
+              );
+              if (otherMics.length > 0) {
+                console.log("Publishing fallback microphone device:", otherMics[0].deviceId);
+                await r.localParticipant.setMicrophoneEnabled(true, {
+                  deviceId: otherMics[0].deviceId,
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                });
+                setAudioDeviceId(otherMics[0].deviceId);
+                success = true;
+                toast.info("Selected microphone was busy. Switched to fallback microphone.", {
+                  id: "room-mic-fallback",
+                });
+              }
+            } catch (fallbackErr) {
+              console.error("Fallback microphone failed:", fallbackErr);
+            }
+          }
+
+          if (!success) {
+            try {
+              await new Promise((resolve) => setTimeout(resolve, 600));
+              await r.localParticipant.setMicrophoneEnabled(true, {
+                deviceId: audioDeviceId || undefined,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              });
+              console.log('Microphone track published successfully on second attempt.');
+            } catch (retryErr) {
+              const err = toAppError(retryErr);
+              console.error("Failed to publish microphone on retry:", err.message);
+              toast.error("Failed to enable microphone.");
+            }
           }
         }
       } catch (unknownErr) {
@@ -142,51 +229,133 @@ export function useRoomConnection({
       setRoom(null);
       connectingRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverUrl, token]);
 
-  // Sync mic/camera state toggles in the active room
+  // Sync mic/camera state toggles in the active room with fallback logic and HD settings
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
+
+    let active = true;
 
     const syncMedia = async () => {
       try {
         if (videoEnabled) {
+          console.log("Active Room: enabling camera with HD quality for device:", videoDeviceId);
           await room.localParticipant.setCameraEnabled(true, {
-            deviceId: videoDeviceId || undefined,
+            deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+            resolution: VideoPresets.h720.resolution, // Publish in HD
           });
+          console.log("Active Room: camera enabled successfully.");
         } else {
+          console.log("Active Room: disabling camera.");
           await room.localParticipant.setCameraEnabled(false);
         }
       } catch (unknownErr) {
+        if (!active) return;
         const err = toAppError(unknownErr);
-        console.error("Error toggling camera in room:", err.message);
+        console.warn("Active Room: error toggling camera, trying fallback...", err.message);
+
+        if (videoEnabled) {
+          try {
+            const vDevices = await Room.getLocalDevices("videoinput");
+            const otherCameras = vDevices.filter(
+              (d) => d.deviceId !== videoDeviceId && d.deviceId !== ""
+            );
+            if (otherCameras.length > 0) {
+              console.log("Active Room: trying fallback camera device:", otherCameras[0].deviceId);
+              await room.localParticipant.setCameraEnabled(true, {
+                deviceId: { exact: otherCameras[0].deviceId },
+                resolution: VideoPresets.h720.resolution,
+              });
+              if (active) {
+                setVideoDeviceId(otherCameras[0].deviceId);
+                toast.info("Selected camera was busy/unavailable. Switched to another camera.", {
+                  id: "room-cam-fallback-sync",
+                });
+              }
+              return;
+            }
+          } catch (fallbackErr) {
+            console.error("Active Room: fallback camera failed:", fallbackErr);
+          }
+        }
+
+        toast.error("Failed to enable camera. Please make sure it is not in use by another app.", {
+          id: "room-cam-error-sync",
+        });
       }
     };
     syncMedia();
-  }, [videoEnabled, videoDeviceId, room]);
+
+    return () => {
+      active = false;
+    };
+  }, [videoEnabled, videoDeviceId, room, setVideoDeviceId]);
 
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
 
+    let active = true;
+
     const syncMedia = async () => {
       try {
         if (audioEnabled) {
+          console.log("Active Room: enabling microphone for device:", audioDeviceId);
           await room.localParticipant.setMicrophoneEnabled(true, {
             deviceId: audioDeviceId || undefined,
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
           });
+          console.log("Active Room: microphone enabled successfully.");
         } else {
+          console.log("Active Room: disabling microphone.");
           await room.localParticipant.setMicrophoneEnabled(false);
         }
       } catch (unknownErr) {
+        if (!active) return;
         const err = toAppError(unknownErr);
-        console.error("Error toggling mic in room:", err.message);
+        console.warn("Active Room: error toggling microphone, trying fallback...", err.message);
+
+        if (audioEnabled) {
+          try {
+            const aDevices = await Room.getLocalDevices("audioinput");
+            const otherMics = aDevices.filter(
+              (d) => d.deviceId !== audioDeviceId && d.deviceId !== ""
+            );
+            if (otherMics.length > 0) {
+              console.log("Active Room: trying fallback microphone device:", otherMics[0].deviceId);
+              await room.localParticipant.setMicrophoneEnabled(true, {
+                deviceId: otherMics[0].deviceId,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              });
+              if (active) {
+                setAudioDeviceId(otherMics[0].deviceId);
+                toast.info("Selected microphone was busy. Switched to another microphone.", {
+                  id: "room-mic-fallback-sync",
+                });
+              }
+              return;
+            }
+          } catch (fallbackErr) {
+            console.error("Active Room: fallback microphone failed:", fallbackErr);
+          }
+        }
+
+        toast.error("Failed to enable microphone. Please check your system settings.", {
+          id: "room-mic-error-sync",
+        });
       }
     };
     syncMedia();
-  }, [audioEnabled, audioDeviceId, room]);
+
+    return () => {
+      active = false;
+    };
+  }, [audioEnabled, audioDeviceId, room, setAudioDeviceId]);
 
   return room;
 }

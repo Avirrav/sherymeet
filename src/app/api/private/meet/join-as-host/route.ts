@@ -5,6 +5,8 @@ import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 import { IParticipant } from "@/app/backend/interfaces/user-interface";
 import { MeetDao } from "@/app/backend/dao/meet-dao";
 import bcrypt from "bcryptjs";
+import { startRoomRecording } from "@/app/backend/services/media-server-services/egress";
+import { RecordingDao } from "@/app/backend/dao/recording-dao";
 
 /**
  * POST /api/private/meet/join-as-host
@@ -75,12 +77,34 @@ export async function POST(request: NextRequest) {
           throw new ApiError("Failed to update meeting status", 500);
         }
       }
+
+      // Start meeting recording when host joins the room for the first time
+      try {
+        const filepath = `recordings/${roomId}_${Date.now()}.mp4`;
+        const egressInfo = await startRoomRecording(roomId, filepath);
+        if (egressInfo && egressInfo.egressId) {
+          await RecordingDao.createRecording({
+            meetId: meet._id,
+            roomId: roomId,
+            egressId: egressInfo.egressId,
+            recordingStatus: "recording",
+            startedAt: new Date(),
+            s3Bucket: process.env.AWS_S3_BUCKET_NAME || 'sherymeet-recordings',
+            s3Region: process.env.AWS_REGION || 'ap-south-1',
+            s3ObjectKey: filepath,
+          });
+          console.log(`Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`);
+        }
+      } catch (recError) {
+        console.error("Failed to start meeting recording:", recError);
+        // We log and continue so the host can still join even if recording service fails
+      }
     }
     const serverUrl = process.env.LIVEKIT_URL;
     if (!serverUrl) {
       throw new ApiError("LiveKit server URL is not configured", 500);
     }
-    const meetLink=`${process.env.NEXT_PUBLIC_LIVEKIT_URL}/meet/${roomId}`;
+    const meetLink=`${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}?token=${token}`;
     return ApiResponse.success(
       {
         token,
