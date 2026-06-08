@@ -63,12 +63,24 @@ export function useParticipants(room: Room | null) {
       }
     };
 
+    const handleLocalTrackPublished = () => {
+      updateParticipantsList();
+      forceUpdate();
+    };
+
+    const handleLocalTrackUnpublished = () => {
+      updateParticipantsList();
+      forceUpdate();
+    };
+
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
     room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
     room.on(RoomEvent.TrackMuted, handleTrackMuted);
     room.on(RoomEvent.TrackUnmuted, handleTrackUnmuted);
+    room.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+    room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
     room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
 
     return () => {
@@ -78,6 +90,8 @@ export function useParticipants(room: Room | null) {
       room.off(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
       room.off(RoomEvent.TrackMuted, handleTrackMuted);
       room.off(RoomEvent.TrackUnmuted, handleTrackUnmuted);
+      room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+      room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
       room.off(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
     };
   }, [room, updateParticipantsList, forceUpdate]);

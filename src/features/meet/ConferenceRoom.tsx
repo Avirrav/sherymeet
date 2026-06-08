@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Room, ConnectionState, Participant, LocalParticipant } from 'livekit-client';
+import React, { useState, useEffect } from 'react';
+import { Room } from 'livekit-client';
 import { useParticipants } from '@/hooks/livekit/useParticipants';
 import { useScreenShare } from '@/hooks/livekit/useScreenShare';
 import { useChat } from '@/hooks/livekit/useChat';
 import { useConnectionQuality } from '@/hooks/livekit/useConnectionQuality';
 import { useMeetingStore } from '@/store/useMeetingStore';
-import ParticipantTile from './ParticipantTile';
 import ChatPanel from './ChatPanel';
 import ParticipantsPanel from './ParticipantsPanel';
 import WaitingState from './WaitingState';
@@ -31,7 +30,14 @@ import {
   Clock,
   Subtitles,
   XCircle,
+  LayoutGrid,
+  Maximize2,
+  Columns,
+  Presentation,
+  Tv2,
+  Layers,
 } from 'lucide-react';
+import LayoutManager from './layout/LayoutManager';
 
 interface ConferenceRoomProps {
   room: Room;
@@ -50,8 +56,10 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     unreadChatCount,
     captionsEnabled,
     toggleCaptions,
+    layoutMode,
+    setLayoutMode,
   } = useMeetingStore();
-  const { localParticipant, remoteParticipants, activeSpeaker, } = useParticipants(room);
+  const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
   const { isScreenSharing, toggleScreenShare } = useScreenShare(room);
   const { raiseHand, isHandRaised } = useChat(room);
   const qualities = useConnectionQuality(room);
@@ -60,7 +68,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
   // States
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const screenShareVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   // Timer effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -74,23 +82,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  // Find screen share track (from remote or local) directly during render
-  const remoteSharePub = remoteParticipants
-    .flatMap((p) => Array.from(p.videoTrackPublications.values()))
-    .find((pub) => pub.source === 'screen_share' && pub.track);
-  const localSharePub = Array.from(room.localParticipant.videoTrackPublications.values()).find(
-    (pub) => pub.source === 'screen_share' && pub.track
-  );
-  const activeScreenShareTrack = remoteSharePub?.track || localSharePub?.track || null;
-  // Bind screen share video element
-  useEffect(() => {
-    const el = screenShareVideoRef.current;
-    if (!el || !activeScreenShareTrack) return;
-    activeScreenShareTrack.attach(el);
-    return () => {
-    activeScreenShareTrack.detach(el);
-    };
-  }, [activeScreenShareTrack]);
+  // Screen shares are handled dynamically inside LayoutManager
   const getIsHost = () => {
     try {
       const metaStr = room.localParticipant?.metadata;
@@ -225,72 +217,13 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           {remoteParticipants.length === 0 ? (
             <WaitingState roomId={roomId} />
           ) : (
-            /* Meeting Layout */
-            <div className="w-full h-full relative flex items-center justify-center">
-              
-              {/* Screen Share Mode */}
-              {activeScreenShareTrack ? (
-                <div className="w-full h-full flex flex-col gap-4 relative">
-                  {/* Big Central Screen Share Feed */}
-                  <div className="flex-1 bg-black/40 border border-brand-border rounded-3xl overflow-hidden relative flex items-center justify-center">
-                    <video
-                      ref={screenShareVideoRef}
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 text-xs text-white">
-                      Active Screen Share
-                    </div>
-                  </div>
-
-                  {/* Sidebar / Floating participant thumbnails */}
-                  <div className="absolute bottom-4 right-4 flex gap-3 z-10">
-                    <div className="w-48 aspect-video">
-                      <ParticipantTile
-                        participant={remoteParticipants[0]}
-                        isLocal={false}
-                        isSpeaker={activeSpeaker?.identity === remoteParticipants[0].identity}
-                      />
-                    </div>
-                    {localParticipant && (
-                      <div className="w-48 aspect-video">
-                        <ParticipantTile
-                          participant={localParticipant}
-                          isLocal={true}
-                          isSpeaker={activeSpeaker?.identity === localParticipant.identity}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Standard 1:1 Video Layout - Side by Side */
-                <div className="w-full h-full flex items-center justify-center p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl animate-scale-in">
-                    {remoteParticipants[0] && (
-                      <div className="aspect-video w-full">
-                        <ParticipantTile
-                          participant={remoteParticipants[0]}
-                          isLocal={false}
-                          isSpeaker={activeSpeaker?.identity === remoteParticipants[0].identity}
-                        />
-                      </div>
-                    )}
-                    {localParticipant && (
-                      <div className="aspect-video w-full">
-                        <ParticipantTile
-                          participant={localParticipant}
-                          isLocal={true}
-                          isSpeaker={activeSpeaker?.identity === localParticipant.identity}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-            </div>
+            /* Google Meet-Style Dynamic Layout Engine */
+            <LayoutManager
+              updateKey={updateKey}
+              localParticipant={localParticipant}
+              remoteParticipants={remoteParticipants}
+              activeSpeaker={activeSpeaker}
+            />
           )}
 
           {/* Real-time Captions Overlay */}
@@ -377,6 +310,58 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           >
             <Subtitles className="w-5 h-5" />
           </button>
+
+          {/* Layout Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowLayoutMenu(!showLayoutMenu)}
+              className={`p-3.5 rounded-xl transition-all border ${
+                showLayoutMenu
+                  ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
+                  : 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
+              }`}
+              title="Change Layout"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+            
+            {showLayoutMenu && (
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-48 bg-brand-surface/95 backdrop-blur-xl border border-brand-border p-2 rounded-2xl shadow-2xl z-30 flex flex-col gap-1 animate-scale-in">
+                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-extrabold text-brand-text-secondary text-left">
+                  Choose Layout
+                </div>
+                {[
+                  { mode: 'grid', label: 'Grid View', icon: LayoutGrid },
+                  { mode: 'spotlight', label: 'Spotlight', icon: Maximize2 },
+                  { mode: 'sidebar', label: 'Sidebar View', icon: Columns },
+                  { mode: 'presenter', label: 'Presenter View', icon: Presentation },
+                  { mode: 'content-first', label: 'Content First', icon: Tv2 },
+                  { mode: 'pip', label: 'Floating PiP', icon: Layers },
+                ].map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = layoutMode === option.mode;
+                  return (
+                    <button
+                      key={option.mode}
+                      onClick={() => {
+                        setLayoutMode(option.mode as 'grid' | 'spotlight' | 'sidebar' | 'presenter' | 'content-first' | 'pip');
+                        setShowLayoutMenu(false);
+                        toast.success(`Switched to ${option.label}`);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer text-left ${
+                        isSelected
+                          ? 'bg-brand-orange text-white'
+                          : 'text-brand-text-primary hover:bg-brand-border hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <span className="text-brand-border mx-1">|</span>
 

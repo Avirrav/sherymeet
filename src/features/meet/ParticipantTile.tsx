@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Participant, Track, ParticipantEvent } from 'livekit-client';
-import { Mic, MicOff, VideoOff, Hand, SignalHigh, SignalMedium, SignalLow } from 'lucide-react';
+import { Mic, MicOff, VideoOff, Hand, SignalHigh, SignalMedium, SignalLow, Pin } from 'lucide-react';
 import { useMeetingStore } from '@/store/useMeetingStore';
 
 interface ParticipantTileProps {
@@ -10,6 +10,9 @@ interface ParticipantTileProps {
   isLocal: boolean;
   className?: string;
   isSpeaker?: boolean;
+  isVirtual?: boolean;
+  pinned?: boolean;
+  onPinToggle?: () => void;
 }
 
 export default function ParticipantTile({
@@ -17,6 +20,9 @@ export default function ParticipantTile({
   isLocal,
   className = '',
   isSpeaker = false,
+  isVirtual = false,
+  pinned = false,
+  onPinToggle,
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -72,13 +78,13 @@ export default function ParticipantTile({
   // Handle video element binding
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !videoTrack) return;
+    if (!el || !videoTrack || isVirtual) return;
 
     videoTrack.attach(el);
     return () => {
       videoTrack.detach(el);
     };
-  }, [videoTrack]);
+  }, [videoTrack, isVirtual]);
 
   // Handle audio element binding (remote only to avoid local echo)
   useEffect(() => {
@@ -106,7 +112,8 @@ export default function ParticipantTile({
 
   return (
     <div
-      className={`relative w-full h-full bg-brand-surface rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+      onDoubleClick={onPinToggle}
+      className={`group relative w-full h-full bg-brand-surface rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
         isSpeaker ? 'border-brand-orange shadow-lg shadow-brand-orange/10' : 'border-brand-border'
       } ${className}`}
     >
@@ -118,15 +125,20 @@ export default function ParticipantTile({
         muted={isLocal}
         className={`w-full h-full object-cover rounded-2xl ${
           isLocal ? 'transform -scale-x-100' : ''
-        } ${isVideoMuted || !videoTrack ? 'hidden' : ''}`}
+        } ${isVideoMuted || !videoTrack || isVirtual ? 'hidden' : ''}`}
       />
 
       {/* Avatar placeholder */}
-      {(isVideoMuted || !videoTrack) && (
+      {(isVideoMuted || !videoTrack || isVirtual) && (
         <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 absolute inset-0">
           <div className="w-20 h-20 rounded-full bg-brand-orange/15 border border-brand-orange/30 flex items-center justify-center text-brand-orange font-bold text-3xl shadow-inner">
             {(participant.name || participant.identity || 'P').charAt(0).toUpperCase()}
           </div>
+          {isVirtual && (
+            <span className="text-[10px] text-brand-text-secondary mt-2">
+              (Stream virtualized)
+            </span>
+          )}
         </div>
       )}
 
@@ -144,12 +156,32 @@ export default function ParticipantTile({
           {renderConnectionQuality()}
         </div>
 
-        {/* Hand Raised overlay */}
-        {isHandRaised && (
-          <div className="bg-brand-orange text-white p-2 rounded-xl flex items-center justify-center shadow-lg border border-brand-orange-hover pointer-events-auto animate-scale-in">
-            <Hand className="w-4 h-4" />
-          </div>
-        )}
+        {/* Hand Raised and Pin overlay */}
+        <div className="flex gap-2 items-center pointer-events-auto">
+          {pinned && (
+            <button
+              onClick={onPinToggle}
+              className="bg-brand-orange text-white p-1.5 rounded-lg flex items-center justify-center shadow-lg border border-brand-orange-hover hover:bg-brand-orange-hover transition-all cursor-pointer"
+              title="Unpin Participant"
+            >
+              <Pin className="w-3.5 h-3.5 transform rotate-45" />
+            </button>
+          )}
+          {!pinned && onPinToggle && (
+            <button
+              onClick={onPinToggle}
+              className="bg-black/60 hover:bg-black/80 text-white/70 hover:text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg border border-white/5 transition-all cursor-pointer"
+              title="Pin Participant"
+            >
+              <Pin className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {isHandRaised && (
+            <div className="bg-brand-orange text-white p-1.5 rounded-lg flex items-center justify-center shadow-lg border border-brand-orange-hover animate-scale-in">
+              <Hand className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom status indicators */}

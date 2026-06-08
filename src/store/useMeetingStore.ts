@@ -30,6 +30,10 @@ interface MeetingState {
   unreadChatCount: number;
   captionsEnabled: boolean;
 
+  // Layout Options
+  layoutMode: 'grid' | 'spotlight' | 'sidebar' | 'presenter' | 'content-first' | 'pip';
+  pinnedParticipantIds: string[];
+
   // Sync state from LiveKit events
   chatMessages: ChatMessage[];
   raisedHands: string[]; // List of participant identities who raised their hand
@@ -54,6 +58,9 @@ interface MeetingState {
   removeRaisedHand: (identity: string) => void;
   toggleCaptions: (active?: boolean) => void;
   setTranscription: (identity: string, text: string) => void;
+  setLayoutMode: (mode: 'grid' | 'spotlight' | 'sidebar' | 'presenter' | 'content-first' | 'pip') => void;
+  togglePinParticipant: (identity: string) => void;
+  clearPins: () => void;
   resetMeetingStore: () => void;
 }
 
@@ -78,6 +85,10 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   activeSidebar: null,
   unreadChatCount: 0,
   captionsEnabled: false,
+
+  // Layout Options defaults
+  layoutMode: 'grid',
+  pinnedParticipantIds: [],
 
   // Event sync states defaults
   chatMessages: [],
@@ -142,6 +153,14 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         [identity]: text,
       },
     })),
+  setLayoutMode: (mode) => set({ layoutMode: mode }),
+  togglePinParticipant: (identity) =>
+    set((state) => ({
+      pinnedParticipantIds: state.pinnedParticipantIds.includes(identity)
+        ? state.pinnedParticipantIds.filter((id) => id !== identity)
+        : [...state.pinnedParticipantIds, identity],
+    })),
+  clearPins: () => set({ pinnedParticipantIds: [] }),
   resetMeetingStore: () =>
     set({
       roomId: '',
@@ -157,5 +176,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       raisedHands: [],
       captionsEnabled: false,
       transcriptions: {},
+      layoutMode: 'grid',
+      pinnedParticipantIds: [],
     }),
 }));
