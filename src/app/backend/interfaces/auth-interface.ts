@@ -9,6 +9,12 @@ export interface AuthenticatedRequest extends NextRequest {
   rawBody?: Buffer;
 }
 
+export interface IRevokedApiKey extends Document {
+  apiKey: string;
+  revokedAt: Date;
+  reason?: string;
+}
+
 export interface IApiClient extends Document {
   name: string;
   apiKey: string;

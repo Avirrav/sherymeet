@@ -59,11 +59,7 @@ import { IUser } from '../interfaces/user-interface';
 //   timestamp: Date;
 // }
 
-// export interface IRevokedApiKey extends Document {
-//   apiKey: string;
-//   revokedAt: Date;
-//   reason?: string;
-// }
+
 
 // --- Request Augmentation ---
 export interface AuthenticatedRequest extends NextRequest {
