@@ -1,6 +1,8 @@
-import { NextRequest } from "next/server";
 import { createInstantMeet } from "@/app/backend/services/meet-services/create-instant-meet";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
+import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
+import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/app/backend/middleware/request-id.middleware";
 
 // GET /api/private/meet - Returns the public LiveKit server URL
 export async function GET() {
@@ -12,7 +14,7 @@ export async function GET() {
 }
 
 // POST /api/private/meet - Generates room and returns two tokens (Host and Participant)
-export async function POST(request: NextRequest) {
+export async function createMeetHandler(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
     const { user, passcode } = body;
@@ -55,3 +57,10 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = runMiddlewares(
+  [
+    requestIdMiddleware
+  ],
+  createMeetHandler,
+);
