@@ -3,6 +3,7 @@ import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
+import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit.middleware";
 
 // GET /api/private/meet - Returns the public LiveKit server URL
 export async function GET() {
@@ -60,7 +61,8 @@ export async function createMeetHandler(request: AuthenticatedRequest) {
 
 export const POST = runMiddlewares(
   [
-    requestIdMiddleware
+    requestIdMiddleware,
+    rateLimitMiddleware
   ],
   createMeetHandler,
 );
