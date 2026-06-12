@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { ApiClientDao } from "../dao/api-client-dao";
-import { KmsService } from "./keyencryption-service";
-import { IApiClient } from "../types/auth-types";
+import { apiKeyEncryption } from "./keyEncryption-service";
+import { IApiClient } from "../interfaces/auth-interface";
 
 export class ApiClientService {
   /**
@@ -16,10 +16,8 @@ export class ApiClientService {
   ): Promise<{ client: IApiClient; plaintextSecret: string }> {
     const apiKey = `sm_live_${crypto.randomBytes(16).toString("hex")}`;
     const plaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
-
     // Encrypt secret using KMS/GCM
-    const encryptedSecret = await KmsService.encrypt(plaintextSecret);
-
+    const encryptedSecret = await apiKeyEncryption.encrypt(plaintextSecret);
     const clientDoc = await ApiClientDao.createApiClient({
       name,
       apiKey,
@@ -30,13 +28,11 @@ export class ApiClientService {
       status: "active",
       revoked: false,
     });
-
     return {
       client: clientDoc,
       plaintextSecret,
     };
   }
-
   /**
    * Performs client secret rotation.
    * Moves the currentSecret to previousSecret and generates a new currentSecret.
@@ -46,29 +42,24 @@ export class ApiClientService {
   ): Promise<{ client: IApiClient; newPlaintextSecret: string } | null> {
     const client = await ApiClientDao.getApiClientByApiKey(apiKey);
     if (!client || client.revoked) return null;
-
     const newPlaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
-    const newEncryptedSecret = await KmsService.encrypt(newPlaintextSecret);
-
+    const newEncryptedSecret = await apiKeyEncryption.encrypt(newPlaintextSecret);
     const updateData: Partial<IApiClient> = {
       previousSecret: client.currentSecret,
       previousSecretVersion: client.currentSecretVersion,
       currentSecret: newEncryptedSecret,
       currentSecretVersion: client.currentSecretVersion + 1,
     };
-
     const updatedClient = await ApiClientDao.updateApiClient(
       client._id.toString(),
       updateData,
     );
     if (!updatedClient) return null;
-
     return {
       client: updatedClient,
       newPlaintextSecret,
     };
   }
-
   /**
    * Revokes an API client key immediately.
    */
