@@ -61,6 +61,13 @@ export class ApiClientService {
     };
   }
   /**
+   * Retrieves an API client by their API key.
+   */
+  static async getClientByApiKey(apiKey: string): Promise<IApiClient | null> {
+    return await ApiClientDao.getApiClientByApiKey(apiKey);
+  }
+
+  /**
    * Revokes an API client key immediately.
    */
   static async revokeClient(apiKey: string, reason?: string): Promise<boolean> {
