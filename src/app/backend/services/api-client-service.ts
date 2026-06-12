@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { ApiClientDao } from "../dao/api-client-dao";
-import { apiKeyEncryption } from "./keyEncryption-service";
+import { apiKeyEncryption } from "./keyencryption-service";
 import { IApiClient } from "../interfaces/auth-interface";
 
 export class ApiClientService {
