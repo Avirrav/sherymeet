@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 interface CreateInstantMeetOptions {
-  user: IUser;
+  host: IUser;
   passcode?: string | null;
 }
 
@@ -27,21 +27,21 @@ function generateRoomCode(): string {
  * to MongoDB, without generating tokens or calling external LiveKit room creation APIs.
  */
 export async function createInstantMeet({
-  user,
+  host,
   passcode,
 }: CreateInstantMeetOptions) {
-  if (!user) {
-    throw new ApiError("User details are required", 400);
+  if (!host) {
+    throw new ApiError("Host details are required", 400);
   }
-  if (!user.userName || !user.role) {
-    throw new ApiError("User userName and role are required", 400);
+  if (!host.userName || !host.role) {
+    throw new ApiError("Host userName and role are required", 400);
   }
 
   // 1. Generate room code locally
   const roomName = generateRoomCode();
 
   // 2. Resolve a valid 24-character hexadecimal ObjectId for MongoDB insert
-  let rawUserId = user._id ? user._id.toString() : "";
+  let rawUserId = host._id ? host._id.toString() : "";
   if (!rawUserId || !/^[0-9a-fA-F]{24}$/.test(rawUserId)) {
     rawUserId = new mongoose.Types.ObjectId().toHexString();
   }
@@ -62,7 +62,7 @@ export async function createInstantMeet({
     endedAt: null,
     host: {
       userId: rawUserId,
-      username: user.userName,
+      username: host.userName,
     },
     passcode: hashedPasscode,
   };

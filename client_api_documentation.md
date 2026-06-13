@@ -67,6 +67,16 @@ To calculate the `x-signature` header:
    * *Note: `CANONICAL_QUERY_STRING` is the query parameters sorted alphabetically and URL-encoded. If none exist, use an empty string.*
    * *Note: If `ORIGIN` is not present, use an empty string.*
 
+   #### Canonical Payload Fields Breakdown:
+   * **`HTTP_METHOD`**: The uppercase name of the HTTP action being performed (e.g., `POST`, `GET`). Binds the signature to a specific HTTP verb to prevent replaying a safe GET request as a state-changing POST/DELETE request.
+   * **`HOST`**: The hostname of the target server (e.g., `api.sherymeet.com` or `localhost:3000`). Prevents request redirection and DNS-rebinding attacks.
+   * **`PATH`**: The absolute URL path of the request starting with `/` (e.g., `/api/v1/client/meet/join-as-host`). Binds the signature to a specific endpoint so a signature for one route cannot be reused for another.
+   * **`CANONICAL_QUERY_STRING`**: Alphabetically sorted and URL-encoded query parameters (e.g., `limit=10&offset=20`). If no parameters exist, use an empty string (`""`). Prevents parameters from being injected or altered.
+   * **`TIMESTAMP`**: The current Unix epoch time in seconds matching the `x-timestamp` header (e.g., `1781254395`). Prevents replay attacks by restricting request validity to a 5-minute (±300 seconds) window.
+   * **`NONCE`**: A unique, single-use random string matching the `x-nonce` header (e.g., `a4f3b26c-8e1d-4f7a-9a8b-3c2d1e0f9a8b`). Prevents replay attacks within the 5-minute validity window since duplicate nonces are rejected.
+   * **`BODY_HASH`**: The SHA-256 hash in hexadecimal format of the alphabetically sorted and stringified JSON request body (e.g., `cb9c7be77e3848b53cf2c99a0e668e14620f3246ebc6df710bd8b4a233b47c0d`). If there is no request body, use the SHA-256 hash of an empty string (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`). Guarantees that the payload body cannot be altered in transit.
+   * **`ORIGIN`**: The value of the browser `Origin` or `Referer` header (e.g., `https://app.sherymeet.com`). If not present (e.g., in server-to-server calls), use an empty string (`""`). Prevents cross-origin signature hijacking.
+
 3. **Compute the Signature**:
    Sign the canonical payload with the plaintext `clientSecret` using **HMAC-SHA256** in hex format.
 
@@ -139,7 +149,7 @@ Initializes a scheduled room in the MongoDB database. This does not instantiate 
 #### Request Body
 ```json
 {
-  "user": {
+  "host": {
     "_id": "647bdf2f91a7e4b9e4a3b6f1",
     "userName": "Gourav Host",
     "role": "mentor",

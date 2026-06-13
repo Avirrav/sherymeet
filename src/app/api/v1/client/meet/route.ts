@@ -20,25 +20,25 @@ export async function GET() {
 export async function createMeetHandler(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
-    const { user, passcode } = body;
-    if (!user) {
-      throw new ApiError("User details are required", 400);
+    const { host, passcode } = body;
+    if (!host) {
+      throw new ApiError("Host details are required", 400);
     }
-    if (!user.userName || !user.role) {
-      throw new ApiError("User userName and role are required", 400);
+    if (!host.userName || !host.role) {
+      throw new ApiError("Host userName and role are required", 400);
     }
     if (!passcode) {
       throw new ApiError("Passcode is required", 400);
     }
     // Call service to generate room code and save in MongoDB
     const meet = await createInstantMeet({
-      user,
+      host,
       passcode,
     });
     const roomName = meet.roomId;
     const origin = request.nextUrl.origin;
     // Provide clean joining links without pre-signed token hashes
-    const hostLink = `${origin}/meet/${roomName}?userName=${user.userName}`;
+    const hostLink = `${origin}/meet/${roomName}?userName=${host.userName}`;
     const participantLink = `${origin}/meet/${roomName}`;
     return ApiResponse.success(
       {
