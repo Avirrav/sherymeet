@@ -7,6 +7,7 @@ export interface AuthenticatedRequest extends NextRequest {
   user?: IUser;
   requestId?: string;
   rawBody?: Buffer;
+  
 }
 
 export interface IRevokedApiKey extends Document {
