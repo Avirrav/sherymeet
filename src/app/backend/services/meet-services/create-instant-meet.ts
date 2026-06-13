@@ -41,7 +41,7 @@ export async function createInstantMeet({
   const roomName = generateRoomCode();
 
   // 2. Resolve a valid 24-character hexadecimal ObjectId for MongoDB insert
-  let rawUserId = user._id;
+  let rawUserId = user._id ? user._id.toString() : "";
   if (!rawUserId || !/^[0-9a-fA-F]{24}$/.test(rawUserId)) {
     rawUserId = new mongoose.Types.ObjectId().toHexString();
   }

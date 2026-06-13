@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiErrorDetail } from "@/app/backend/types/error";
+import { ApiErrorDetail } from "@/app/backend/types/error-types";
 
 /**
  * Standard API Error class extending native Error.

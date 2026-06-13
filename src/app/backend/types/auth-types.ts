@@ -1,49 +1,43 @@
-import { NextRequest } from 'next/server';
-import { Document } from 'mongoose';
-import { IApiClient } from '../interfaces/auth-interface';
-import { IUser } from '../interfaces/user-interface';
+import { NextRequest } from "next/server";
+// Re-export interfaces and enums from other source files
+export type { IApiClient, IRevokedApiKey } from "../interfaces/auth-interface";
+export type { IUser } from "../interfaces/user-interface";
+export { UserRole } from "../interfaces/user-interface";
+import { IApiClient } from "../interfaces/auth-interface";
+import { IUser } from "../interfaces/user-interface";
 
+// --- Roles & Permissions Definitions ---
+export type MeetingPermission =
+  | "createMeeting"
+  | "updateMeeting"
+  | "deleteMeeting"
+  | "startMeeting"
+  | "endMeeting"
+  | "joinMeeting";
 
+export type RecordingPermission =
+  | "startRecording"
+  | "stopRecording"
+  | "viewRecording"
+  | "deleteRecording"
+  | "downloadRecording";
 
-// export type MeetingPermission =
-//   | 'createMeeting'
-//   | 'updateMeeting'
-//   | 'deleteMeeting'
-//   | 'startMeeting'
-//   | 'endMeeting'
-//   | 'joinMeeting';
+export type OrganizationPermission =
+  | "manageApiKeys"
+  | "manageMembers"
+  | "manageBilling";
 
-// export type RecordingPermission =
-//   | 'startRecording'
-//   | 'stopRecording'
-//   | 'viewRecording'
-//   | 'deleteRecording'
-//   | 'downloadRecording';
+export type UserPermission =
+  | "manageUsers"
+  | "assignRoles"
+  | "suspendUsers";
 
-// export type OrganizationPermission =
-//   | 'manageApiKeys'
-//   | 'manageMembers'
-//   | 'manageBilling';
+export type Permission =
+  | MeetingPermission
+  | RecordingPermission
+  | OrganizationPermission
+  | UserPermission;
 
-// export type UserPermission =
-//   | 'manageUsers'
-//   | 'assignRoles'
-//   | 'suspendUsers';
-
-// export type Permission =
-//   | MeetingPermission
-//   | RecordingPermission
-//   | OrganizationPermission
-//   | UserPermission;
-
-
-// export interface IApiKeyUsageLog extends Document {
-//   apiKey: string;
-//   date: string; // YYYY-MM-DD
-//   requestCount: number;
-//   errorCount: number;
-//   lastUsedAt: Date;
-// }
 
 // export interface IAuditLog extends Document {
 //   requestId: string;
@@ -59,8 +53,6 @@ import { IUser } from '../interfaces/user-interface';
 //   timestamp: Date;
 // }
 
-
-
 // --- Request Augmentation ---
 export interface AuthenticatedRequest extends NextRequest {
   client?: IApiClient;
@@ -74,5 +66,5 @@ export type NextMiddleware = () => Promise<Response>;
 
 export type AppMiddleware = (
   req: AuthenticatedRequest,
-  next: NextMiddleware
+  next: NextMiddleware,
 ) => Promise<Response>;

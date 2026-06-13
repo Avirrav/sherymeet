@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
-import { AuthenticatedRequest, AppMiddleware } from '../types/auth.types';
-import { errorHandlerMiddleware } from './error-handler.middleware';
+import { NextRequest } from "next/server";
+import { AppMiddleware } from "../types/auth-types";
+import { errorHandlerMiddleware } from "./errorhandler-middleware";
+import { AuthenticatedRequest } from "../interfaces/auth-interface";
 
 /**
  * Higher-order runner that sequences an array of AppMiddleware functions,
@@ -8,23 +9,23 @@ import { errorHandlerMiddleware } from './error-handler.middleware';
  */
 export function runMiddlewares(
   middlewares: AppMiddleware[],
-  handler: (req: AuthenticatedRequest) => Promise<Response>
+  handler: (request: AuthenticatedRequest) => Promise<Response>,
 ) {
-  return async (req: NextRequest): Promise<Response> => {
-    const authReq = req as AuthenticatedRequest;
+  return async (request: NextRequest): Promise<Response> => {
+    const authRequest = request as AuthenticatedRequest;
     let index = 0;
     const next = async (): Promise<Response> => {
       if (index < middlewares.length) {
         const middleware = middlewares[index++];
-        return await middleware(authReq, next);
+        return await middleware(authRequest, next);
       }
-      return await handler(authReq);
+      return await handler(authRequest);
     };
 
     try {
       return await next();
     } catch (err) {
-      return await errorHandlerMiddleware(authReq, err as Error);
+      return await errorHandlerMiddleware(authRequest, err as Error);
     }
   };
 }

@@ -1,6 +1,6 @@
 import { canonicalizeJson, canonicalizeQueryString } from "../utils/canonical";
 import { sha256, hmacSha256, timingSafeEqual } from "../utils/crypto-helper";
-import { SecretCacheService } from "./secret-cache.service";
+import { SecretCacheService } from "./secret-cache-service";
 import { IApiClient } from "../interfaces/auth-interface";
 
 export class SignatureService {
