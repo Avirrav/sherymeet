@@ -1,12 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { dbConnect } from '@/app/backend/utils/db-connect';
-import { ApiClientService } from '@/app/backend/services/api-client.service';
+import { NextRequest, NextResponse } from "next/server";
+import { dbConnect } from "@/app/backend/utils/db-connect";
+import { ApiClientService } from "@/app/backend/services/api-client-service";
+import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
+import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
+import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
+import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
 
 /**
  * Registers a new API Client keypair.
  * POST /api/private/auth/client
  */
-export async function POST(req: NextRequest) {
+export async function createApiClientHandler(req: NextRequest) {
   try {
     await dbConnect();
     const body = await req.json();
@@ -14,8 +19,8 @@ export async function POST(req: NextRequest) {
 
     if (!name) {
       return NextResponse.json(
-        { error: 'Missing name parameter' },
-        { status: 400 }
+        { error: "Missing name parameter" },
+        { status: 400 },
       );
     }
 
@@ -23,12 +28,12 @@ export async function POST(req: NextRequest) {
     const result = await ApiClientService.createApiClient(
       name,
       allowedDomains || [],
-      allowedIps || []
+      allowedIps || [],
     );
 
     return NextResponse.json(
       {
-        message: 'API client registered successfully',
+        message: "API client registered successfully",
         clientId: result.client._id,
         apiKey: result.client.apiKey,
         clientSecret: result.plaintextSecret, // plaintext client secret shown ONLY ONCE
@@ -36,13 +41,20 @@ export async function POST(req: NextRequest) {
         burstLimit: result.client.burstLimit,
         dailyLimit: result.client.dailyLimit,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
-    console.error('Failed to create api client route:', err);
+    console.error("Failed to create api client route:", err);
     return NextResponse.json(
-      { error: (err as Error).message || 'Internal Server Error' },
-      { status: 500 }
+      { error: (err as Error).message || "Internal Server Error" },
+      { status: 500 },
     );
   }
 }
+
+export const POST = runMiddlewares([
+  requestIdMiddleware,
+  authenticationMiddleware,
+  authorizationMiddleware([]),
+  rateLimitMiddleware,
+], createApiClientHandler);

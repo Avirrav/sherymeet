@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, X, MessageSquare } from 'lucide-react';
-import { useChat } from '@/hooks/livekit/useChat';
+import { useChat } from '@/hooks/media-server/useChat';
 import { Room } from 'livekit-client';
 
 interface ChatPanelProps {

@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Room } from 'livekit-client';
-import { useParticipants } from '@/hooks/livekit/useParticipants';
-import { useScreenShare } from '@/hooks/livekit/useScreenShare';
-import { useChat } from '@/hooks/livekit/useChat';
-import { useConnectionQuality } from '@/hooks/livekit/useConnectionQuality';
+import { useParticipants } from '@/hooks/media-server/useParticipants';
+import { useScreenShare } from '@/hooks/media-server/useScreenShare';
+import { useChat } from '@/hooks/media-server/useChat';
+import { useConnectionQuality } from '@/hooks/media-server/useConnectionQuality';
 import { useMeetingStore } from '@/store/useMeetingStore';
 import ChatPanel from './ChatPanel';
 import ParticipantsPanel from './ParticipantsPanel';
@@ -13,7 +13,7 @@ import WaitingState from './WaitingState';
 import LeaveConfirmModal from './LeaveConfirmModal';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useTranscribe } from '@/hooks/livekit/useTranscribe';
+import { useTranscribe } from '@/hooks/media-server/useTranscribe';
 import CaptionOverlay from './CaptionOverlay';
 
 import {

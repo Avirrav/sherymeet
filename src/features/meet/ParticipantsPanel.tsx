@@ -3,8 +3,8 @@
 import React from 'react';
 import { X, Users, Mic, MicOff, Video, VideoOff, SignalHigh, SignalMedium, SignalLow, Hand } from 'lucide-react';
 import { Room, Participant } from 'livekit-client';
-import { useParticipants } from '@/hooks/livekit/useParticipants';
-import { useConnectionQuality } from '@/hooks/livekit/useConnectionQuality';
+import { useParticipants } from '@/hooks/media-server/useParticipants';
+import { useConnectionQuality } from '@/hooks/media-server/useConnectionQuality';
 import { useMeetingStore } from '@/store/useMeetingStore';
 
 interface ParticipantsPanelProps {

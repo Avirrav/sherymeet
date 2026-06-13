@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/app/backend/types/error";
+import { toAppError } from "@/app/backend/types/error-types";
 
 // GZIP-compatible CRC32 implementation for EventStream message envelopes
 const makeCRCTable = () => {
@@ -178,7 +178,7 @@ export function useTranscribe(room: Room | null) {
           const emptyAudioEvent = encodeEventStreamMessage(new Uint8Array(0));
           wsRef.current.send(emptyAudioEvent);
         } catch (unknownErr) {
-          console.log("AWS",unknownErr)
+          console.log("AWS", unknownErr);
         }
       }
       wsRef.current.close();
@@ -232,9 +232,11 @@ export function useTranscribe(room: Room | null) {
 
           const AudioContextClass =
             window.AudioContext ||
-            (window as typeof window & {
-              webkitAudioContext?: typeof AudioContext;
-            }).webkitAudioContext;
+            (
+              window as typeof window & {
+                webkitAudioContext?: typeof AudioContext;
+              }
+            ).webkitAudioContext;
           if (!AudioContextClass) {
             throw new Error("Web Audio API is not supported in this browser");
           }
@@ -369,7 +371,10 @@ export function useTranscribe(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
+    const handleDataReceived = (
+      payload: Uint8Array,
+      participant?: Participant,
+    ) => {
       try {
         const textDecoder = new TextDecoder();
         const jsonStr = textDecoder.decode(payload);

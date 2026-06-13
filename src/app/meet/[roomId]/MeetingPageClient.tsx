@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMeetingStore } from '@/store/useMeetingStore';
-import { useRoomConnection } from '@/hooks/livekit/useRoomConnection';
+import { useRoomConnection } from '@/hooks/media-server/useRoomConnection';
 import PreJoinScreen from '@/features/meet/PreJoinScreen';
 import ConferenceRoom from '@/features/meet/ConferenceRoom';
 import { Loader2 } from 'lucide-react';

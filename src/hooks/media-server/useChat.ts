@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/app/backend/types/error";
+import { toAppError } from "@/app/backend/types/error-types";
 
 export function useChat(room: Room | null) {
   const {
@@ -73,7 +73,10 @@ export function useChat(room: Room | null) {
 
     const decoder = new TextDecoder();
 
-    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
+    const handleDataReceived = (
+      payload: Uint8Array,
+      participant?: Participant,
+    ) => {
       try {
         const dataStr = decoder.decode(payload);
         const data = JSON.parse(dataStr);

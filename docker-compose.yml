@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: sherymeet_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - sherymeet_network
+    restart: always
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sherymeet_app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/sherymeet
+      - ENCRYPTION_MASTER_KEY=sherymeet_production_kms_fallback_key_32_bytes!
+      - AWS_REGION=us-east-1
+      # Insert your AWS credentials or KMS keys here if integrating:
+      # - AWS_KMS_KEY_ID=arn:aws:kms:us-east-1:123456789012:key/...
+      # - AWS_ACCESS_KEY_ID=...
+      # - AWS_SECRET_ACCESS_KEY=...
+    networks:
+      - sherymeet_network
+    restart: always
+
+volumes:
+  mongo_data:
+
+networks:
+  sherymeet_network:
+    driver: bridge

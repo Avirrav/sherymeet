@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocalMedia } from '@/hooks/livekit/useLocalMedia';
+import { useLocalMedia } from '@/hooks/media-server/useLocalMedia';
 import { useMeetingStore } from '@/store/useMeetingStore';
 import { toast } from 'sonner';
 import {

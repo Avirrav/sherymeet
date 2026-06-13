@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/app/backend/types/error";
+import { toAppError } from "@/app/backend/types/error-types";
 
 export function useScreenShare(room: Room | null) {
   const { isScreenSharing, toggleScreenShare } = useMeetingStore();
@@ -55,7 +55,9 @@ export function useScreenShare(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    const handleLocalTrackUnpublished = (publication: LocalTrackPublication) => {
+    const handleLocalTrackUnpublished = (
+      publication: LocalTrackPublication,
+    ) => {
       if (
         publication.trackName === "screen_share" ||
         publication.source === "screen_share"
