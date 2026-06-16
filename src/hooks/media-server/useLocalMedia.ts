@@ -45,6 +45,10 @@ export function useLocalMedia() {
 
   // Load available media input devices
   const loadDevices = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      console.warn("Media devices API is not supported in this browser context (unsecure connection).");
+      return;
+    }
     try {
       const vDevices = await Room.getLocalDevices("videoinput");
       const aDevices = await Room.getLocalDevices("audioinput");
@@ -86,6 +90,17 @@ export function useLocalMedia() {
           videoTrackRef.current = null;
           setVideoTrack(null);
         }
+        return;
+      }
+
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        setIsCameraPermissionDenied(true);
+        setVideoEnabled(false);
+        setVideoTrack(null);
+        toast.warning(
+          "Camera access is not supported. Please ensure you are using a secure connection (HTTPS or localhost).",
+          { id: "cam-perm-warning" }
+        );
         return;
       }
 
@@ -197,6 +212,17 @@ export function useLocalMedia() {
           audioTrackRef.current = null;
           setAudioTrack(null);
         }
+        return;
+      }
+
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        setIsMicPermissionDenied(true);
+        setAudioEnabled(false);
+        setAudioTrack(null);
+        toast.warning(
+          "Microphone access is not supported. Please ensure you are using a secure connection (HTTPS or localhost).",
+          { id: "mic-perm-warning" }
+        );
         return;
       }
 

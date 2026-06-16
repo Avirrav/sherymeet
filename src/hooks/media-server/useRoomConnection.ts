@@ -88,8 +88,13 @@ export function useRoomConnection({
         // Wait a short moment for any Pre-Join preview tracks to fully release their media handles
         await new Promise((resolve) => setTimeout(resolve, 400));
 
+        const isMediaSupported = typeof navigator !== "undefined" && !!navigator.mediaDevices;
+        if (!isMediaSupported && (videoEnabled || audioEnabled)) {
+          toast.warning("Camera/Microphone access is not supported on unsecure HTTP connections. Please use HTTPS or localhost.");
+        }
+
         // Publish camera track if enabled
-        if (videoEnabled) {
+        if (videoEnabled && isMediaSupported) {
           let success = false;
           try {
             console.log("Publishing camera track in HD quality...");
@@ -157,7 +162,7 @@ export function useRoomConnection({
         }
 
         // Publish microphone track if enabled
-        if (audioEnabled) {
+        if (audioEnabled && isMediaSupported) {
           let success = false;
           try {
             console.log("Publishing microphone track...");
@@ -271,6 +276,10 @@ export function useRoomConnection({
     let active = true;
 
     const syncMedia = async () => {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        console.warn("Active Room: Media devices API is not supported in this browser context (unsecure connection).");
+        return;
+      }
       try {
         if (videoEnabled) {
           console.log(
@@ -346,6 +355,10 @@ export function useRoomConnection({
     let active = true;
 
     const syncMedia = async () => {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        console.warn("Active Room: Media devices API is not supported in this browser context (unsecure connection).");
+        return;
+      }
       try {
         if (audioEnabled) {
           console.log(
