@@ -41,7 +41,8 @@ export async function authenticationMiddleware(
     request.nextUrl.hostname === "localhost" ||
     request.nextUrl.hostname === "127.0.0.1";
   const proto =
-    headers.get("x-forwarded-proto") || request.nextUrl.protocol.replace(":", "");
+    headers.get("x-forwarded-proto") ||
+    request.nextUrl.protocol.replace(":", "");
   if (proto !== "https" && !isLocalhost) {
     return NextResponse.json({ error: "HTTPS is required" }, { status: 403 });
   }
@@ -63,7 +64,6 @@ export async function authenticationMiddleware(
       { status: 400 },
     );
   }
-
   const now = Math.floor(Date.now() / 1000);
   if (Math.abs(now - timestamp) > 300) {
     return NextResponse.json(
@@ -73,8 +73,21 @@ export async function authenticationMiddleware(
   }
 
   // 5. Validate Source (IP & Origin whitelists)
-  const clientIp =
+  let clientIp =
     headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+  // Normalize IPv6 loopback and mapped addresses
+  if (clientIp === "::1") {
+    clientIp = "127.0.0.1";
+  } else if (clientIp.startsWith("::ffff:")) {
+    clientIp = clientIp.substring(7);
+  }
+  // Ensure IP starts with a number (digit 0-9)
+  if (!/^\d/.test(clientIp)) {
+    return NextResponse.json(
+      { error: "Forbidden: Invalid IP address format" },
+      { status: 400 },
+    );
+  }
   if (client.allowedIps && client.allowedIps.length > 0) {
     if (!client.allowedIps.includes(clientIp)) {
       return NextResponse.json(
