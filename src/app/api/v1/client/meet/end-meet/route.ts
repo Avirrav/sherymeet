@@ -35,7 +35,7 @@ export const POST = runMiddlewares(
   [
     requestIdMiddleware,
     authenticationMiddleware,
-    authorizationMiddleware(["endMeeting", "deleteMeeting"]),
+    authorizationMiddleware(["endMeeting"]),
     rateLimitMiddleware
   ],
   endMeetHandler
