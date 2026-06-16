@@ -31,14 +31,21 @@ export async function createRoom(roomName?: string, maxParticipants: number = 10
     .replace("ws://", "http://");
   const roomService = new RoomServiceClient(host, apiKey, apiSecret);
   // Check if room already exists
-  const existingRooms = await roomService.listRooms([roomName]);
-  if (existingRooms.length > 0) {
-    return existingRooms[0];
+  try {
+    const existingRooms = await roomService.listRooms([roomName]);
+    if (existingRooms.length > 0) {
+      return existingRooms[0];
+    }
+  } catch (error) {
+    throw new Error("Failed to list rooms: " + error);
   }
-  // Create new room
+ try {
   return await roomService.createRoom({
     name: roomName,
     emptyTimeout: Number(roomEmptyTimeout),
     maxParticipants,
   });
+ } catch (error) {
+  throw new Error("Failed to create room: " + error);
+ }
 }
