@@ -11,6 +11,7 @@ export type MeetingPermission =
   | "createMeeting"
   | "updateMeeting"
   | "deleteMeeting"
+  | "getMeeting"
   | "startMeeting"
   | "endMeeting"
   | "joinMeeting";
