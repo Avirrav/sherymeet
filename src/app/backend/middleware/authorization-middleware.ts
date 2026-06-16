@@ -16,6 +16,23 @@ export function authorizationMiddleware(requiredPermissions: Permission[]) {
     request: AuthenticatedRequest,
     next: NextMiddleware,
   ): Promise<Response> => {
+    // Extract user/host context from body if not already present on the request
+    if (!request.user) {
+      try {
+        const clone = request.clone();
+        const bodyText = await clone.text();
+        if (bodyText.trim()) {
+          const parsedBody = JSON.parse(bodyText);
+          const userContext = parsedBody.user || parsedBody.host;
+          if (userContext) {
+            request.user = userContext;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse request body:", e);
+      }
+    }
+
     // 1. Resolve Role
     // Default to 'SERVICE_ACCOUNT' for direct API Client access if no user context is attached
     const role: UserRole = request.user ? request.user.role : UserRole.SERVICE_ACCOUNT;
