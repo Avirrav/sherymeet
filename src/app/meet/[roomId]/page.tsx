@@ -3,7 +3,7 @@ import MeetingPageClient from './MeetingPageClient';
 import { Metadata } from 'next';
 import { Clock, Link, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-import { headers } from 'next/headers';
+import { getMeetDetails } from '@/app/backend/services/meet-services/get-meet-details';
 
 interface Params {
   token?: string;
@@ -31,15 +31,10 @@ export default async function MeetingPage({
   const resolvedSearchParams = await searchParams;
   const roomId = resolvedParams.roomId;
 
-  // 1. Fetch meeting details from API
+  // 1. Fetch meeting details directly from backend service (secure server-side call)
   let meet = null;
   try {
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/private/meet/get-meet?roomId=${roomId}`;
-    const res = await fetch(apiUrl, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      meet = data.data?.meet || null;
-    }
+    meet = await getMeetDetails({ roomId });
   } catch (error) {
     console.error('Failed to fetch meeting details in server component:', error);
   }
