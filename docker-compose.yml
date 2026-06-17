@@ -1,42 +1,99 @@
 version: '3.8'
 
+# ─── Why use docker-compose? ──────────────────────────────────────────────────
+# docker-compose lets you run multi-container apps (app + MongoDB) with a single
+# command. All services share a private internal network (sherymeet_network) and
+# secrets are passed via `environment:` — never baked into the image.
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
+
+  # ── MongoDB ──────────────────────────────────────────────────────────────────
+  # Official Mongo 6 image. Data is persisted in the `mongo_data` named volume
+  # so that the database survives container restarts.
   mongodb:
     image: mongo:6.0
     container_name: sherymeet_mongodb
     ports:
-      - "27017:27017"
+      - "27017:27017"          # Exposed to host for debugging (remove in prod)
     volumes:
-      - mongo_data:/data/db
+      - mongo_data:/data/db   # Named volume — data persists across restarts
     networks:
       - sherymeet_network
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      # Wait until Mongo is actually ready to accept connections before
+      # starting the app container — avoids race-condition startup failures.
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ── Next.js Application ───────────────────────────────────────────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      # Build-time args: these are available during `docker build` only.
+      # NEXT_PUBLIC_* vars must be passed here because Next.js bakes them
+      # into the client-side JavaScript bundle at build time.
+      args:
+        - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: sherymeet_app
     ports:
       - "3000:3000"
     depends_on:
-      - mongodb
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongodb:27017/sherymeet
-      - ENCRYPTION_MASTER_KEY=sherymeet_production_kms_fallback_key_32_bytes!
-      - AWS_REGION=us-east-1
-      # Insert your AWS credentials or KMS keys here if integrating:
-      # - AWS_KMS_KEY_ID=arn:aws:kms:us-east-1:123456789012:key/...
-      # - AWS_ACCESS_KEY_ID=...
-      # - AWS_SECRET_ACCESS_KEY=...
+      mongodb:
+        condition: service_healthy   # Only start after Mongo is healthy
     networks:
       - sherymeet_network
-    restart: always
+    restart: unless-stopped
 
+    # ── Runtime Environment Variables ────────────────────────────────────────
+    # These are injected at container START time — they are never stored in the
+    # Docker image. This is the secure way to pass secrets.
+    #
+    # Pattern: Set values in a `.env` file in this directory (gitignored),
+    # and docker-compose will automatically read it.
+    environment:
+      NODE_ENV: production
+
+      # ── MongoDB ─────────────────────────────────────────────────────────────
+      # Uses the service name 'mongodb' as the hostname — Docker's internal
+      # DNS resolves service names within the same network automatically.
+      MONGODB_URI: mongodb://mongodb:27017/sherymeet
+
+      # ── LiveKit Media Server ─────────────────────────────────────────────────
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
+      # ── AWS (S3 Recordings + Transcribe) ────────────────────────────────────
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      AWS_KMS_KEY_ID: ${AWS_KMS_KEY_ID:-}  # Optional — empty string if not set
+
+      # ── Encryption ──────────────────────────────────────────────────────────
+      # 32-byte key for local AES-256-GCM fallback when AWS KMS is not used
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
+
+      # ── Room Settings ───────────────────────────────────────────────────────
+      ROOM_EMPTY_TIMEOUT: ${ROOM_EMPTY_TIMEOUT:-300}
+
+# ── Persistent Volumes ────────────────────────────────────────────────────────
 volumes:
   mongo_data:
+    # Docker manages this volume. Data is stored outside the container
+    # so it survives `docker-compose down` (but not `docker-compose down -v`).
 
+# ── Private Network ───────────────────────────────────────────────────────────
 networks:
   sherymeet_network:
     driver: bridge
+    # Both services share this network. The app reaches MongoDB via the
+    # hostname 'mongodb' (Docker resolves service names within the network).

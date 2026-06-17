@@ -1,0 +1,56 @@
+# ─── Why .dockerignore matters ───────────────────────────────────────────────
+# Docker sends everything in the build context to the daemon before building.
+# Without this file, node_modules (~500MB), .next/, and sensitive .env files
+# would all be sent — making builds very slow and potentially leaking secrets.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Dependencies — never send to Docker; they are installed fresh inside the image
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Next.js build output — rebuilt inside the image during `pnpm build`
+.next
+out
+build
+
+# Environment / secrets — NEVER bake secrets into an image.
+# Pass them at runtime via docker-compose `environment:` or `--env-file`.
+.env
+.env.*
+!.env.example
+
+# Git & editor metadata — not needed in the image
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.iml
+
+# Dev / CI tooling
+.eslintrc*
+eslint.config.*
+jest.config.*
+tests
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Agent / documentation files
+.agent
+.agents
+AGENTS.md
+CLAUDE.md
+README.md
+*.md
