@@ -36,11 +36,11 @@ export async function endMeetHandler(request: NextRequest) {
 export const POST = runMiddlewares(
   [
     requestIdMiddleware,
+    auditMiddleware,
+    replayProtectionMiddleware,
     authenticationMiddleware,
     authorizationMiddleware(["endMeeting"]),
     rateLimitMiddleware,
-    auditMiddleware,
-    replayProtectionMiddleware
   ],
   endMeetHandler,
 );

@@ -12,7 +12,6 @@ export class ApiClientService {
   static async createApiClient(
     name: string,
     allowedDomains: string[] = [],
-    allowedIps: string[] = [],
   ): Promise<{ client: IApiClient; plaintextSecret: string }> {
     const apiKey = `sm_live_${crypto.randomBytes(16).toString("hex")}`;
     const plaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
@@ -24,7 +23,6 @@ export class ApiClientService {
       currentSecret: encryptedSecret,
       currentSecretVersion: 1,
       allowedDomains,
-      allowedIps,
       status: "active",
       revoked: false,
     });

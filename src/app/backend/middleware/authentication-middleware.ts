@@ -73,30 +73,7 @@ export async function authenticationMiddleware(
     );
   }
 
-  // 5. Validate Source (IP & Origin whitelists)
-  let clientIp =
-    headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
-  // Normalize IPv6 loopback and mapped addresses
-  if (clientIp === "::1") {
-    clientIp = "127.0.0.1";
-  } else if (clientIp.startsWith("::ffff:")) {
-    clientIp = clientIp.substring(7);
-  }
-  // Ensure IP starts with a number (digit 0-9)
-  if (!/^\d/.test(clientIp)) {
-    return NextResponse.json(
-      { error: "Forbidden: Invalid IP address format" },
-      { status: 400 },
-    );
-  }
-  if (client.allowedIps && client.allowedIps.length > 0) {
-    if (!client.allowedIps.includes(clientIp)) {
-      return NextResponse.json(
-        { error: "IP address not allowed" },
-        { status: 403 },
-      );
-    }
-  }
+
 
   const origin = headers.get("origin") || headers.get("referer") || "";
   if (client.allowedDomains && client.allowedDomains.length > 0 && origin) {

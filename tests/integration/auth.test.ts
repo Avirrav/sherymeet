@@ -30,7 +30,6 @@ describe("Auth & Permission Pipeline Integration", () => {
       burstLimit: 20,
       dailyLimit: 50000,
       allowedDomains: [],
-      allowedIps: [],
     } as unknown as IApiClient;
   });
 

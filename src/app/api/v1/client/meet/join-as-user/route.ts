@@ -78,11 +78,11 @@ export async function joinAsUserHandler(request: NextRequest) {
 export const POST =runMiddlewares(
     [
       requestIdMiddleware,
+      auditMiddleware,
+      replayProtectionMiddleware,
       authenticationMiddleware,
       authorizationMiddleware(["joinMeeting"]),
       rateLimitMiddleware,
-      auditMiddleware,
-      replayProtectionMiddleware
     ],
     joinAsUserHandler,
   );

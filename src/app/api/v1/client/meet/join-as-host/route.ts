@@ -137,11 +137,11 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
 export const POST = runMiddlewares(
   [
     requestIdMiddleware,
+    auditMiddleware,
+    replayProtectionMiddleware,
     authenticationMiddleware,
     authorizationMiddleware(["startMeeting", "joinMeeting"]),
     rateLimitMiddleware,
-    auditMiddleware,
-    replayProtectionMiddleware
   ],
   startMeetHandler,
 );

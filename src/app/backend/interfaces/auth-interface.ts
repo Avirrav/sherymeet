@@ -24,7 +24,6 @@ export interface IApiClient extends Document {
   currentSecretVersion: number;
   previousSecretVersion?: number;
   allowedDomains: string[];
-  allowedIps: string[];
   status: 'active' | 'suspended';
   rateLimit: number; // requests/minute
   burstLimit: number; // requests/10 seconds

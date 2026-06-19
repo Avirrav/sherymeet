@@ -66,6 +66,8 @@ export async function createMeetHandler(request: AuthenticatedRequest) {
 export const POST = runMiddlewares(
   [
     requestIdMiddleware,
+    auditMiddleware,
+    replayProtectionMiddleware,
     authenticationMiddleware,
     authorizationMiddleware(["createMeeting"]),
     rateLimitMiddleware,

@@ -8,6 +8,8 @@ import { authorizationMiddleware } from "@/app/backend/middleware/authorization-
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
 import { logger } from "@/app/backend/utils/logger";
 import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
+import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
+import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
 
 /**
  * Registers a new API Client keypair.
@@ -17,7 +19,7 @@ export async function createApiClientHandler(req: AuthenticatedRequest): Promise
   try {
     await dbConnect();
     const body = await req.json();
-    const { name, allowedDomains, allowedIps } = body;
+    const { name, allowedDomains } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -30,7 +32,6 @@ export async function createApiClientHandler(req: AuthenticatedRequest): Promise
     const result = await ApiClientService.createApiClient(
       name,
       allowedDomains || [],
-      allowedIps || [],
     );
 
     return NextResponse.json(
@@ -57,6 +58,8 @@ export async function createApiClientHandler(req: AuthenticatedRequest): Promise
 }
 
 export const POST = runMiddlewares([
+  auditMiddleware,
+  replayProtectionMiddleware,
   requestIdMiddleware,
   authenticationMiddleware,
   authorizationMiddleware([]),
