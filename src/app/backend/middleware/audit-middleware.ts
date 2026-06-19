@@ -10,14 +10,19 @@ export async function auditMiddleware(
   req: AuthenticatedRequest,
   next: NextMiddleware,
 ): Promise<Response> {
-  const ip =
+  let ip =
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+  if (ip === "::1") {
+    ip = "127.0.0.1";
+  } else if (ip.startsWith("::ffff:")) {
+    ip = ip.substring(7);
+  }
   const origin = req.headers.get("origin") || req.headers.get("referer") || "";
   const method = req.method;
   const path = req.nextUrl.pathname;
 
   let response: Response;
-
+  
   try {
     response = await next();
   } catch (err) {
@@ -39,20 +44,36 @@ export async function auditMiddleware(
 
   // Determine security event classification
   let eventType = "authentication_success";
-  let details = "";
+  let details = "successful run";
 
-  if (response.status === 401) {
-    eventType = "unauthorized";
-    details = "Authentication failed or missing credentials";
-  } else if (response.status === 403) {
-    eventType = "forbidden";
-    details = "Access denied: client IP, domain, or RBAC permission breach";
-  } else if (response.status === 429) {
-    eventType = "rate_limit_exceeded";
-    details = "Request throttled: sliding window quota breach";
-  } else if (response.status >= 500) {
-    eventType = "internal_error";
-    details = "Route handler returned server error";
+  if (response.status >= 400) {
+    if (response.status === 401) {
+      eventType = "unauthorized";
+      details = "Authentication failed or missing credentials";
+    } else if (response.status === 403) {
+      eventType = "forbidden";
+      details = "Access denied: client IP, domain, or RBAC permission breach";
+    } else if (response.status === 429) {
+      eventType = "rate_limit_exceeded";
+      details = "Request throttled: sliding window quota breach";
+    } else {
+      eventType = "internal_error";
+      details = "Route handler returned server error";
+    }
+
+    // Try to extract the actual error message from the response payload
+    try {
+      const responseClone = response.clone();
+      const body = await responseClone.json();
+      if (body && typeof body === "object") {
+        const errMsg = body.error || body.message;
+        if (errMsg) {
+          details = `${details}: ${errMsg}`;
+        }
+      }
+    } catch {
+      // Ignore reading failures (e.g. non-JSON responses)
+    }
   }
 
   // Write audit details asynchronously

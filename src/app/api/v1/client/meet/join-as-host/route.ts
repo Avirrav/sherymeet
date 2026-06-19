@@ -138,10 +138,10 @@ export const POST = runMiddlewares(
   [
     requestIdMiddleware,
     auditMiddleware,
-    replayProtectionMiddleware,
     authenticationMiddleware,
     authorizationMiddleware(["startMeeting", "joinMeeting"]),
     rateLimitMiddleware,
+    replayProtectionMiddleware,
   ],
   startMeetHandler,
 );
