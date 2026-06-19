@@ -6,6 +6,8 @@ import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middlewa
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
+import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
+import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
 
 /**
  * POST /api/private/meet/end-meet
@@ -36,7 +38,9 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     authenticationMiddleware,
     authorizationMiddleware(["endMeeting"]),
-    rateLimitMiddleware
+    rateLimitMiddleware,
+    auditMiddleware,
+    replayProtectionMiddleware
   ],
-  endMeetHandler
+  endMeetHandler,
 );

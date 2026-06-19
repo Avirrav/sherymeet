@@ -8,6 +8,8 @@ import { authenticationMiddleware } from "@/app/backend/middleware/authenticatio
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
+import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
+import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
 
 /**
  * POST /api/private/meet/join-as-user
@@ -43,7 +45,6 @@ export async function joinAsUserHandler(request: NextRequest) {
     // 2. Generate connection token
     const token = await generateToken({
       roomName: roomId,
-      user,
       participant,
     });
     if (!token) {
@@ -80,6 +81,8 @@ export const POST =runMiddlewares(
       authenticationMiddleware,
       authorizationMiddleware(["joinMeeting"]),
       rateLimitMiddleware,
+      auditMiddleware,
+      replayProtectionMiddleware
     ],
     joinAsUserHandler,
   );

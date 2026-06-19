@@ -12,6 +12,8 @@ import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middlewa
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
+import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
+import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
 
 /**
  * POST /api/private/meet/join-as-host
@@ -21,15 +23,15 @@ import { authorizationMiddleware } from "@/app/backend/middleware/authorization-
 export async function startMeetHandler(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
-    const { roomId, user, maxParticipants, passcode } = body;
+    const { roomId, host, maxParticipants, passcode } = body;
     if (!roomId) {
       throw new ApiError("Room ID is required", 400);
     }
-    if (!user) {
-      throw new ApiError("User details are required", 400);
+    if (!host) {
+      throw new ApiError("Host details are required", 400);
     }
-    if (!user.userName || !user.role) {
-      throw new ApiError("User userName and role are required", 400);
+    if (!host.userName || !host.role) {
+      throw new ApiError("Host userName and role are required", 400);
     }
     // Fetch meeting details from database
     const meet = await MeetDao.getMeetByRoomId(roomId);
@@ -52,13 +54,12 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
     }
     // 1. Map the user to IParticipant structure
     const participant: IParticipant = {
-      participantName: user.userName,
-      role: user.role,
+      participantName: host.userName,
+      role:  host.role,
     };
     // 2. Generate connection token (checks role internally for MENTOR / ADMIN grants)
     const token = await generateToken({
       roomName: roomId,
-      user,
       participant,
     });
     if (!token) {
@@ -136,6 +137,8 @@ export const POST = runMiddlewares(
     authenticationMiddleware,
     authorizationMiddleware(["startMeeting", "joinMeeting"]),
     rateLimitMiddleware,
+    auditMiddleware,
+    replayProtectionMiddleware
   ],
   startMeetHandler,
 );

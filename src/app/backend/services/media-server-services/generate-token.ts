@@ -12,7 +12,6 @@ const apiSecret = process.env.LIVEKIT_API_SECRET;
 interface GenerateTokenOptions {
   roomName: string;
   metadata?: string;
-  user: IUser;
   participant: IParticipant;
 }
 
@@ -22,14 +21,13 @@ export async function generateToken(
   if (!apiKey || !apiSecret) {
     throw new Error("LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set");
   }
-  const { roomName, user, participant } = options;
+  const { roomName, participant } = options;
   // Generate the secure identity
   const identity = `${participant.participantName}_${Math.random().toString(36).substring(2, 6)}`;
   // Create an AccessToken
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
     metadata: JSON.stringify({
-      user,
       participant,
       roomName,
     }),
