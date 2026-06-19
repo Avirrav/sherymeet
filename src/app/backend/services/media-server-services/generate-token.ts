@@ -1,7 +1,6 @@
 import { AccessToken } from "livekit-server-sdk";
 import {
   IParticipant,
-  IUser,
   RoleHierarchy,
 } from "@/app/backend/interfaces/user-interface";
 import { UserRole } from "@/app/backend/interfaces/user-interface";

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { dbConnect } from "@/app/backend/utils/db-connect";
 import { ApiClientService } from "@/app/backend/services/api-client-service";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
