@@ -13,7 +13,7 @@ export function useScreenShare(room: Room | null) {
     if (!room) return;
     try {
       const pub = await room.localParticipant.setScreenShareEnabled(true, {
-        audio: true, // option to share system audio
+        audio: true, 
       });
       setScreenSharePublication(pub || null);
       toggleScreenShare(true);

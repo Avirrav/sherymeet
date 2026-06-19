@@ -21,28 +21,15 @@ export function sortParticipants(
     if (aPinned && !bPinned) return -1;
     if (!aPinned && bPinned) return 1;
 
-    // 2. Active Speaker priority
-    const aSpeaker = a.id === activeSpeakerId;
-    const bSpeaker = b.id === activeSpeakerId;
-    if (aSpeaker && !bSpeaker) return -1;
-    if (!aSpeaker && bSpeaker) return 1;
-
-    // 3. Hand Raised priority
+    // 2. Hand Raised priority
     if (a.isHandRaised && !b.isHandRaised) return -1;
     if (!a.isHandRaised && b.isHandRaised) return 1;
 
-    // 4. Video Enabled priority
+    // 3. Video Enabled priority
     if (a.isVideoEnabled && !b.isVideoEnabled) return -1;
     if (!a.isVideoEnabled && b.isVideoEnabled) return 1;
 
-    // 5. Last spoke timestamp priority
-    const aSpoke = a.lastSpokeAt || 0;
-    const bSpoke = b.lastSpokeAt || 0;
-    if (aSpoke !== bSpoke) {
-      return bSpoke - aSpoke;
-    }
-
-    // 6. Local user last
+    // 4. Local user last
     if (a.isLocal && !b.isLocal) return 1;
     if (!a.isLocal && b.isLocal) return -1;
 

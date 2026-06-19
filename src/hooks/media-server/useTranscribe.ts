@@ -3,6 +3,7 @@ import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error-types";
+import { getTranscribeUrlAction } from "@/app/actions/transcribeAction";
 
 // GZIP-compatible CRC32 implementation for EventStream message envelopes
 const makeCRCTable = () => {
@@ -208,15 +209,14 @@ export function useTranscribe(room: Room | null) {
     setIsTranscribing(true);
 
     try {
-      // 1. Retrieve signed URL from Next.js server route
-      const response = await fetch("/api/private/meet/transcribe-url");
-      const json = await response.json();
-      if (!response.ok || !json.success || !json.data?.url) {
-        throw new Error(json.message || "Failed to sign transcription URL");
+      // 1. Retrieve signed URL using Server Action
+      const result = await getTranscribeUrlAction();
+      if (!result.success || !result.url) {
+        throw new Error(result.error || "Failed to sign transcription URL");
       }
 
       // 2. Open AWS Transcribe WebSocket
-      const ws = new WebSocket(json.data.url);
+      const ws = new WebSocket(result.url);
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 

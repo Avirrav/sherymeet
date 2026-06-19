@@ -26,7 +26,7 @@ interface MeetingState {
   // Active UI Controls
   isScreenSharing: boolean;
   isHandRaised: boolean;
-  activeSidebar: 'chat' | 'participants' | null;
+  activeSidebar: 'chat' | 'participants' | 'settings' | null;
   unreadChatCount: number;
   captionsEnabled: boolean;
 
@@ -49,7 +49,7 @@ interface MeetingState {
   setConnectionStatus: (connecting: boolean, connected: boolean, error?: string | null) => void;
   toggleScreenShare: (active?: boolean) => void;
   toggleHandRaise: (active?: boolean) => void;
-  toggleSidebar: (panel: 'chat' | 'participants' | null) => void;
+  toggleSidebar: (panel: 'chat' | 'participants' | 'settings' | null) => void;
   toggleCamera: () => void;
   toggleMicrophone: () => void;
   addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
@@ -101,7 +101,21 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   setVideoEnabled: (enabled) => set({ videoEnabled: enabled }),
   setAudioDeviceId: (id) => set({ audioDeviceId: id }),
   setVideoDeviceId: (id) => set({ videoDeviceId: id }),
-  setMeetingInfo: (roomId, token) => set({ roomId, token }),
+  setMeetingInfo: (roomId, token) =>
+    set(() => {
+      let savedMessages: ChatMessage[] = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = localStorage.getItem(`chat_messages_${roomId}`);
+          if (cached) {
+            savedMessages = JSON.parse(cached);
+          }
+        } catch (e) {
+          console.error("Error loading chat from localStorage", e);
+        }
+      }
+      return { roomId, token, chatMessages: savedMessages };
+    }),
   setConnectionStatus: (connecting, connected, error = null) =>
     set({ isConnecting: connecting, isConnected: connected, error }),
   toggleScreenShare: (active) =>
@@ -125,15 +139,33 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         id: Math.random().toString(36).substring(2, 9),
         timestamp: Date.now(),
       };
+      const newMessages = [...state.chatMessages, newMsg];
+      if (state.roomId && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`chat_messages_${state.roomId}`, JSON.stringify(newMessages));
+        } catch (e) {
+          console.error("Error saving chat to localStorage", e);
+        }
+      }
       return {
-        chatMessages: [...state.chatMessages, newMsg],
+        chatMessages: newMessages,
         unreadChatCount:
           state.activeSidebar === 'chat'
             ? 0
             : state.unreadChatCount + 1,
       };
     }),
-  clearChat: () => set({ chatMessages: [], unreadChatCount: 0 }),
+  clearChat: () =>
+    set((state) => {
+      if (state.roomId && typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(`chat_messages_${state.roomId}`);
+        } catch (e) {
+          console.error("Error clearing chat from localStorage", e);
+        }
+      }
+      return { chatMessages: [], unreadChatCount: 0 };
+    }),
   addRaisedHand: (identity) =>
     set((state) => ({
       raisedHands: state.raisedHands.includes(identity)
