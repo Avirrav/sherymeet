@@ -4,6 +4,7 @@ import { MeetDao } from "../../dao/meet-dao";
 import { RecordingDao } from "../../dao/recording-dao";
 import { ApiError } from "../../utils/api-helper";
 import { dbConnect } from "../../utils/db-connect";
+import { logger } from "../../utils/logger";
 
 interface EndMeetOptions {
   roomId: string;
@@ -33,7 +34,7 @@ export async function endMeet({ roomId }: EndMeetOptions) {
     const activeRecordings = await RecordingDao.getActiveRecordingsByRoomId(roomId);
 
     for (const rec of activeRecordings) {
-      console.log(`Stopping egress recording for room: ${roomId}, egressId: ${rec.egressId}`);
+      logger.info(`Stopping egress recording for room: ${roomId}, egressId: ${rec.egressId}`);
       try {
         await stopEgress(rec.egressId);
         await RecordingDao.updateRecording(rec.egressId, {
@@ -41,7 +42,7 @@ export async function endMeet({ roomId }: EndMeetOptions) {
           endedAt: new Date(),
         });
       } catch (egrErr) {
-        console.error(`Failed to stop egress ${rec.egressId}:`, egrErr);
+        logger.error(`Failed to stop egress ${rec.egressId}`, egrErr);
         // If stopping fails (e.g. already stopped), set to failed/completed depending on context
         await RecordingDao.updateRecording(rec.egressId, {
           recordingStatus: "failed",
@@ -50,14 +51,14 @@ export async function endMeet({ roomId }: EndMeetOptions) {
       }
     }
   } catch (recErr) {
-    console.error("Error stopping room recordings:", recErr);
+    logger.error("Error stopping room recordings", recErr);
   }
 
   // 4. Delete the room on LiveKit server
   try {
     await deleteRoom(roomId);
   } catch (lkErr) {
-    console.error(`Failed to delete room ${roomId} on LiveKit:`, lkErr);
+    logger.error(`Failed to delete room ${roomId} on LiveKit`, lkErr);
     // Ignore if room does not exist on LiveKit anymore
   }
 

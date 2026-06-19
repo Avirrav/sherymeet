@@ -6,12 +6,14 @@ import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middlewa
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
+import { logger } from "@/app/backend/utils/logger";
+import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
 
 /**
  * Rotates client secret for an API client.
  * POST /api/private/auth/client/rotate
  */
-export async function rotateApiClientHandler(req: NextRequest) {
+export async function rotateApiClientHandler(req: AuthenticatedRequest): Promise<Response> {
   try {
     await dbConnect();
     const body = await req.json();
@@ -42,7 +44,9 @@ export async function rotateApiClientHandler(req: NextRequest) {
       { status: 200 },
     );
   } catch (err) {
-    console.error("Failed to rotate client secret route:", err);
+    logger.error("Failed to rotate client secret route", err, {
+      requestId: req.requestId,
+    });
     return NextResponse.json(
       { error: (err as Error).message || "Internal Server Error" },
       { status: 500 },

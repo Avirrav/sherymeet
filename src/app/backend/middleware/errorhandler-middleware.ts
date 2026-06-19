@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthenticatedRequest } from "../types/auth-types";
+import { logger } from "../utils/logger";
 
 export interface ApiError extends Error {
   status?: number;
@@ -16,9 +17,10 @@ export async function errorHandlerMiddleware(
   const status = err.status || 500;
   const message = err.message || "Internal Server Error";
 
-  console.error(
-    `[Error] Request ${req.requestId || "unknown"} - Status ${status}: ${message}`,
+  logger.error(
+    `Unhandled API Error - Status ${status}: ${message}`,
     err,
+    { requestId: req.requestId }
   );
 
   return NextResponse.json({ error: message }, { status });

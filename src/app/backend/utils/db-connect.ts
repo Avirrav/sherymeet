@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { logger } from "./logger";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/sherymeet";
 
@@ -31,9 +32,9 @@ export async function dbConnect() {
       bufferCommands: false,
     };
 
-    console.log("Connecting to MongoDB...");
+    logger.info("Connecting to MongoDB...");
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      console.log("Connected to MongoDB successfully!");
+      logger.info("Connected to MongoDB successfully!");
       return mongooseInstance;
     });
   }
@@ -42,6 +43,7 @@ export async function dbConnect() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    logger.error("MongoDB connection failed", e);
     throw e;
   }
 

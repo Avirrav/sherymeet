@@ -5,6 +5,7 @@ import {
   RoleHierarchy,
 } from "@/app/backend/interfaces/user-interface";
 import { UserRole } from "@/app/backend/interfaces/user-interface";
+import { logger } from "@/app/backend/utils/logger";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -34,8 +35,11 @@ export async function generateToken(
     name: participant.participantName,
     ttl: "2h", // Token valid for 2 hours
   });
-  console.log(RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR])
-  if (RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR]) {
+  
+  const isMentorOrAbove = RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR];
+  logger.debug(`Generating token for ${participant.participantName} (role: ${participant.role}, isMentorOrAbove: ${isMentorOrAbove})`);
+
+  if (isMentorOrAbove) {
     at.addGrant({
       roomJoin: true,
       room: roomName,

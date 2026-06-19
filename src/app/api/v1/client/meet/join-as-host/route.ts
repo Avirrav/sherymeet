@@ -14,6 +14,7 @@ import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middlew
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
 import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
+import { logger } from "@/app/backend/utils/logger";
 
 /**
  * POST /api/private/meet/join-as-host
@@ -72,9 +73,9 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
     }
     // 4. Update the meeting status to 'active' and record startedAt timestamp in MongoDB
     if (meet.status === "scheduled") {
-      console.log(
-        `Updating database meet status to active for room: ${roomId}`,
-      );
+      logger.info(`Updating database meet status to active for room: ${roomId}`, {
+        requestId: request.requestId,
+      });
       const updatedMeet = await MeetDao.startMeet(roomId);
       if (!updatedMeet) {
         // In case of concurrent joins starting it at the exact same moment, double check
@@ -99,12 +100,14 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
             s3Region: process.env.AWS_REGION || "ap-south-1",
             s3ObjectKey: filepath,
           });
-          console.log(
-            `Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`,
-          );
+          logger.info(`Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`, {
+            requestId: request.requestId,
+          });
         }
       } catch (recError) {
-        console.error("Failed to start meeting recording:", recError);
+        logger.error("Failed to start meeting recording", recError, {
+          requestId: request.requestId,
+        });
         // We log and continue so the host can still join even if recording service fails
       }
     }

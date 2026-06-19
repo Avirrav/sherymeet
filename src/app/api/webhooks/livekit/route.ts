@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { WebhookReceiver } from "livekit-server-sdk";
 import { RecordingDao, IRecordingUpdate } from "@/app/backend/dao/recording-dao";
 import { dbConnect } from "@/app/backend/utils/db-connect";
+import { logger } from "@/app/backend/utils/logger";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -21,11 +22,11 @@ export async function POST(request: NextRequest) {
       const receiver = new WebhookReceiver(apiKey, apiSecret);
       event = await receiver.receive(bodyText, authHeader || "");
     } catch (err) {
-      console.warn("Webhook signature verification failed. Parsing raw JSON directly for development.", err);
+      logger.warn("Webhook signature verification failed. Parsing raw JSON directly for development.", err);
       event = JSON.parse(bodyText);
     }
 
-    console.log("Received LiveKit Webhook event:", event.event);
+    logger.info(`Received LiveKit Webhook event: ${event.event}`);
 
     // Egress updates (starting, active, ending, complete, failed)
     if (event.event === "egress_ended" || event.event === "egress_updated") {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
               code: "EGRESS_UPLOAD_FAILED",
               message: egressInfo.error,
             };
-            console.error(`LiveKit Egress ${egressId} reported error during execution/upload:`, egressInfo.error);
+            logger.error(`LiveKit Egress ${egressId} reported error during execution/upload: ${egressInfo.error}`);
           }
 
           // Populate S3 file results if present
@@ -82,14 +83,14 @@ export async function POST(request: NextRequest) {
           }
 
           await RecordingDao.updateRecording(egressId, updateData);
-          console.log(`Updated recording ${egressId} database status to: ${recordingStatus}`);
+          logger.info(`Updated recording ${egressId} database status to: ${recordingStatus}`);
         }
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Webhook processing error:", error);
+    logger.error("Webhook processing error", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

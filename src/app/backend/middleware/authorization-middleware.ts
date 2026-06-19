@@ -6,6 +6,7 @@ import {
   UserRole,
 } from "../types/auth-types";
 import { AuthorizationService } from "../services/authorization.service";
+import { logger } from "../utils/logger";
 
 /**
  * Authorization Middleware Factory.
@@ -29,7 +30,9 @@ export function authorizationMiddleware(requiredPermissions: Permission[]) {
           }
         }
       } catch (e) {
-        console.error("Failed to parse request body:", e);
+        logger.error("Failed to parse request body for authorization context", e, {
+          requestId: request.requestId,
+        });
       }
     }
 

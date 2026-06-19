@@ -3,6 +3,7 @@ import { NextMiddleware } from "../types/auth-types";
 import { AuthenticatedRequest } from "../interfaces/auth-interface";
 import { ApiClientService } from "../services/api-client-service";
 import { SignatureService } from "../services/signature.service";
+import { logger } from "../utils/logger";
 
 /**
  * Enterprise Authentication Middleware.
@@ -123,7 +124,9 @@ export async function authenticationMiddleware(
     const bodyText = await clone.text();
     rawBody = Buffer.from(bodyText, "utf8");
   } catch (err) {
-    console.error("Failed to parse request raw body:", err);
+    logger.error("Failed to parse request raw body for authentication", err, {
+      requestId,
+    });
   }
   request.rawBody = rawBody;
 

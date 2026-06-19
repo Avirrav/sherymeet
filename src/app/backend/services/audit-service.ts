@@ -1,5 +1,6 @@
 import { AuditDao } from "../dao/audit-dao";
 import { IAuditLog } from "../types/auth-types";
+import { logger } from "../utils/logger";
 
 export class AuditService {
   /**
@@ -20,7 +21,11 @@ export class AuditService {
       return log;
     } catch (err) {
       // Log errors locally, but prevent audit log writing failures from blocking client API responses
-      console.error("Failed to save audit log:", err);
+      logger.error("Failed to save audit log", err, {
+        requestId: logData.requestId,
+        apiKey: logData.apiKey,
+        eventType: logData.eventType,
+      });
       return null;
     }
   }

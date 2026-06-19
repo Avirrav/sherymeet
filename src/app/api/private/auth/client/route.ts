@@ -6,12 +6,14 @@ import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middlewa
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
+import { logger } from "@/app/backend/utils/logger";
+import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
 
 /**
  * Registers a new API Client keypair.
  * POST /api/private/auth/client
  */
-export async function createApiClientHandler(req: NextRequest) {
+export async function createApiClientHandler(req: AuthenticatedRequest): Promise<Response> {
   try {
     await dbConnect();
     const body = await req.json();
@@ -44,7 +46,9 @@ export async function createApiClientHandler(req: NextRequest) {
       { status: 201 },
     );
   } catch (err) {
-    console.error("Failed to create api client route:", err);
+    logger.error("Failed to create api client route", err, {
+      requestId: req.requestId,
+    });
     return NextResponse.json(
       { error: (err as Error).message || "Internal Server Error" },
       { status: 500 },
