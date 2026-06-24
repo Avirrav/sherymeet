@@ -8,7 +8,7 @@ import {
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
 const livekitUrl = process.env.LIVEKIT_URL;
-const customBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+// const customBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export async function startRoomRecording(roomName: string, filepath: string) {
   if (!apiKey || !apiSecret || !livekitUrl) {
@@ -26,7 +26,7 @@ export async function startRoomRecording(roomName: string, filepath: string) {
   const s3AccessKey = process.env.AWS_ACCESS_KEY_ID || "";
   const s3Secret = process.env.AWS_SECRET_ACCESS_KEY || "";
   const s3Region = process.env.AWS_S3_REGION || "ap-south-1";
-  const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
+  // const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
 
   // Starts recording the room using a web-composite template and uploads to S3
   const egressInfo = await client.startRoomCompositeEgress(
@@ -45,7 +45,6 @@ export async function startRoomRecording(roomName: string, filepath: string) {
     }),
     {
       layout: "speaker",
-      customBaseUrl: recordingUrl,
       encodingOptions: new EncodingOptions({
         width: 1920,
         height: 1080,

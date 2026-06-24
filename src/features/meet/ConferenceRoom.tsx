@@ -102,7 +102,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const handleEndMeeting = async () => {
     if (confirm("Are you sure you want to end the meeting for everyone?")) {
       try {
-        const res = await fetch("/api/v1/client/meet/end-meet", {
+        const res = await fetch("/api/meet/end", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
