@@ -4,7 +4,7 @@ export async function getTranscribeUrl(): Promise<string> {
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_REGION || "us-east-1";
+  const region = process.env.AWS_TRANSCRIBE_REGION || "us-east-1";
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(
