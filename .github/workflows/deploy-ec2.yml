@@ -1,0 +1,61 @@
+name: Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: ["Build and Push to AWS ECR"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to EC2 Instance via SSM
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve EC2 Instance ID and Deploy via SSM
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        run: |
+          # Query AWS EC2 to find the InstanceId of the running machine named 'sherymeet-app'
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=sherymeet-app" "Name=instance-state-name,Values=running" \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text)
+          
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "None" ]; then
+            echo "Error: No running EC2 instance ID found with Name tag 'sherymeet-app'"
+            exit 1
+          fi
+
+          echo "Found EC2 Instance ID: $INSTANCE_ID"
+
+          # Send deployment command to the instance via SSM
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --region ${{ secrets.AWS_REGION }} \
+            --parameters "commands=[
+              \"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest\",
+              \"docker stop sherymeet-app || true\",
+              \"docker rm sherymeet-app || true\",
+              \"docker run -d --name sherymeet-app -p 3000:3000 --restart always $ECR_REGISTRY/$ECR_REPOSITORY:latest\"
+            ]" \
+            --output text
