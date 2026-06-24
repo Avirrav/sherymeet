@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useMeetingStore } from '@/store/useMeetingStore';
 import { useRoomConnection } from '@/hooks/media-server/useRoomConnection';
 import PreJoinScreen from '@/features/meet/PreJoinScreen';
@@ -12,9 +12,10 @@ interface MeetingPageClientProps {
   roomId: string;
   token: string;
   userName?: string;
+  isRecorder?: boolean;
 }
 
-export default function MeetingPageClient({ roomId, token, userName }: MeetingPageClientProps) {
+export default function MeetingPageClient({ roomId, token, userName, isRecorder = false }: MeetingPageClientProps) {
   const {
     username,
     isConnected,
@@ -57,7 +58,7 @@ export default function MeetingPageClient({ roomId, token, userName }: MeetingPa
     };
   }, [resetMeetingStore, userName, token, setUsername]);
 
-  const handleJoin = async () => {
+  const handleJoin = useCallback(async () => {
     setConnectionStatus(true, false, null);
     if (activeToken) {
         const envUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
@@ -72,7 +73,16 @@ export default function MeetingPageClient({ roomId, token, userName }: MeetingPa
       setHasEntered(false);
       setConnectionStatus(false, false, null);
     }
-  };
+  }, [activeToken, roomId, setConnectionStatus, setMeetingInfo]);
+
+  useEffect(() => {
+    if (isRecorder && activeToken && !hasEntered) {
+      const timer = setTimeout(() => {
+        handleJoin();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isRecorder, activeToken, hasEntered, handleJoin]);
 
   const room = useRoomConnection({
     serverUrl,
@@ -91,7 +101,7 @@ export default function MeetingPageClient({ roomId, token, userName }: MeetingPa
     }
 
     if (isConnected && room) {
-      return <ConferenceRoom room={room} />;
+      return <ConferenceRoom room={room} isRecorder={isRecorder} />;
     }
   }
 

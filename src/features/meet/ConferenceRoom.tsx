@@ -35,9 +35,10 @@ import { RoleHierarchy, UserRole } from '@/app/backend/interfaces/user-interface
 
 interface ConferenceRoomProps {
   room: Room;
+  isRecorder?: boolean;
 }
 
-export default function ConferenceRoom({ room }: ConferenceRoomProps) {
+export default function ConferenceRoom({ room, isRecorder = false }: ConferenceRoomProps) {
   const router = useRouter(); 
   const {
     roomId,
@@ -122,6 +123,25 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       }
     }
   };
+
+  if (isRecorder) {
+    return (
+      <div className="h-screen w-screen bg-brand-dark text-white overflow-hidden relative font-sans">
+        <div className="w-full h-full flex overflow-hidden relative">
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            <LayoutManager
+              updateKey={updateKey}
+              localParticipant={localParticipant}
+              remoteParticipants={remoteParticipants}
+              activeSpeaker={activeSpeaker}
+            />
+            <CaptionOverlay room={room} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen flex flex-col justify-between bg-brand-dark text-white overflow-hidden relative font-sans">
       <header className="px-6 py-4 flex items-center justify-between z-10">

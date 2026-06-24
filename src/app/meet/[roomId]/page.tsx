@@ -13,6 +13,7 @@ interface Params {
 interface SearchParams {
   token?: string;
   userName?: string;
+  recorder?: boolean;
 }
 
 export const metadata: Metadata = {
@@ -105,6 +106,7 @@ export default async function MeetingPage({
       roomId={resolvedParams.roomId}
       token={resolvedSearchParams.token || ''}
       userName={resolvedSearchParams.userName || ''}
+      isRecorder={resolvedSearchParams.recorder}
     />
   );
 }
