@@ -20,7 +20,16 @@ export class MeetDao {
   }) {
     await dbConnect();
     const meet = new Meet(meetData);
-    return await meet.save();
+    const savedMeet = await meet.save()
+
+    const meetObj = savedMeet.toObject();
+    delete meetObj._id;
+    delete meetObj.passcode;
+    delete meetObj.createdAt;
+    delete meetObj.updatedAt;
+    delete meetObj.__v;
+    
+    return meetObj;
   }
 
   /**
@@ -37,7 +46,7 @@ export class MeetDao {
           startedAt: new Date(),
         },
       },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
   }
 
@@ -62,7 +71,7 @@ export class MeetDao {
           endedAt: new Date(),
         },
       },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
   }
 }
