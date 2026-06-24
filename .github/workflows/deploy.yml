@@ -71,7 +71,7 @@ jobs:
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=sherymeet-app" "Name=instance-state-name,Values=running" \
-            --region ${{ secrets.AWS_REGION }} \
+            --region ${{ secrets.AWS_EC2_REGION }} \
             --query "Reservations[*].Instances[*].InstanceId" \
             --output text)
           
@@ -85,9 +85,9 @@ jobs:
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --region ${{ secrets.AWS_REGION }} \
+            --region ${{ secrets.AWS_EC2_REGION }} \
             --parameters "commands=[
-              \"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"aws ecr get-login-password --region ${{ secrets.AWS_EC2_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY\",
               \"docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest\",
               \"docker stop sherymeet-app || true\",
               \"docker rm sherymeet-app || true\",
