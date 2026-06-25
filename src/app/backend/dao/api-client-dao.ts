@@ -27,7 +27,7 @@ export class ApiClientDao {
     return await ApiClient.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
   }
 
@@ -41,7 +41,7 @@ export class ApiClientDao {
     const client = await ApiClient.findOneAndUpdate(
       { apiKey },
       { $set: { revoked: true, revokedAt: new Date() } },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     if (!client) return false;

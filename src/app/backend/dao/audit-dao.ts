@@ -41,7 +41,7 @@ export class AuditDao {
     await ApiKeyUsageLog.findOneAndUpdate(
       { apiKey, date: today },
       updateQuery,
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: "after" },
     );
   }
 }

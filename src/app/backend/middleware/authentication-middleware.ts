@@ -73,17 +73,26 @@ export async function authenticationMiddleware(
     );
   }
 
+  const origin =
+    headers.get("origin") || headers.get("referer") || request.nextUrl.origin;
 
-
-  const origin = headers.get("origin") || headers.get("referer") || "";
   if (client.allowedDomains && client.allowedDomains.length > 0 && origin) {
-    const originUrl = new URL(origin);
+    let originUrl: URL;
+    try {
+      originUrl = new URL(origin);
+    } catch {
+      originUrl = new URL(`http://${origin}`);
+    }
     const domainMatch = client.allowedDomains.some((domain) => {
       try {
-        const allowedUrl = new URL(domain);
+        const allowedUrl = new URL(domain.startsWith("http") ? domain : `http://${domain}`);
+        if (originUrl.hostname === "localhost" || allowedUrl.hostname === "localhost") {
+          return allowedUrl.hostname === originUrl.hostname;
+        }
         return allowedUrl.host === originUrl.host;
       } catch {
-        return domain === originUrl.host;
+        const domainHostname = domain.replace(/^(https?:\/\/)?/, "").split(":")[0];
+        return domainHostname === originUrl.hostname;
       }
     });
     if (!domainMatch) {
@@ -131,9 +140,7 @@ export async function authenticationMiddleware(
       { status: 401 },
     );
   }
-
   // Attach client to request context
   request.client = client;
-
   return await next();
 }
