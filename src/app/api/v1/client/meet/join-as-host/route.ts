@@ -24,14 +24,14 @@ import { logger } from "@/app/backend/utils/logger";
 export async function startMeetHandler(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
-    const { roomId, host, maxParticipants, passcode } = body;
+    const { roomId, user, maxParticipants, passcode } = body;
     if (!roomId) {
       throw new ApiError("Room ID is required", 400);
     }
-    if (!host) {
-      throw new ApiError("Host details are required", 400);
+    if (!user) {
+      throw new ApiError("User details are required", 400);
     }
-    if (!host.userName || !host.role) {
+    if (!user.userName || !user.role) {
       throw new ApiError("Host userName and role are required", 400);
     }
     // Fetch meeting details from database
@@ -42,6 +42,10 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
     // Check meeting status
     if (meet.status === "ended") {
       throw new ApiError("Meeting already ended", 400);
+    }
+    // Verify that the requesting user matches the host of the meeting
+    if (meet.host.username !== user.userName && meet.host.role !== user.role) {
+      throw new ApiError("Only the assigned host of this meeting can join as host", 403);
     }
     // Verify passcode if set
     if (meet.passcode) {
@@ -55,8 +59,8 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
     }
     // 1. Map the user to IParticipant structure
     const participant: IParticipant = {
-      participantName: host.userName,
-      role:  host.role,
+      participantName: user.userName,
+      role: user.role,
     };
     // 2. Generate connection token (checks role internally for MENTOR / ADMIN grants)
     const token = await generateToken({

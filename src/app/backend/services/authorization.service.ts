@@ -1,6 +1,7 @@
 import { ROLE_PERMISSIONS } from "../constants/roles";
 import { RoleHierarchy } from "../interfaces/user-interface";
 import { UserRole, Permission } from "../types/auth-types";
+import { ApiError } from "../utils/api-helper";
 
 export class AuthorizationService {
   /**
@@ -30,7 +31,7 @@ export class AuthorizationService {
       return true;
     }
     if (requiredPermissions.length === 0) {
-      return false;
+      throw new ApiError("Required permissions are not provided", 400);
     }
     const permissions = ROLE_PERMISSIONS[role] || [];
     return requiredPermissions.every((p) => permissions.includes(p));

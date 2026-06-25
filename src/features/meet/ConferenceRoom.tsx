@@ -49,10 +49,6 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     activeSidebar,
     toggleSidebar,
     unreadChatCount,
-    captionsEnabled,
-    toggleCaptions,
-    layoutMode,
-    setLayoutMode,
   } = useMeetingStore();
   {/* Use Participants hook */}
   const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
@@ -102,12 +98,32 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const handleEndMeeting = async () => {
     if (confirm("Are you sure you want to end the meeting for everyone?")) {
       try {
-        const res = await fetch("/api/meet/end", {
+        const localUser = {
+          username: room.localParticipant?.name || "",
+          identity: room.localParticipant?.identity || "",
+          role: "student"
+        };
+        try {
+          const metaStr = room.localParticipant?.metadata;
+          if (metaStr) {
+            const meta = JSON.parse(metaStr);
+            if (meta.participant) {
+              localUser.role = meta.participant.role || "student";
+              if (meta.participant.userName) {
+                localUser.username = meta.participant.userName;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing participant metadata for end-meet:", e);
+        }
+
+        const res = await fetch("/api/v1/server/meet/end-meet", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ roomId }),
+          body: JSON.stringify({ roomId, localParticipant: localUser }),
         });
 
         if (res.ok) {
