@@ -40,11 +40,19 @@ const MeetSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
+      role: {
+        type: String,
+        required: true,
+      },
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
+
+if (process.env.NODE_ENV === "development" && mongoose.models.Meet) {
+  delete mongoose.models.Meet;
+}
 
 export default mongoose.models.Meet || mongoose.model("Meet", MeetSchema);

@@ -15,6 +15,7 @@ export class MeetDao {
     host: {
       userId: string;
       username: string;
+      role: string;
     };
     passcode?: string | null;
   }) {

@@ -63,10 +63,12 @@ export async function createInstantMeet({
     host: {
       userId: rawUserId,
       username: host.userName,
+      role: host.role,
     },
     passcode: hashedPasscode,
   };
   const meet = await MeetDao.createMeet(meetData);
+  console.log("Saved Meet", meet)
   if (meet) {
     return meet;
   } else {
