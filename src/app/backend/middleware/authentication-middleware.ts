@@ -3,6 +3,7 @@ import { NextMiddleware } from "../types/auth-types";
 import { AuthenticatedRequest } from "../interfaces/auth-interface";
 import { ApiClientService } from "../services/api-client-service";
 import { SignatureService } from "../services/signature.service";
+import { UserService } from "../services/user-service";
 import { logger } from "../utils/logger";
 
 /**
@@ -56,6 +57,20 @@ export async function authenticationMiddleware(
       { status: 401 },
     );
   }
+  // 3b. Resolve the platform user who owns this API client (if any) and attach to the request
+  if (client.createdBy) {
+    const owner = await UserService.getUserById(client.createdBy);
+    console.log("owner:", owner)
+    if (owner) {
+      request.user = {
+        _id: owner._id.toString(),
+        userName: owner.userName,
+        email: owner.email,
+        role: owner.role,
+        avatarUrl: owner.avatarUrl,
+      };
+    }
+  }
 
   // 4. Validate Timestamp Drift (5 minutes drift allowed)
   const timestamp = parseInt(timestampStr, 10);
@@ -75,7 +90,7 @@ export async function authenticationMiddleware(
 
   const origin =
     headers.get("origin") || headers.get("referer") || request.nextUrl.origin;
-
+  console.log("origin:", origin)
   if (client.allowedDomains && client.allowedDomains.length > 0 && origin) {
     let originUrl: URL;
     try {
@@ -86,12 +101,19 @@ export async function authenticationMiddleware(
     const domainMatch = client.allowedDomains.some((domain) => {
       try {
         const allowedUrl = new URL(domain.startsWith("http") ? domain : `http://${domain}`);
-        if (originUrl.hostname === "localhost" || allowedUrl.hostname === "localhost") {
+        const isOriginLocal = originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1";
+        const isAllowedLocal = allowedUrl.hostname === "localhost" || allowedUrl.hostname === "127.0.0.1";
+        if (isOriginLocal || isAllowedLocal) {
           return allowedUrl.hostname === originUrl.hostname;
         }
         return allowedUrl.host === originUrl.host;
       } catch {
         const domainHostname = domain.replace(/^(https?:\/\/)?/, "").split(":")[0];
+        const isOriginLocal = originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1";
+        const isAllowedLocal = domainHostname === "localhost" || domainHostname === "127.0.0.1";
+        if (isOriginLocal || isAllowedLocal) {
+          return domainHostname === originUrl.hostname;
+        }
         return domainHostname === originUrl.hostname;
       }
     });

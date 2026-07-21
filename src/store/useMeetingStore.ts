@@ -11,6 +11,7 @@ export interface ChatMessage {
 interface MeetingState {
   // Local User Preferences
   username: string;
+  email: string;
   audioEnabled: boolean;
   videoEnabled: boolean;
   audioDeviceId: string;
@@ -22,6 +23,7 @@ interface MeetingState {
   isConnecting: boolean;
   isConnected: boolean;
   error: string | null;
+  meetDetails: any | null;
 
   // Active UI Controls
   isScreenSharing: boolean;
@@ -41,12 +43,14 @@ interface MeetingState {
 
   // Actions
   setUsername: (name: string) => void;
+  setEmail: (email: string) => void;
   setAudioEnabled: (enabled: boolean) => void;
   setVideoEnabled: (enabled: boolean) => void;
   setAudioDeviceId: (id: string) => void;
   setVideoDeviceId: (id: string) => void;
   setMeetingInfo: (roomId: string, token: string) => void;
   setConnectionStatus: (connecting: boolean, connected: boolean, error?: string | null) => void;
+  setMeetDetails: (details: any) => void;
   toggleScreenShare: (active?: boolean) => void;
   toggleHandRaise: (active?: boolean) => void;
   toggleSidebar: (panel: 'chat' | 'participants' | 'settings' | null) => void;
@@ -67,6 +71,7 @@ interface MeetingState {
 export const useMeetingStore = create<MeetingState>((set) => ({
   // Local User Preferences defaults
   username: '',
+  email: '',
   audioEnabled: true,
   videoEnabled: true,
   audioDeviceId: '',
@@ -78,6 +83,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   isConnecting: false,
   isConnected: false,
   error: null,
+  meetDetails: null,
 
   // Active UI Controls defaults
   isScreenSharing: false,
@@ -97,6 +103,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
 
   // Actions
   setUsername: (name) => set({ username: name }),
+  setEmail: (email) => set({ email }),
   setAudioEnabled: (enabled) => set({ audioEnabled: enabled }),
   setVideoEnabled: (enabled) => set({ videoEnabled: enabled }),
   setAudioDeviceId: (id) => set({ audioDeviceId: id }),
@@ -118,6 +125,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
     }),
   setConnectionStatus: (connecting, connected, error = null) =>
     set({ isConnecting: connecting, isConnected: connected, error }),
+  setMeetDetails: (details) => set({ meetDetails: details }),
   toggleScreenShare: (active) =>
     set((state) => ({ isScreenSharing: active !== undefined ? active : !state.isScreenSharing })),
   toggleHandRaise: (active) =>
@@ -200,6 +208,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       isConnecting: false,
       isConnected: false,
       error: null,
+      meetDetails: null,
       isScreenSharing: false,
       isHandRaised: false,
       activeSidebar: null,

@@ -5,8 +5,9 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 interface CreateInstantMeetOptions {
-  host: IUser;
   passcode?: string | null;
+  type?: "webinar" | "meet";
+  isRecording?: boolean;
 }
 
 /**
@@ -27,24 +28,13 @@ function generateRoomCode(): string {
  * to MongoDB, without generating tokens or calling external LiveKit room creation APIs.
  */
 export async function createInstantMeet({
-  host,
   passcode,
+  type,
+  isRecording,
 }: CreateInstantMeetOptions) {
-  if (!host) {
-    throw new ApiError("Host details are required", 400);
-  }
-  if (!host.userName || !host.role) {
-    throw new ApiError("Host userName and role are required", 400);
-  }
 
   // 1. Generate room code locally
   const roomName = generateRoomCode();
-
-  // 2. Resolve a valid 24-character hexadecimal ObjectId for MongoDB insert
-  let rawUserId = host._id ? host._id.toString() : "";
-  if (!rawUserId || !/^[0-9a-fA-F]{24}$/.test(rawUserId)) {
-    rawUserId = new mongoose.Types.ObjectId().toHexString();
-  }
 
   // 3. Hash passcode if provided using production-grade bcrypt
   let hashedPasscode = null;
@@ -58,14 +48,11 @@ export async function createInstantMeet({
     roomId: roomName,
     roomCode: roomName,
     status: "scheduled" as const,
+    type,
     startedAt: null,
     endedAt: null,
-    host: {
-      userId: rawUserId,
-      username: host.userName,
-      role: host.role,
-    },
     passcode: hashedPasscode,
+    isRecording: !!isRecording,
   };
   const meet = await MeetDao.createMeet(meetData);
   console.log("Saved Meet", meet)

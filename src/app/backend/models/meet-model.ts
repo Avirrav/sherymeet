@@ -23,6 +23,15 @@ const MeetSchema = new mongoose.Schema(
       enum: ["scheduled", "active", "ended"],
       default: "scheduled",
     },
+    type: {
+      type: String,
+      enum: ["webinar", "meet"],
+      default: "meet",
+    },
+    isRecording: {
+      type: Boolean,
+      default: false,
+    },
     startedAt: {
       type: Date,
       default: null,
@@ -30,20 +39,6 @@ const MeetSchema = new mongoose.Schema(
     endedAt: {
       type: Date,
       default: null,
-    },
-    host: {
-      userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-      },
-      username: {
-        type: String,
-        required: true,
-      },
-      role: {
-        type: String,
-        required: true,
-      },
     },
   },
   {

@@ -1,8 +1,8 @@
+import { Document } from "mongoose";
+
 export enum UserRole {
   BLOCKED = "blocked",
   DELETED = "deleted",
-  STUDENT = "student",
-  MENTOR = "mentor",
   ADMIN = "admin",
   SUPER_ADMIN = "super_admin",
   SERVICE_ACCOUNT = "service_account",
@@ -13,19 +13,48 @@ export interface IUser {
     userName: string;
     role:UserRole;
     email:string;
+    avatarUrl?: string;
 }
+
+export enum ParticipantRole {
+    HOST = "host",
+    CO_HOST="co_host",
+    PARTICIPANT = "participant",
+}
+
 export interface IParticipant {
-    participantName:string;
-    role:UserRole;
+  name:string;
+  role:ParticipantRole;
 }
-export const RoleHierarchy = {
+
+/**
+ * IUserDocument — Mongoose document interface for the User collection.
+ * Represents a platform user authenticated via Google OAuth (Login with Google).
+ */
+export interface IUserDocument extends Document {
+  googleId: string;
+  email: string;
+  userName: string;
+  avatarUrl?: string;
+  role: UserRole;
+  status: "active" | "blocked";
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const UserRoleHierarchy = {
   [UserRole.BLOCKED]: -2,
   [UserRole.DELETED]: -1,
-  [UserRole.STUDENT]: 1,
   [UserRole.SERVICE_ACCOUNT]: 0,
-  [UserRole.MENTOR]: 2,
-  [UserRole.ADMIN]: 3,
-  [UserRole.SUPER_ADMIN]: 4
+  [UserRole.ADMIN]: 1,
+  [UserRole.SUPER_ADMIN]: 2
+} as const;
+
+export const ParticipantRoleHierarchy = {
+  [ParticipantRole.PARTICIPANT]: 0,
+  [ParticipantRole.CO_HOST]: 1,
+  [ParticipantRole.HOST]: 2
 } as const;
 
 

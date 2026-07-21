@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/app/backend/utils/db-connect";
 import { ApiClientService } from "@/app/backend/services/api-client-service";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
-import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
+import { userAuthenticationMiddleware } from "@/app/backend/middleware/user-authentication-middleware";
 import { logger } from "@/app/backend/utils/logger";
 import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
 
@@ -22,6 +19,27 @@ export async function rotateApiClientHandler(req: AuthenticatedRequest): Promise
       return NextResponse.json(
         { error: "Missing apiKey parameter" },
         { status: 400 },
+      );
+    }
+
+    if (!req.user) {
+      return NextResponse.json(
+        { error: "Unauthorized: You must be logged in to perform this action" },
+        { status: 401 },
+      );
+    }
+
+    const existingClient = await ApiClientService.getClientByApiKey(apiKey);
+    if (!existingClient) {
+      return NextResponse.json(
+        { error: "Client not found or client is revoked" },
+        { status: 404 },
+      );
+    }
+    if (existingClient.createdBy && existingClient.createdBy.toString() !== req.user._id) {
+      return NextResponse.json(
+        { error: "You do not have permission to rotate this API key" },
+        { status: 403 },
       );
     }
 
@@ -55,8 +73,5 @@ export async function rotateApiClientHandler(req: AuthenticatedRequest): Promise
 }
 
 export const POST = runMiddlewares([
-  requestIdMiddleware,
-  authenticationMiddleware,
-  authorizationMiddleware([]),
-  rateLimitMiddleware,
+  userAuthenticationMiddleware,
 ], rotateApiClientHandler);

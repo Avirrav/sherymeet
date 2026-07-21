@@ -15,7 +15,16 @@ export type MeetingPermission =
   | "getMeeting"
   | "startMeeting"
   | "endMeeting"
-  | "joinMeeting";
+  | "joinMeeting"
+  | "muteParticipants"
+  | "unmuteParticipants"
+  | "removeParticipant"
+  | "requestParticipantVideo"
+  | "rejectParticipantVideo"
+  | "acceptParticipantVideo"
+  | "requestCoHost"
+  | "acceptCoHost"
+  | "rejectCoHost"
 
 export type RecordingPermission =
   | "startRecording"
@@ -25,6 +34,7 @@ export type RecordingPermission =
   | "downloadRecording";
 
 export type OrganizationPermission =
+  | "createApiKey"
   | "manageApiKeys"
   | "manageMembers"
   | "manageBilling";

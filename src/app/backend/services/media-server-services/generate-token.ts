@@ -1,10 +1,11 @@
 import { AccessToken } from "livekit-server-sdk";
 import {
   IParticipant,
-  RoleHierarchy,
+  ParticipantRole,
+  ParticipantRoleHierarchy,
 } from "@/app/backend/interfaces/user-interface";
-import { UserRole } from "@/app/backend/interfaces/user-interface";
 import { logger } from "@/app/backend/utils/logger";
+import { MeetDao } from "@/app/backend/dao/meet-dao";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -23,7 +24,7 @@ export async function generateToken(
   }
   const { roomName, participant } = options;
   // Generate the secure identity
-  const identity = `${participant.participantName}_${Math.random().toString(36).substring(2, 6)}`;
+  const identity = `${participant.name}_${Math.random().toString(36).substring(2, 6)}`;
   // Create an AccessToken
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
@@ -31,14 +32,23 @@ export async function generateToken(
       participant,
       roomName,
     }),
-    name: participant.participantName,
+    name: participant.name,
     ttl: "2h", // Token valid for 2 hours
   });
-  
-  const isMentorOrAbove = RoleHierarchy[participant.role] >= RoleHierarchy[UserRole.MENTOR];
-  logger.debug(`Generating token for ${participant.participantName} (role: ${participant.role}, isMentorOrAbove: ${isMentorOrAbove})`);
-
-  if (isMentorOrAbove) {
+  let meetType: "webinar" | "meet" = "meet";
+  try {
+    const meet = await MeetDao.getMeetByRoomId(roomName);
+    if (meet && meet.type) {
+      meetType = meet.type;
+    }
+  } catch (err) {
+    logger.warn(`Failed to fetch meeting type for room: ${roomName}, defaulting to meet`, err);
+  }
+  const isCoHostorAbove = ParticipantRoleHierarchy[participant.role] >= ParticipantRoleHierarchy[ParticipantRole.CO_HOST];
+  logger.debug(`Generating token for ${participant.name} (role: ${participant.role}, isCoHostorAbove: ${isCoHostorAbove}, meetType: ${meetType})`);
+  // If webinar only, only co-hosts and above can publish audio/video tracks.
+  const canPublish = meetType === "webinar" ? isCoHostorAbove : true;
+  if (isCoHostorAbove) {
     at.addGrant({
       roomJoin: true,
       room: roomName,
@@ -51,11 +61,10 @@ export async function generateToken(
     at.addGrant({
       room: roomName,
       roomJoin: true,
-      canPublish: true,
+      canPublish: canPublish,
       canPublishData: true,
       canSubscribe: true,
     });
   }
-
   return await at.toJwt();
 }

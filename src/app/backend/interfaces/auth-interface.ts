@@ -19,11 +19,15 @@ export interface IRevokedApiKey extends Document {
 export interface IApiClient extends Document {
   name: string;
   apiKey: string;
+  createdBy?: string; // ObjectId of the platform User who created this client (dashboard self-service)
+  createdByName?: string; // Denormalized snapshot of the creating user's name at creation time
+  createdByAvatarUrl?: string; // Denormalized snapshot of the creating user's Google avatar at creation time
   currentSecret: string; // Encrypted with AWS KMS or fallback AES-256
   previousSecret?: string; // Encrypted with AWS KMS or fallback AES-256
   currentSecretVersion: number;
   previousSecretVersion?: number;
   allowedDomains: string[];
+  allowRecording: boolean;
   status: 'active' | 'suspended';
   rateLimit: number; // requests/minute
   burstLimit: number; // requests/10 seconds

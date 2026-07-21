@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { generateToken } from "@/app/backend/services/media-server-services/generate-token";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { IParticipant } from "@/app/backend/interfaces/user-interface";
-import { getMeetDetails } from "@/app/backend/services/meet-services/get-meet-details";
+import { IParticipant, ParticipantRole } from "@/app/backend/interfaces/user-interface";
 import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
@@ -18,30 +17,21 @@ import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
 export async function joinAsUserHandler(request: NextRequest) {
   try {
     const body = await request.json();
-    const { roomId, user } = body;
-
+    const { roomId, participantData } = body;
     if (!roomId) {
       throw new ApiError("Room ID is required", 400);
     }
-    if (!user) {
-      throw new ApiError("User details are required", 400);
+    if (!participantData) {
+      throw new ApiError("Participant details are required", 400);
     }
-    if (!user.userName || !user.role) {
-      throw new ApiError("User userName and role are required", 400);
+    if (!participantData.name || !participantData.role) {
+      throw new ApiError("Participant name and role are required", 400);
     }
-    // Fetch meeting details using the getMeetDetails service
-    const meet = await getMeetDetails({ roomId });
-    // Check meeting status: if meeting status is not active return error "Meeting is not started"
-    if (meet.status !== "active") {
-      throw new ApiError("Meeting is not started", 400);
-    }
-
     // 1. Map the user to IParticipant structure
     const participant: IParticipant = {
-      participantName: user.userName,
-      role: user.role,
+      name: participantData.username,
+      role: ParticipantRole.PARTICIPANT
     };
-
     // 2. Generate connection token
     const token = await generateToken({
       roomName: roomId,
@@ -50,19 +40,14 @@ export async function joinAsUserHandler(request: NextRequest) {
     if (!token) {
       throw new ApiError("Failed to generate token", 500);
     }
-
     const serverUrl = process.env.LIVEKIT_URL;
     if (!serverUrl) {
       throw new ApiError("LiveKit server URL is not configured", 500);
     }
-
     const meetLink = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}?token=${token}`;
-
     return ApiResponse.success(
       {
-        token,
         roomId,
-        serverUrl,
         meetLink,
       },
       "Joined meeting successfully.",

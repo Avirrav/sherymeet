@@ -10,14 +10,11 @@ export class MeetDao {
     roomId: string;
     roomCode: string;
     status?: "scheduled" | "active" | "ended";
+    type?: "webinar" | "meet";
     startedAt?: Date | null;
     endedAt?: Date | null;
-    host: {
-      userId: string;
-      username: string;
-      role: string;
-    };
     passcode?: string | null;
+    isRecording?: boolean;
   }) {
     await dbConnect();
     const meet = new Meet(meetData);

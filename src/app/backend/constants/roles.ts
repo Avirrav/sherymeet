@@ -1,7 +1,7 @@
 import { Permission } from "../types/auth-types";
-import { UserRole } from "../interfaces/user-interface";
+import { ParticipantRole, UserRole } from "../interfaces/user-interface";
 
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+export const USER_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.SUPER_ADMIN]: [
     "createMeeting",
     "updateMeeting",
@@ -9,7 +9,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "getMeeting",
     "startMeeting",
     "endMeeting",
-    "joinMeeting",
     "startRecording",
     "stopRecording",
     "viewRecording",
@@ -29,33 +28,56 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "getMeeting",
     "startMeeting",
     "endMeeting",
-    "joinMeeting",
     "startRecording",
     "stopRecording",
     "viewRecording",
     "deleteRecording",
     "downloadRecording",
-    "manageMembers",
-    "manageBilling",
-    "manageUsers",
-    "assignRoles",
-  ],
-  [UserRole.MENTOR]: [
-    "createMeeting",
-    "updateMeeting",
-    "startMeeting",
-    "endMeeting",
-    "getMeeting",
-    "joinMeeting",
-    "startRecording",
-    "stopRecording",
-    "viewRecording",
-    "downloadRecording",
-  ],
-  [UserRole.STUDENT]: [
-    "joinMeeting",
+    "createApiKey",
   ],
   [UserRole.BLOCKED]: [],
   [UserRole.DELETED]: [],
   [UserRole.SERVICE_ACCOUNT]: [],
+};
+
+export const MEETING_ROLE_PERMISSIONS: Record<ParticipantRole, Permission[]> = {
+  [ParticipantRole.HOST]: [
+    "createMeeting",
+    "updateMeeting",
+    "deleteMeeting",
+    "getMeeting",
+    "startMeeting",
+    "endMeeting",
+    "startRecording",
+    "stopRecording",
+    "viewRecording",
+    "deleteRecording",
+    "downloadRecording",
+  ],
+  [ParticipantRole.CO_HOST]: [
+    "createMeeting",
+    "updateMeeting",
+    "deleteMeeting",
+    "getMeeting",
+    "startMeeting",
+    "endMeeting",
+    "startRecording",
+    "stopRecording",
+    "viewRecording",
+    "deleteRecording",
+    "downloadRecording",
+  ],
+  [ParticipantRole.PARTICIPANT]: [
+    "createMeeting",
+    "updateMeeting",
+    "deleteMeeting",
+    "getMeeting",
+    "startMeeting",
+    "endMeeting",
+    "startRecording",
+    "stopRecording",
+    "viewRecording",
+    "deleteRecording",
+    "downloadRecording",
+  ],
 };

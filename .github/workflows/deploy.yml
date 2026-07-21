@@ -48,49 +48,79 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
   deploy:
-    name: Deploy to EC2 via SSM
+    needs: build-and-push
     runs-on: ubuntu-latest
-    needs: build-and-push # Wait for Build & Push to succeed
-
     steps:
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials (EC2/SSM region)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_EC2_REGION }}
+          aws-region: ${{ env.AWS_REGION_EC2 }}
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Deploy Container via SSM Run Command
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      - name: Resolve running instance id by tag
+        id: instance
         run: |
-          INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=sherymeet-app" "Name=instance-state-name,Values=running" \
-            --region ${{ secrets.AWS_EC2_REGION }} \
-            --query "Reservations[*].Instances[*].InstanceId" \
+          set -e
+          ID=$(aws ec2 describe-instances \
+            --region "$AWS_REGION_EC2" \
+            --filters "Name=tag:Name,Values=$INSTANCE_TAG_NAME" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
             --output text)
-          
-          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" == "None" ]; then
-            echo "Error: No running EC2 instance ID found with Name tag 'sherymeet-app'"
-            exit 1
+          if [ -z "$ID" ] || [ "$ID" = "None" ]; then
+            echo "No running instance with tag Name=$INSTANCE_TAG_NAME"; exit 1
           fi
+          echo "Instance: $ID"
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
 
-          echo "Found EC2 Instance ID: $INSTANCE_ID"
+      - name: Redeploy container via SSM
+        run: |
+          set -e
+          INSTANCE_ID="${{ steps.instance.outputs.id }}"
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
-          aws ssm send-command \
+          # Build the remote command list as JSON (env vars expand here, on the runner)
+          cat > ssm-params.json <<JSON
+          {
+            "commands": [
+              "set -e",
+              "aws ecr get-login-password --region ${AWS_REGION_ECR} | docker login --username AWS --password-stdin ${ECR_REGISTRY}",
+              "docker pull ${IMAGE}",
+              "docker rm -f ${CONTAINER_NAME} || true",
+              "docker run -d --name ${CONTAINER_NAME} --restart unless-stopped --network sherymeet-network -p 3000:3000 --env-file /home/ubuntu/sherymeet.env ${IMAGE}",
+              "docker image prune -f"
+            ]
+          }
+          JSON
+
+          CMD_ID=$(aws ssm send-command \
+            --region "$AWS_REGION_EC2" \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --region ${{ secrets.AWS_EC2_REGION }} \
-            --parameters "commands=[
-              \"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY\",
-              \"docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest\",
-              \"docker stop sherymeet-app || true\",
-              \"docker rm sherymeet-app || true\",
-              \"docker run -d --name sherymeet-app -p 3000:3000 --restart always $ECR_REGISTRY/$ECR_REPOSITORY:latest\"
-            ]" \
-            --output text
+            --comment "Redeploy sherymeet ${{ github.sha }}" \
+            --parameters file://ssm-params.json \
+            --query "Command.CommandId" --output text)
+          echo "SSM Command: $CMD_ID"
+
+          # Wait for completion (don't fail yet — we want to print the logs first)
+          aws ssm wait command-executed \
+            --region "$AWS_REGION_EC2" \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" || true
+
+          STATUS=$(aws ssm get-command-invocation \
+            --region "$AWS_REGION_EC2" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query "Status" --output text)
+
+          echo "----- STDOUT -----"
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION_EC2" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query "StandardOutputContent" --output text
+          echo "----- STDERR -----"
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION_EC2" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query "StandardErrorContent" --output text
+
+          echo "Status: $STATUS"
+          [ "$STATUS" = "Success" ] || exit 1

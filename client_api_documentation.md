@@ -42,6 +42,9 @@ Every request must include the following headers:
 | `x-signature` | Yes | The calculated HMAC-SHA256 signature of the canonical payload, signed using your plaintext client secret. |
 | `Origin` | Optional | Whitelisted origin header if domain restrictions are configured. |
 
+> [!TIP]
+> **Local Development Hostname Exception**: If the incoming `Origin` / `Referer` hostname is a local loopback address (`localhost` or `127.0.0.1`), the port check is bypassed. Only the hostname is compared against the allowed domain list, permitting seamless local testing across different development ports (e.g., `localhost:3000` will successfully match a whitelisted `localhost:3001` or `localhost`).
+
 ---
 
 ### Signature Generation Algorithm
@@ -149,37 +152,18 @@ Initializes a scheduled room in the MongoDB database. This does not instantiate 
 #### Request Body
 ```json
 {
-  "host": {
-    "_id": "647bdf2f91a7e4b9e4a3b6f1",
-    "userName": "Gourav Host",
-    "role": "mentor",
-    "email": "host@example.com"
-  },
-  "passcode": "secure_room_passcode_123"
+  "passcode": "123456",
+  "type": "meet"
 }
 ```
 
 #### Response (200 OK)
-Returns clean sharing links (host and participant) that you can distribute to users.
+Returns the created room code/name.
 ```json
 {
   "statusCode": 200,
   "data": {
-    "roomName": "abc-defg-hij",
-    "hostLink": "https://api.sherymeet.com/meet/abc-defg-hij?userName=Gourav Host",
-    "participantLink": "https://api.sherymeet.com/meet/abc-defg-hij",
-    "meet": {
-      "_id": "647bdf2f91a...",
-      "roomId": "abc-defg-hij",
-      "roomCode": "abc-defg-hij",
-      "status": "scheduled",
-      "startedAt": null,
-      "endedAt": null,
-      "host": {
-        "userId": "647bdf2f9...",
-        "username": "Gourav Host"
-      }
-    }
+    "roomName": "abc-defg-hij"
   },
   "message": "Meeting generated successfully",
   "success": true
@@ -188,39 +172,30 @@ Returns clean sharing links (host and participant) that you can distribute to us
 
 ---
 
-### 2. Join Meeting as Host (Start Meeting)
-Verifies client hierarchy, updates meeting status to `"active"`, spawns a LiveKit room, starts recording if enabled, and generates a connection token with full **Host permissions** (e.g. mute participants, start/stop recording, eject users).
+### 2. Join Meeting as Host (Create Start URL)
+Verifies client credentials, checks passcode, transitions the meeting status to `"active"`, and returns a signed starting URL for the host to initialize and enter the meeting.
 
 * **HTTP Method**: `POST`
-* **URL**: `/api/v1/client/meet/join-as-host`
-* **Permissions Required**: `startMeeting`, `joinMeeting`
+* **URL**: `/api/v1/client/meet/create-start-url`
+* **Permissions Required**: `createMeeting`
 
 #### Request Body
 ```json
 {
   "roomId": "abc-defg-hij",
-  "user": {
-    "_id": "647bdf2f91a7e4b9e4a3b6f1",
-    "userName": "Gourav Host",
-    "role": "mentor",
-    "email": "host@example.com"
-  },
-  "passcode": "secure_room_passcode_123"
+  "passcode": "123456"
 }
 ```
 
 #### Response (200 OK)
-Returns a LiveKit WebSocket URL and a signed JWT containing **host/admin grants**. The returned `meetLink` has the token appended as a hash.
+Returns a signed application meet URL carrying the connection token as a query parameter.
 ```json
 {
   "statusCode": 200,
   "data": {
-    "token": "eyJhbGciOi...",
-    "roomId": "abc-defg-hij",
-    "serverUrl": "wss://livekit.sherymeet.com",
-    "meetLink": "https://api.sherymeet.com/meet/abc-defg-hij?token=eyJhbGciOi..."
+    "startUrl": "http://localhost:3000/meet/abc-defg-hij?token=eyJhbGciOi..."
   },
-  "message": "Room created successfully, Meeting started.",
+  "message": "Start URL Generated Successfully.",
   "success": true
 }
 ```
@@ -228,7 +203,7 @@ Returns a LiveKit WebSocket URL and a signed JWT containing **host/admin grants*
 ---
 
 ### 3. Join Meeting as User (Participant Join)
-Checks if the meeting has been started by the host, checks the passcode, and returns a LiveKit connection token with **standard participant grants** (read/write feeds, no moderator controls).
+Checks if the meeting has been started by the host, verifies the passcode, and returns a dynamic meeting connection URL for the user.
 
 * **HTTP Method**: `POST`
 * **URL**: `/api/v1/client/meet/join-as-user`
@@ -238,25 +213,22 @@ Checks if the meeting has been started by the host, checks the passcode, and ret
 ```json
 {
   "roomId": "abc-defg-hij",
-  "user": {
-    "_id": "647bdf2f91a7e4b9e4a3b6f2",
-    "userName": "Student User",
-    "role": "student",
-    "email": "student@example.com"
+  "participantData": {
+    "name": "Student User",
+    "username": "Student User",
+    "role": "participant"
   }
 }
 ```
 
 #### Response (200 OK)
-Returns a LiveKit connection token with **participant grants** and a join URL.
+Returns the join link containing the dynamic LiveKit token.
 ```json
 {
   "statusCode": 200,
   "data": {
-    "token": "eyJhbGciOi...",
     "roomId": "abc-defg-hij",
-    "serverUrl": "wss://livekit.sherymeet.com",
-    "meetLink": "https://api.sherymeet.com/meet/abc-defg-hij?token=eyJhbGciOi..."
+    "meetLink": "http://localhost:3000/meet/abc-defg-hij?token=eyJhbGciOi..."
   },
   "message": "Joined meeting successfully.",
   "success": true
@@ -265,17 +237,20 @@ Returns a LiveKit connection token with **participant grants** and a join URL.
 
 ---
 
-### 4. End Meeting
-Updates the meeting status in the database to `"ended"`, stops any active recordings, and destroys the room on the LiveKit server.
+### 4. End Meeting (Server API)
+Ends a meeting: transitions status to `"ended"`, stops active recordings, and destroys the LiveKit room.
 
 * **HTTP Method**: `POST`
-* **URL**: `/api/v1/client/meet/end-meet`
-* **Permissions Required**: `endMeeting`, `deleteMeeting`
+* **URL**: `/api/server/meet/end-meet`
+* **Authentication**: Server API Middleware (Origin/Referer check)
 
 #### Request Body
 ```json
 {
-  "roomId": "abc-defg-hij"
+  "roomId": "abc-defg-hij",
+  "localParticipant": {
+    "username": "DefaultMentor"
+  }
 }
 ```
 
@@ -297,8 +272,43 @@ Updates the meeting status in the database to `"ended"`, stops any active record
 
 ---
 
+### 5. Get Meeting Details (Server API)
+Retrieves the status, configuration, and host information of a meeting room.
+
+* **HTTP Method**: `GET`
+* **URL**: `/api/server/meet/details`
+* **Authentication**: Server API Middleware (Origin/Referer check)
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `roomId` | `string` | Yes | The room ID of the meeting to fetch. |
+
+#### Response (200 OK)
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "_id": "647bdf2f91a7e4b9e4a3b6f1",
+    "roomId": "abc-defg-hij",
+    "roomCode": "abc-defg-hij",
+    "status": "active",
+    "startedAt": "2026-07-11T12:00:00.000Z",
+    "endedAt": null,
+    "host": {
+      "userId": "647bdf2f91a7e4b9e4a3b6f1",
+      "username": "DefaultMentor"
+    }
+  },
+  "message": "Success",
+  "success": true
+}
+```
+
+---
+
 ## 4. Important Safety Guidelines for Clients
-1. **Passcode & Tokens**: Keep both the `meetLink` values returned by the endpoints secure. The token in the link expires based on LiveKit token policies, so they should be fetched dynamically when users join a room.
+1. **Passcode & Tokens**: Keep both the `meetLink` and `startUrl` values returned by the endpoints secure. The token in the link expires based on LiveKit token policies, so they should be fetched dynamically when users join a room.
 2. **Access Separation**:
-   * Distribute the token generated from `join-as-host` **only** to the instructor/host. It gives full room moderator control.
-   * Distribute the token generated from `join-as-user` to standard attendees. It strictly limits their permissions to publishing and subscribing to streams.
+   - Distribute the token generated from `create-start-url` **only** to the instructor/host. It gives full room moderator control.
+   - Distribute the token generated from `join-as-user` to standard attendees. It strictly limits their permissions to publishing and subscribing to streams.

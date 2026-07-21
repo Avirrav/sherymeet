@@ -1,5 +1,5 @@
-import { ROLE_PERMISSIONS } from "../constants/roles";
-import { RoleHierarchy } from "../interfaces/user-interface";
+import { USER_ROLE_PERMISSIONS } from "../constants/roles";
+import { UserRoleHierarchy } from "../interfaces/user-interface";
 import { UserRole, Permission } from "../types/auth-types";
 import { ApiError } from "../utils/api-helper";
 
@@ -12,10 +12,10 @@ export class AuthorizationService {
     role: UserRole,
     requiredPermission: Permission,
   ): Promise<boolean> {
-    if (RoleHierarchy[role] >= RoleHierarchy[UserRole.SUPER_ADMIN]) {
+    if (UserRoleHierarchy[role] >= UserRoleHierarchy[UserRole.SUPER_ADMIN]) {
       return true;
     }
-    const permissions = ROLE_PERMISSIONS[role] || [];
+    const permissions = USER_ROLE_PERMISSIONS[role] || [];
     return permissions.includes(requiredPermission);
   }
 
@@ -27,13 +27,13 @@ export class AuthorizationService {
     role: UserRole,
     requiredPermissions: Permission[],
   ): Promise<boolean> {
-    if (RoleHierarchy[role] >= RoleHierarchy[UserRole.SUPER_ADMIN]) {
+    if (UserRoleHierarchy[role] >= UserRoleHierarchy[UserRole.SUPER_ADMIN]) {
       return true;
     }
     if (requiredPermissions.length === 0) {
       throw new ApiError("Required permissions are not provided", 400);
     }
-    const permissions = ROLE_PERMISSIONS[role] || [];
+    const permissions = USER_ROLE_PERMISSIONS[role] || [];
     return requiredPermissions.every((p) => permissions.includes(p));
   }
 }

@@ -7,7 +7,6 @@ import {
 } from "../types/auth-types";
 import { AuthorizationService } from "../services/authorization.service";
 import { logger } from "../utils/logger";
-
 /**
  * Authorization Middleware Factory.
  * Enforces Role-Based Access Control (RBAC) permissions.

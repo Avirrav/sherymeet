@@ -31,7 +31,7 @@ import {
 
 } from 'lucide-react';
 import LayoutManager from './layout/LayoutManager';
-import { RoleHierarchy, UserRole } from '@/app/backend/interfaces/user-interface';
+import { ParticipantRole, ParticipantRoleHierarchy } from '@/app/backend/interfaces/user-interface';
 
 interface ConferenceRoomProps {
   room: Room;
@@ -42,6 +42,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const router = useRouter(); 
   const {
     roomId,
+    token,
     audioEnabled,
     videoEnabled,
     toggleCamera,
@@ -79,8 +80,8 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
       const metaStr = room.localParticipant?.metadata;
       if (metaStr) {
         const meta = JSON.parse(metaStr);
-        const role = meta.participant?.role as UserRole;
-        return RoleHierarchy[role] >= RoleHierarchy[UserRole.MENTOR];
+        const role = meta.participant?.role as ParticipantRole;
+        return ParticipantRoleHierarchy[role] >= ParticipantRoleHierarchy[ParticipantRole.HOST];
       }
     } catch (err) {
       console.error('Error parsing participant metadata:', err);
@@ -92,43 +93,29 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const handleLeaveConfirm = () => {
     room.disconnect();
     toast.info('Left the meeting');
+    if (typeof window !== 'undefined' && window.self !== window.top) {
+      window.parent.postMessage({ type: 'sherymeet:left', roomId }, '*');
+    }
     router.push('/');
   };
   {/*Handle EndMeeting*/}
   const handleEndMeeting = async () => {
     if (confirm("Are you sure you want to end the meeting for everyone?")) {
       try {
-        const localUser = {
-          username: room.localParticipant?.name || "",
-          identity: room.localParticipant?.identity || "",
-          role: "student"
-        };
-        try {
-          const metaStr = room.localParticipant?.metadata;
-          if (metaStr) {
-            const meta = JSON.parse(metaStr);
-            if (meta.participant) {
-              localUser.role = meta.participant.role || "student";
-              if (meta.participant.userName) {
-                localUser.username = meta.participant.userName;
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Error parsing participant metadata for end-meet:", e);
-        }
-
-        const res = await fetch("/api/v1/server/meet/end-meet", {
+        const res = await fetch("/api/server/meet/end-meet", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ roomId, localParticipant: localUser }),
+          body: JSON.stringify({ roomId, token }),
         });
 
         if (res.ok) {
           toast.success("Meeting ended successfully");
           room.disconnect();
+          if (typeof window !== 'undefined' && window.self !== window.top) {
+            window.parent.postMessage({ type: 'sherymeet:ended', roomId }, '*');
+          }
           router.push("/");
         } else {
           toast.error("Failed to end meeting");

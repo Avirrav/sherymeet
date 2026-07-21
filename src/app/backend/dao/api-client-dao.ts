@@ -8,6 +8,7 @@ export class ApiClientDao {
     clientData: Partial<IApiClient>,
   ): Promise<IApiClient> {
     await dbConnect();
+    console.log("clientData", clientData);
     const client = new ApiClient(clientData);
     return await client.save();
   }
@@ -17,6 +18,13 @@ export class ApiClientDao {
   ): Promise<IApiClient | null> {
     await dbConnect();
     return await ApiClient.findOne({ apiKey });
+  }
+
+  static async getApiClientsByCreatedBy(
+    userId: string,
+  ): Promise<IApiClient[]> {
+    await dbConnect();
+    return await ApiClient.find({ createdBy: userId }).sort({ createdAt: -1 });
   }
 
   static async updateApiClient(

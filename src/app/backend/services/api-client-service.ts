@@ -12,10 +12,13 @@ export class ApiClientService {
   static async createApiClient(
     name: string,
     allowedDomains: string[] = [],
+    creator?: { id: string; name?: string; avatarUrl?: string },
+    allowRecording: boolean = false,
   ): Promise<{ client: IApiClient; plaintextSecret: string }> {
     const apiKey = `sm_live_${crypto.randomBytes(16).toString("hex")}`;
     const plaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
     // Encrypt secret using KMS/GCM
+    console.log("Creator:", creator);
     const encryptedSecret = await apiKeyEncryption.encrypt(plaintextSecret);
     const clientDoc = await ApiClientDao.createApiClient({
       name,
@@ -23,13 +26,24 @@ export class ApiClientService {
       currentSecret: encryptedSecret,
       currentSecretVersion: 1,
       allowedDomains,
+      allowRecording,
       status: "active",
       revoked: false,
+      createdBy: creator?.id,
+      createdByName: creator?.name,
+      createdByAvatarUrl: creator?.avatarUrl,
     });
     return {
       client: clientDoc,
       plaintextSecret,
     };
+  }
+
+  /**
+   * Lists the API clients created by a given platform user (dashboard self-service).
+   */
+  static async listClientsForUser(userId: string): Promise<IApiClient[]> {
+    return await ApiClientDao.getApiClientsByCreatedBy(userId);
   }
   /**
    * Performs client secret rotation.
