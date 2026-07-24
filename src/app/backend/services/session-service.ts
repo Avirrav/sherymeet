@@ -6,10 +6,19 @@ import { IUser, UserRole } from "../interfaces/user-interface";
 export const SESSION_COOKIE_NAME = "sherymeet_session";
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-const SESSION_SECRET_FALLBACK = "sherymeet_default_dev_session_secret_change_me!";
+// Development-only fallback. Production refuses to run without a real secret
+// (also enforced at boot by validateEnv in instrumentation.ts).
+const DEV_SESSION_SECRET_FALLBACK = "sherymeet_default_dev_session_secret_change_me!";
 
 function getSessionSecret(): string {
-  return process.env.SESSION_SECRET || SESSION_SECRET_FALLBACK;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET must be set in production");
+    }
+    return DEV_SESSION_SECRET_FALLBACK;
+  }
+  return secret;
 }
 
 export interface SessionPayload {

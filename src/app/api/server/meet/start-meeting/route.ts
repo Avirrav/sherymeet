@@ -8,6 +8,9 @@ import { startRoomRecording } from "@/app/backend/services/media-server-services
 import { logger } from "@/app/backend/utils/logger";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
 import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middleware";
+import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
+import { ipRateLimitMiddleware } from "@/app/backend/middleware/ip-rate-limit-middleware";
+import { parseJsonBody, serverRoomTokenSchema } from "@/app/backend/validation/meet-schemas";
 
 /**
  * POST /api/server/meet/start-meeting
@@ -19,13 +22,7 @@ import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middlew
  */
 export async function startMeetingHandler(request: NextRequest) {
   try {
-    const { roomId, token } = await request.json();
-    if (!roomId) {
-      throw new ApiError("Room ID is required", 400);
-    }
-    if (!token) {
-      throw new ApiError("Token is required", 400);
-    }
+    const { roomId, token } = await parseJsonBody(request, serverRoomTokenSchema);
 
     const { roomAdmin } = await verifyRoomToken(token, roomId);
     if (!roomAdmin) {
@@ -37,6 +34,9 @@ export async function startMeetingHandler(request: NextRequest) {
       throw new ApiError("Meeting not found", 404);
     }
 
+    if (meet.status === "ended") {
+      throw new ApiError("Meeting already ended", 400);
+    }
     if (meet.status === "active") {
       return ApiResponse.success({ status: meet.status, isRecording: meet.isRecording });
     }
@@ -46,6 +46,13 @@ export async function startMeetingHandler(request: NextRequest) {
 
     const updatedMeet = await MeetDao.startMeet(roomId);
     if (!updatedMeet) {
+      // startMeet only flips scheduled -> active, so a null here usually means
+      // a concurrent request won the race. Treat an already-active meet as
+      // success instead of a 500.
+      const current = await MeetDao.getMeetByRoomId(roomId);
+      if (current?.status === "active") {
+        return ApiResponse.success({ status: current.status, isRecording: current.isRecording });
+      }
       throw new ApiError("Failed to start meeting", 500);
     }
 
@@ -75,12 +82,11 @@ export async function startMeetingHandler(request: NextRequest) {
 
     return ApiResponse.success({ status: updatedMeet.status, isRecording: updatedMeet.isRecording });
   } catch (error) {
-    if (error instanceof ApiError) {
-      return ApiResponse.failure(error.message, error.statusCode, error.errors);
-    }
-    const err = error instanceof Error ? error : new Error(String(error));
-    return ApiResponse.failure(err.message || "Failed to start meeting", 500);
+    return ApiResponse.fromError(error, "Failed to start meeting");
   }
 }
 
-export const POST = runMiddlewares([serverApiMiddleware], startMeetingHandler);
+export const POST = runMiddlewares(
+  [requestIdMiddleware, ipRateLimitMiddleware, serverApiMiddleware],
+  startMeetingHandler,
+);

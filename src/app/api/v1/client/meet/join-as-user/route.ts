@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import bcrypt from "bcryptjs";
 import { generateToken } from "@/app/backend/services/media-server-services/generate-token";
 import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
 import { IParticipant, ParticipantRole } from "@/app/backend/interfaces/user-interface";
+import { MeetDao } from "@/app/backend/dao/meet-dao";
 import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
 import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
@@ -9,30 +11,40 @@ import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middlew
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
 import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
 import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
+import { joinAsUserSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
 
 /**
- * POST /api/private/meet/join-as-user
- * Generates an Access Token for joining a specific active room as a user and returns the join link.
+ * POST /api/v1/client/meet/join-as-user
+ * Generates an Access Token for joining a specific room as a participant and
+ * returns the join link. Validates that the meeting exists, has not ended,
+ * and (when the meeting has a passcode) that the correct passcode was sent.
  */
 export async function joinAsUserHandler(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { roomId, participantData } = body;
-    if (!roomId) {
-      throw new ApiError("Room ID is required", 400);
+    const { roomId, passcode, participantData } = await parseJsonBody(request, joinAsUserSchema);
+
+    const meet = await MeetDao.getMeetByRoomId(roomId);
+    if (!meet) {
+      throw new ApiError("Meeting not found", 404);
     }
-    if (!participantData) {
-      throw new ApiError("Participant details are required", 400);
+    if (meet.status === "ended") {
+      throw new ApiError("Meeting already ended", 400);
     }
-    if (!participantData.name || !participantData.role) {
-      throw new ApiError("Participant name and role are required", 400);
+    if (meet.passcode) {
+      if (!passcode) {
+        throw new ApiError("Passcode is required to join this meeting", 400);
+      }
+      const isMatch = await bcrypt.compare(passcode, meet.passcode);
+      if (!isMatch) {
+        throw new ApiError("Invalid passcode", 401);
+      }
     }
-    // 1. Map the user to IParticipant structure
+
     const participant: IParticipant = {
-      name: participantData.username,
-      role: ParticipantRole.PARTICIPANT
+      // Older clients send `username`; the documented field is `name`.
+      name: (participantData.name || participantData.username) as string,
+      role: ParticipantRole.PARTICIPANT,
     };
-    // 2. Generate connection token
     const token = await generateToken({
       roomName: roomId,
       participant,
@@ -40,11 +52,9 @@ export async function joinAsUserHandler(request: NextRequest) {
     if (!token) {
       throw new ApiError("Failed to generate token", 500);
     }
-    const serverUrl = process.env.LIVEKIT_URL;
-    if (!serverUrl) {
-      throw new ApiError("LiveKit server URL is not configured", 500);
-    }
-    const meetLink = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}?token=${token}`;
+    // Token travels in the hash fragment so it never reaches server logs,
+    // proxies, or Referer headers. The meet page reads the fragment client-side.
+    const meetLink = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}#token=${encodeURIComponent(token)}&userName=${encodeURIComponent(participant.name)}`;
     return ApiResponse.success(
       {
         roomId,
@@ -53,22 +63,17 @@ export async function joinAsUserHandler(request: NextRequest) {
       "Joined meeting successfully.",
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      return ApiResponse.failure(error.message, error.statusCode, error.errors);
-    }
-    const err = error instanceof Error ? error : new Error(String(error));
-    return ApiResponse.failure(err.message || "Failed to join meeting", 500);
+    return ApiResponse.fromError(error, "Failed to join meeting");
   }
 }
-export const POST =runMiddlewares(
-    [
-      requestIdMiddleware,
-      auditMiddleware,
-      authenticationMiddleware,
-      authorizationMiddleware(["joinMeeting"]),
-      rateLimitMiddleware,
-      replayProtectionMiddleware,
-    ],
-    joinAsUserHandler,
-  );
-
+export const POST = runMiddlewares(
+  [
+    requestIdMiddleware,
+    auditMiddleware,
+    authenticationMiddleware,
+    authorizationMiddleware(["joinMeeting"]),
+    rateLimitMiddleware,
+    replayProtectionMiddleware,
+  ],
+  joinAsUserHandler,
+);

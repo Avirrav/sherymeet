@@ -35,7 +35,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   };
 
   return (
-    <div className="w-80 h-full bg-brand-surface border-l border-brand-border rounded-xl flex flex-col justify-between animate-fade-in relative z-20">
+    <div className="w-80 h-full bg-brand-surface border-l border-brand-border rounded-xl flex flex-col justify-between relative z-20">
       
       {/* Header */}
       <div className="p-4 border-b border-brand-border flex items-center justify-between">

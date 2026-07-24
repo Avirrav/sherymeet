@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
       const receiver = new WebhookReceiver(apiKey, apiSecret);
       event = await receiver.receive(bodyText, authHeader || "");
     } catch (err) {
+      // Unsigned payloads are only tolerated in local development; in any
+      // other environment a failed signature check must reject the request,
+      // otherwise anyone can forge egress events and corrupt recording state.
+      if (process.env.NODE_ENV !== "development") {
+        logger.warn("Rejected LiveKit webhook with invalid signature", err);
+        return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+      }
       logger.warn("Webhook signature verification failed. Parsing raw JSON directly for development.", err);
       event = JSON.parse(bodyText);
     }

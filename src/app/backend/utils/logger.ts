@@ -8,8 +8,14 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 // Default log level from environment or 'info'
-const CURRENT_LOG_LEVEL = (process.env.LOG_LEVEL?.toLowerCase() as LogLevel) || 
+const CURRENT_LOG_LEVEL = (process.env.LOG_LEVEL?.toLowerCase() as LogLevel) ||
   (process.env.NODE_ENV === "production" ? "info" : "debug");
+
+// Production emits one JSON object per line so log aggregators can parse
+// fields; development keeps the human-readable format. LOG_FORMAT overrides.
+const USE_JSON_LOGS =
+  process.env.LOG_FORMAT === "json" ||
+  (process.env.LOG_FORMAT !== "pretty" && process.env.NODE_ENV === "production");
 
 interface LogContext {
   requestId?: string;
@@ -81,7 +87,23 @@ class Logger {
       errorStack = `\n${error.stack || error.message}`;
     }
 
-    const logOutput = `${timestamp} ${levelTag}${requestIdStr}: ${message}${metadataStr}${errorStack}`;
+    let logOutput: string;
+    if (USE_JSON_LOGS) {
+      const entry: Record<string, unknown> = { timestamp, level, message };
+      const requestId = requestIdStr.replace(/^\s*\[|\]$/g, "");
+      if (requestId) entry.requestId = requestId;
+      if (metadataStr) {
+        try {
+          entry.context = JSON.parse(metadataStr.replace(" | Context: ", ""));
+        } catch {
+          entry.context = metadataStr;
+        }
+      }
+      if (errorStack) entry.error = errorStack.trim();
+      logOutput = JSON.stringify(entry);
+    } else {
+      logOutput = `${timestamp} ${levelTag}${requestIdStr}: ${message}${metadataStr}${errorStack}`;
+    }
 
     // Write to standard streams based on severity
     if (level === "error") {

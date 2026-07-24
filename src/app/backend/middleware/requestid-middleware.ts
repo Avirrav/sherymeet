@@ -1,20 +1,18 @@
 import crypto from "crypto";
 import { NextMiddleware } from "../types/auth-types";
-import { ApiError } from "../utils/api-helper";
 import { AuthenticatedRequest } from "../interfaces/auth-interface";
 
 /**
  * Injects a unique trace correlation ID (X-REQUEST-ID) into the request context
- * and returns it in the final response headers.
+ * and returns it in the final response headers. Uses the caller-supplied
+ * x-request-id when present (API clients); otherwise generates one, so the
+ * middleware also works for browser-originated requests.
  */
 export async function requestIdMiddleware(
   request: AuthenticatedRequest,
   next: NextMiddleware,
 ): Promise<Response> {
-  const headerId = request.headers.get("x-request-id");
-  if (!headerId) {
-    throw new ApiError("X-REQUEST-ID is required", 400);
-  }
+  const headerId = request.headers.get("x-request-id") || crypto.randomUUID();
   const requestId = `Req_${headerId}_${Date.now()}_${crypto.randomUUID().replace(/-/g, "")}`;
   // Attach to request context
   request.requestId = requestId;

@@ -18,6 +18,8 @@ COPY package.json pnpm-lock.yaml ./
 
 # --frozen-lockfile ensures CI-safe, reproducible installs.
 # devDependencies are needed at build time (TypeScript, PostCSS, etc.)
+# HUSKY=0 skips git-hook installation — there is no .git inside the image.
+ENV HUSKY=0
 RUN pnpm install --frozen-lockfile
 
 
@@ -102,6 +104,11 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+# Container-level readiness probe hitting the app's health endpoint.
+# busybox wget ships with alpine, so no extra packages are needed.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
 
 # standalone mode produces a server.js at the root of the standalone dir.
 # We run it directly with node — no pnpm/npm needed at all in this image.

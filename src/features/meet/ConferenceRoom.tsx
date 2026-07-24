@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useTranscribe } from '@/hooks/media-server/useTranscribe';
 import CaptionOverlay from './CaptionOverlay';
 import MicVisualizer from './MicVisualizer';
+import { emitEmbedEvent, isEmbedded } from './embed-bridge';
 
 import {
   Mic,
@@ -62,6 +63,20 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   {/* States */}
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  // Keeps the sidebar mounted briefly after close so it can slide out.
+  const [renderedSidebar, setRenderedSidebar] = useState<typeof activeSidebar>(null);
+  const isPanelClosing = !activeSidebar && !!renderedSidebar;
+  useEffect(() => {
+    if (activeSidebar) {
+      // One-frame defer keeps the entrance animation reliable and avoids
+      // synchronous setState inside the effect.
+      const raf = requestAnimationFrame(() => setRenderedSidebar(activeSidebar));
+      return () => cancelAnimationFrame(raf);
+    }
+    if (!renderedSidebar) return;
+    const timer = setTimeout(() => setRenderedSidebar(null), 240);
+    return () => clearTimeout(timer);
+  }, [activeSidebar, renderedSidebar]);
   {/*Timer effect*/}
   useEffect(() => {
     const interval = setInterval(() => {
@@ -93,10 +108,11 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const handleLeaveConfirm = () => {
     room.disconnect();
     toast.info('Left the meeting');
-    if (typeof window !== 'undefined' && window.self !== window.top) {
-      window.parent.postMessage({ type: 'sherymeet:left', roomId }, '*');
+    // The embed bridge reports 'left' via the connection watcher in
+    // MeetingPageClient; don't navigate away inside an embed iframe.
+    if (!isEmbedded()) {
+      router.push('/');
     }
-    router.push('/');
   };
   {/*Handle EndMeeting*/}
   const handleEndMeeting = async () => {
@@ -113,10 +129,10 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         if (res.ok) {
           toast.success("Meeting ended successfully");
           room.disconnect();
-          if (typeof window !== 'undefined' && window.self !== window.top) {
-            window.parent.postMessage({ type: 'sherymeet:ended', roomId }, '*');
+          emitEmbedEvent('meeting-ended', { roomId });
+          if (!isEmbedded()) {
+            router.push("/");
           }
-          router.push("/");
         } else {
           toast.error("Failed to end meeting");
         }
@@ -146,7 +162,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col justify-between bg-brand-dark text-white overflow-hidden relative font-sans">
+    <div className="h-screen w-screen flex flex-col justify-between bg-brand-dark text-white overflow-hidden relative font-sans animate-screen-in">
       <header className="px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-xs text-brand-text-secondary font-mono">
@@ -162,7 +178,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Participants Sidebar Toggle */}
           <button
             onClick={() => toggleSidebar('participants')}
-            className={`p-3.5 rounded-full transition-all border ${
+            className={`control-btn p-3.5 rounded-full border ${
               activeSidebar === 'participants'
                 ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
                 : 'bg-transparent border-transparent hover:bg-brand-surface hover:border-brand-border text-brand-text-secondary hover:text-white'
@@ -175,7 +191,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Chat Sidebar Toggle */}
           <button
             onClick={() => toggleSidebar('chat')}
-            className={`p-3.5 rounded-full transition-all border relative ${
+            className={`control-btn p-3.5 rounded-full border relative ${
               activeSidebar === 'chat'
                 ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
                 : 'bg-transparent border-transparent hover:bg-brand-surface hover:border-brand-border text-brand-text-secondary hover:text-white'
@@ -193,7 +209,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Settings & Layout Sidebar Toggle */}
           <button
             onClick={() => toggleSidebar('settings')}
-            className={`p-3.5 rounded-full transition-all border ${
+            className={`control-btn p-3.5 rounded-full border ${
               activeSidebar === 'settings'
                 ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
                 : 'bg-transparent border-transparent hover:bg-brand-surface hover:border-brand-border text-brand-text-secondary hover:text-white'
@@ -218,21 +234,28 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Real-time Captions Overlay */}
           <CaptionOverlay room={room} />
         </div>
-        {/* Sidebar panel */}
-        {activeSidebar === 'chat' && (
-          <ChatPanel room={room} onClose={() => toggleSidebar('chat')} />
-        )}
-        {activeSidebar === 'participants' && (
-          <ParticipantsPanel room={room} onClose={() => toggleSidebar('participants')} />
-        )}
-        {activeSidebar === 'settings' && (
-          <SettingsPanel
-            room={room}
-            onClose={() => toggleSidebar('settings')}
-            isHost={isHost}
-            handleEndMeeting={handleEndMeeting}
-            setShowLeaveModal={setShowLeaveModal}
-          />
+        {/* Sidebar panel (stays mounted during the slide-out animation) */}
+        {renderedSidebar && (
+          <div
+            key={renderedSidebar}
+            className={`h-full ${isPanelClosing ? 'panel-slide-out' : 'panel-slide-in'}`}
+          >
+            {renderedSidebar === 'chat' && (
+              <ChatPanel room={room} onClose={() => toggleSidebar('chat')} />
+            )}
+            {renderedSidebar === 'participants' && (
+              <ParticipantsPanel room={room} onClose={() => toggleSidebar('participants')} />
+            )}
+            {renderedSidebar === 'settings' && (
+              <SettingsPanel
+                room={room}
+                onClose={() => toggleSidebar('settings')}
+                isHost={isHost}
+                handleEndMeeting={handleEndMeeting}
+                setShowLeaveModal={setShowLeaveModal}
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -242,7 +265,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         <button
           onClick={() => raiseHand(!isHandRaised)}
           disabled={remoteParticipants.length === 0}
-          className={`p-3.5 rounded-full transition-all border disabled:opacity-30 disabled:pointer-events-none ${
+          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
             isHandRaised
               ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
               : 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
@@ -254,41 +277,41 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         {/* Mute Mic */}
         <button
           onClick={toggleMicrophone}
-          className={`p-3.5 rounded-full transition-all border ${
+          className={`control-btn p-3.5 rounded-full border ${
             audioEnabled
               ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
               : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
           }`}
           title={audioEnabled ? 'Mute Mic' : 'Unmute Mic'}
         >
-          {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          {audioEnabled ? <Mic className="w-5 h-5 animate-pop-in" /> : <MicOff className="w-5 h-5 animate-pop-in" />}
         </button>
         {/* Mic Sound Bar Visualizer */}
         <MicVisualizer isActive={audioEnabled} />
         {/* Toggle Camera */}
         <button
           onClick={toggleCamera}
-          className={`p-3.5 rounded-full transition-all border ${
+          className={`control-btn p-3.5 rounded-full border ${
             videoEnabled
               ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
               : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
           }`}
           title={videoEnabled ? 'Stop Camera' : 'Start Camera'}
         >
-          {videoEnabled ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+          {videoEnabled ? <VideoIcon className="w-5 h-5 animate-pop-in" /> : <VideoOff className="w-5 h-5 animate-pop-in" />}
         </button>
         {/* Screen Share */}
         <button
           onClick={toggleScreenShare}
           disabled={remoteParticipants.length === 0}
-          className={`p-3.5 rounded-full transition-all border disabled:opacity-30 disabled:pointer-events-none ${
+          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
             isScreenSharing
               ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
               : 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
           }`}
           title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
         >
-          {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+          {isScreenSharing ? <MonitorOff className="w-5 h-5 animate-pop-in" /> : <Monitor className="w-5 h-5 animate-pop-in" />}
         </button>
       </footer>
 

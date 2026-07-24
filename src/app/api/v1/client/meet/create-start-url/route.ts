@@ -11,6 +11,7 @@ import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middlew
 import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
 import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
 import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
+import { createStartUrlSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
 
 /**
  * POST /api/private/meet/join-as-host
@@ -19,12 +20,8 @@ import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-prot
  */
 export async function startMeetHandler(request: AuthenticatedRequest) {
   try {
-    const body = await request.json();
-    const { roomId, passcode } = body;
+    const { roomId, passcode } = await parseJsonBody(request, createStartUrlSchema);
     const user = request.user;
-    if (!roomId) {
-      throw new ApiError("Room ID is required", 400);
-    }
     if (!user) {
       throw new ApiError("User details are required", 400);
     }
@@ -66,7 +63,9 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
     // Activation (status -> active) and recording no longer happen here; the
     // host explicitly triggers both from the meet page via /start-meeting.
 
-    const startUrl = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}&userName=${encodeURIComponent(user.userName)}`;
+    // Token travels in the hash fragment so it never reaches server logs,
+    // proxies, or Referer headers. The meet page reads the fragment client-side.
+    const startUrl = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}#token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}&userName=${encodeURIComponent(user.userName)}`;
     return ApiResponse.success(
       {
         startUrl,
@@ -74,11 +73,7 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
       "Start URL Generated Successfully.",
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      return ApiResponse.failure(error.message, error.statusCode, error.errors);
-    }
-    const err = error instanceof Error ? error : new Error(String(error));
-    return ApiResponse.failure(err.message || "Failed to join meeting", 500);
+    return ApiResponse.fromError(error, "Failed to create start URL");
   }
 }
 

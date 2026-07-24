@@ -12,7 +12,15 @@ const AuditLogSchema = new Schema<IAuditLog>({
   eventType: { type: String, required: true, index: true },
   status: { type: Number, required: true },
   details: { type: String },
-  timestamp: { type: Date, required: true, default: Date.now, index: true },
+  timestamp: {
+    type: Date,
+    required: true,
+    default: Date.now,
+    index: true,
+    // TTL index: audit logs are pruned automatically so the collection
+    // doesn't grow without bound. Configurable in days via AUDIT_LOG_TTL_DAYS.
+    expires: 60 * 60 * 24 * Number(process.env.AUDIT_LOG_TTL_DAYS || 90),
+  },
 });
 
 export default mongoose.models.AuditLog ||

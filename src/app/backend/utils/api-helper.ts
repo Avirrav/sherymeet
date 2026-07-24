@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiErrorDetail } from "@/app/backend/types/error-types";
+import { logger } from "./logger";
 
 /**
  * Standard API Error class extending native Error.
@@ -58,6 +59,19 @@ export class ApiResponse extends NextResponse {
   /**
    * Returns a standard error response with success: false, data: null, and error list.
    */
+  /**
+   * Standard catch-block responder: ApiErrors pass through with their status
+   * and message; anything else is logged server-side and returned as the
+   * generic fallback so internal error details never reach the client.
+   */
+  static fromError(error: unknown, fallbackMessage: string) {
+    if (error instanceof ApiError) {
+      return ApiResponse.failure(error.message, error.statusCode, error.errors);
+    }
+    logger.error(fallbackMessage, error);
+    return ApiResponse.failure(fallbackMessage, 500);
+  }
+
   static failure(
     message: string,
     statusCode: number = 500,

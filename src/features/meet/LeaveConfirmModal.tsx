@@ -24,13 +24,13 @@ export default function LeaveConfirmModal({ onConfirm, onCancel }: LeaveConfirmM
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 bg-brand-dark hover:bg-brand-border border border-brand-border py-2.5 rounded-xl text-xs font-semibold text-white transition-colors"
+            className="btn-press flex-1 bg-brand-dark hover:bg-brand-border border border-brand-border py-2.5 rounded-xl text-xs font-semibold text-white"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 bg-red-600 hover:bg-red-700 py-2.5 rounded-xl text-xs font-semibold text-white transition-colors shadow-lg shadow-red-600/15"
+            className="btn-press flex-1 bg-red-600 hover:bg-red-700 py-2.5 rounded-xl text-xs font-semibold text-white shadow-lg shadow-red-600/15"
           >
             Leave
           </button>

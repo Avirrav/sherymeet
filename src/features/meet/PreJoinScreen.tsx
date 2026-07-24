@@ -141,27 +141,27 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
               <button
                 type="button"
                 onClick={toggleMicrophone}
-                className={`p-3 rounded-full transition-all duration-200 border ${
+                className={`control-btn p-3 rounded-full border ${
                   audioEnabled
                     ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
                     : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
                 }`}
                 title={audioEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
               >
-                {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                {audioEnabled ? <Mic className="w-5 h-5 animate-pop-in" /> : <MicOff className="w-5 h-5 animate-pop-in" />}
               </button>
 
               <button
                 type="button"
                 onClick={toggleCamera}
-                className={`p-3 rounded-full transition-all duration-200 border ${
+                className={`control-btn p-3 rounded-full border ${
                   videoEnabled
                     ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
                     : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
                 }`}
                 title={videoEnabled ? 'Stop Video' : 'Start Video'}
               >
-                {videoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+                {videoEnabled ? <Video className="w-5 h-5 animate-pop-in" /> : <VideoOff className="w-5 h-5 animate-pop-in" />}
               </button>
             </div>
 
@@ -258,7 +258,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-6 rounded-xl font-bold transition-all duration-200 shadow-lg shadow-brand-orange/20 hover:shadow-brand-orange/35 text-sm uppercase tracking-wider mt-2 group"
+              className="btn-press w-full flex items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-6 rounded-xl font-bold shadow-lg shadow-brand-orange/20 hover:shadow-brand-orange/35 text-sm uppercase tracking-wider mt-2 group"
             >
               <span>Enter Meet</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />

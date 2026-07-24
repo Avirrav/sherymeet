@@ -60,7 +60,6 @@ export async function authenticationMiddleware(
   // 3b. Resolve the platform user who owns this API client (if any) and attach to the request
   if (client.createdBy) {
     const owner = await UserService.getUserById(client.createdBy);
-    console.log("owner:", owner)
     if (owner) {
       request.user = {
         _id: owner._id.toString(),
@@ -90,7 +89,6 @@ export async function authenticationMiddleware(
 
   const origin =
     headers.get("origin") || headers.get("referer") || request.nextUrl.origin;
-  console.log("origin:", origin)
   if (client.allowedDomains && client.allowedDomains.length > 0 && origin) {
     let originUrl: URL;
     try {

@@ -26,8 +26,8 @@ export async function auditMiddleware(
   try {
     response = await next();
   } catch (err) {
-    // Record internal execution crashes
-    await AuditService.logEvent({
+    // Record internal execution crashes (non-blocking; logEvent never throws)
+    void AuditService.logEvent({
       requestId: req.requestId || "unknown",
       apiKey: req.client?.apiKey,
       userId: req.user?._id?.toString(),
@@ -76,8 +76,9 @@ export async function auditMiddleware(
     }
   }
 
-  // Write audit details asynchronously
-  await AuditService.logEvent({
+  // Write audit details asynchronously — never block the response on the
+  // audit write (logEvent catches its own failures).
+  void AuditService.logEvent({
     requestId: req.requestId || "unknown",
     apiKey: req.client?.apiKey,
     userId: req.user?._id?.toString(),

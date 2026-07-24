@@ -18,7 +18,6 @@ export class ApiClientService {
     const apiKey = `sm_live_${crypto.randomBytes(16).toString("hex")}`;
     const plaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
     // Encrypt secret using KMS/GCM
-    console.log("Creator:", creator);
     const encryptedSecret = await apiKeyEncryption.encrypt(plaintextSecret);
     const clientDoc = await ApiClientDao.createApiClient({
       name,

@@ -1,5 +1,6 @@
 import { createInstantMeet } from "@/app/backend/services/meet-services/create-instant-meet";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
+import { ApiResponse } from "@/app/backend/utils/api-helper";
+import { createMeetSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
 import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
 import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
@@ -21,14 +22,7 @@ export async function GET() {
 // POST /api/private/meet - Generates room and returns two tokens (Host and Participant)
 export async function createMeetHandler(request: AuthenticatedRequest) {
   try {
-    const body = await request.json();
-    const { passcode, type, isRecording } = body;
-    if (!passcode) {
-      throw new ApiError("Passcode is required", 400);
-    }
-    if (type && type !== "webinar" && type !== "meet") {
-      throw new ApiError("Type must be either 'webinar' or 'meet'", 400);
-    }
+    const { passcode, type, isRecording } = await parseJsonBody(request, createMeetSchema);
     // Recording is only honored when the requesting API client is permitted
     // to use it; otherwise it's silently disabled rather than rejected.
     const canRecord = !!isRecording && !!request.client?.allowRecording;
@@ -47,14 +41,7 @@ export async function createMeetHandler(request: AuthenticatedRequest) {
       "Meeting generated successfully",
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      return ApiResponse.failure(error.message, error.statusCode, error.errors);
-    }
-    const err = error instanceof Error ? error : new Error(String(error));
-    return ApiResponse.failure(
-      err.message || "Failed to initialize meeting",
-      500,
-    );
+    return ApiResponse.fromError(error, "Failed to initialize meeting");
   }
 }
 

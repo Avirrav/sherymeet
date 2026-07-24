@@ -1,5 +1,17 @@
 import { create } from 'zustand';
 
+// Shape returned by GET /api/server/meet/details (dates arrive as ISO strings)
+export interface MeetDetails {
+  roomId: string;
+  roomCode: string;
+  status: 'scheduled' | 'active' | 'ended';
+  type: 'webinar' | 'meet';
+  isRecording: boolean;
+  hasPasscode: boolean;
+  startedAt: string | null;
+  endedAt: string | null;
+}
+
 export interface ChatMessage {
   id: string;
   senderName: string;
@@ -23,7 +35,7 @@ interface MeetingState {
   isConnecting: boolean;
   isConnected: boolean;
   error: string | null;
-  meetDetails: any | null;
+  meetDetails: MeetDetails | null;
 
   // Active UI Controls
   isScreenSharing: boolean;
@@ -50,7 +62,7 @@ interface MeetingState {
   setVideoDeviceId: (id: string) => void;
   setMeetingInfo: (roomId: string, token: string) => void;
   setConnectionStatus: (connecting: boolean, connected: boolean, error?: string | null) => void;
-  setMeetDetails: (details: any) => void;
+  setMeetDetails: (details: MeetDetails | null) => void;
   toggleScreenShare: (active?: boolean) => void;
   toggleHandRaise: (active?: boolean) => void;
   toggleSidebar: (panel: 'chat' | 'participants' | 'settings' | null) => void;

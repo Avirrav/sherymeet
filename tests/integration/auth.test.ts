@@ -152,7 +152,7 @@ describe("Auth & Permission Pipeline Integration", () => {
 
     it("should allow authorized roles", async () => {
       const allowed = await AuthorizationService.checkPermission(
-        UserRole.MENTOR,
+        UserRole.ADMIN,
         "createMeeting",
       );
       expect(allowed).toBe(true);
@@ -160,18 +160,18 @@ describe("Auth & Permission Pipeline Integration", () => {
 
     it("should reject unauthorized roles", async () => {
       const allowed = await AuthorizationService.checkPermission(
-        UserRole.STUDENT,
+        UserRole.SERVICE_ACCOUNT,
         "createMeeting",
       );
       expect(allowed).toBe(false);
     });
 
     it("should verify multiple permissions correctly", async () => {
-      const allowedAll = await AuthorizationService.checkPermissions(UserRole.MENTOR, [
+      const allowedAll = await AuthorizationService.checkPermissions(UserRole.ADMIN, [
         "createMeeting",
         "startRecording",
       ]);
-      const deniedSome = await AuthorizationService.checkPermissions(UserRole.MENTOR, [
+      const deniedSome = await AuthorizationService.checkPermissions(UserRole.ADMIN, [
         "createMeeting",
         "manageBilling",
       ]);

@@ -2,11 +2,19 @@ import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const LOCAL_PREFIX = "local:";
-const MASTER_KEY_FALLBACK = "sherymeet_default_32byte_masterkey!"; // 32 bytes
+// Development-only fallback. Production refuses to run without a real key
+// (also enforced at boot by validateEnv in instrumentation.ts).
+const DEV_MASTER_KEY_FALLBACK = "sherymeet_default_32byte_masterkey!";
 
 export class apiKeyEncryption {
   private static getMasterKey(): Buffer {
-    const keyStr = process.env.ENCRYPTION_MASTER_KEY || MASTER_KEY_FALLBACK;
+    let keyStr = process.env.ENCRYPTION_MASTER_KEY;
+    if (!keyStr) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("ENCRYPTION_MASTER_KEY must be set in production");
+      }
+      keyStr = DEV_MASTER_KEY_FALLBACK;
+    }
     // Ensure the key is exactly 32 bytes (256 bits)
     return Buffer.from(keyStr.padEnd(32, "!").substring(0, 32), "utf8");
   }

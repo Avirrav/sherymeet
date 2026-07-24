@@ -1,10 +1,15 @@
 import mongoose from "mongoose";
 import { logger } from "./logger";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/sherymeet";
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+function getMongoUri(): string {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("MONGODB_URI must be set in production");
+    }
+    return "mongodb://localhost:27017/sherymeet";
+  }
+  return uri;
 }
 
 interface GlobalMongoose {
@@ -30,10 +35,13 @@ export async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10_000,
+      socketTimeoutMS: 45_000,
     };
 
     logger.info("Connecting to MongoDB...");
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+    cached.promise = mongoose.connect(getMongoUri(), opts).then((mongooseInstance) => {
       logger.info("Connected to MongoDB successfully!");
       return mongooseInstance;
     });

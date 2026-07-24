@@ -31,9 +31,8 @@ export async function rateLimitMiddleware(
       { status: 429 },
     );
     // Set standard rate limit headers
-    // response.headers.set("Retry-After", (reset || 60).toString());
+    response.headers.set("Retry-After", (reset || 60).toString());
     response.headers.set("X-RateLimit-Limit", client.rateLimit.toString());
-    response.headers.set("X-RateLimit-Limit", (100).toString());
     response.headers.set("X-RateLimit-Remaining", "0");
     response.headers.set("X-RateLimit-Reset", (reset || 60).toString());
     return response;
@@ -42,7 +41,6 @@ export async function rateLimitMiddleware(
   // Inject remaining quotas into headers
   if (remaining !== undefined) {
     response.headers.set("X-RateLimit-Limit", client.rateLimit.toString());
-    // response.headers.set("X-RateLimit-Limit", (100).toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
     response.headers.set("X-RateLimit-Reset", (reset || 60).toString());
   }

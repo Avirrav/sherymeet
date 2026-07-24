@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { AccessToken } from "livekit-server-sdk";
 import {
   IParticipant,
@@ -23,8 +24,9 @@ export async function generateToken(
     throw new Error("LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set");
   }
   const { roomName, participant } = options;
-  // Generate the secure identity
-  const identity = `${participant.name}_${Math.random().toString(36).substring(2, 6)}`;
+  // Generate the secure identity (crypto-random suffix avoids collisions and
+  // makes identities unguessable)
+  const identity = `${participant.name}_${crypto.randomBytes(4).toString("hex")}`;
   // Create an AccessToken
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
@@ -33,7 +35,9 @@ export async function generateToken(
       roomName,
     }),
     name: participant.name,
-    ttl: "2h", // Token valid for 2 hours
+    // Long meetings need reconnects after the default window; keep this
+    // configurable per deployment.
+    ttl: process.env.LIVEKIT_TOKEN_TTL || "2h",
   });
   let meetType: "webinar" | "meet" = "meet";
   try {

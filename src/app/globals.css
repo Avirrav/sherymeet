@@ -10,9 +10,18 @@
   --color-brand-text-primary: #FFFFFF;
   --color-brand-text-secondary: #A1A1AA;
   
+  /* Motion system: one spring easing + a soft ease shared by every
+     animation so the whole app moves with a single "voice". */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-fade-in: fadeIn 0.3s ease-out forwards;
-  --animate-scale-in: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-scale-in: scaleIn 0.2s var(--ease-spring) forwards;
+  --animate-screen-in: screenIn 0.45s var(--ease-spring) forwards;
+  --animate-pop-in: popIn 0.28s var(--ease-spring) forwards;
+  --animate-message-in: messageIn 0.3s var(--ease-spring) forwards;
+  --animate-fade-in-up: fadeInUp 0.45s var(--ease-spring) forwards;
 }
 
 @keyframes fadeIn {
@@ -23,6 +32,41 @@
 @keyframes scaleIn {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* Full-screen views (gate screens, pre-join, conference) breathe in. */
+@keyframes screenIn {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Small state changes (toggled icons, badges) pop with overshoot. */
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Chat bubbles rise gently into place. */
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Side panels slide in from the right edge and slide back out. */
+@keyframes panelIn {
+  from { opacity: 0; transform: translateX(48px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes panelOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(48px); }
 }
 
 :root {
@@ -75,6 +119,53 @@ html, body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Panel enter/exit wrappers (driven by ConferenceRoom's mount state). */
+.panel-slide-in {
+  animation: panelIn 0.32s var(--ease-spring) forwards;
+}
+
+.panel-slide-out {
+  animation: panelOut 0.24s var(--ease-soft) forwards;
+  pointer-events: none;
+}
+
+/* Circular control buttons: unified hover lift + tactile press. */
+.control-btn {
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.control-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.control-btn:active {
+  transform: translateY(0) scale(0.92);
+  transition-duration: 0.08s;
+}
+
+/* Primary CTA buttons (Start Meeting, Join, modal actions). */
+.btn-press {
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.2s ease,
+    box-shadow 0.25s ease,
+    opacity 0.2s ease;
+}
+
+.btn-press:hover {
+  transform: translateY(-1px);
+}
+
+.btn-press:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 0.08s;
+}
+
 /* Video grid scaling and layouts */
 .video-grid-container {
   display: grid;
@@ -91,11 +182,27 @@ html, body {
   border-radius: 0.75rem;
   overflow: hidden;
   border: 2px solid #222222;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.3s ease,
+    transform 0.2s ease,
+    box-shadow 0.35s ease;
   aspect-ratio: 16 / 9;
+  animation: scaleIn 0.35s var(--ease-spring) both;
 }
 
 .video-tile.active-speaker {
   border-color: #FF6B00;
-  box-shadow: 0 0 15px rgba(255, 107, 0, 0.2);
+  box-shadow: 0 0 22px rgba(255, 107, 0, 0.28);
+}
+
+/* Accessibility: collapse all motion for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
