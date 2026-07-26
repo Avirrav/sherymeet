@@ -3,6 +3,7 @@ import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error-types";
+import { canParticipantPublish } from "@/features/meet/participant-permissions";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;
@@ -22,6 +23,8 @@ export function useRoomConnection({
     videoDeviceId,
     setVideoDeviceId,
     setAudioDeviceId,
+    setAudioEnabled,
+    setVideoEnabled,
   } = useMeetingStore();
   const connectingRef = useRef(false);
 
@@ -84,6 +87,20 @@ export function useRoomConnection({
         console.log("r.connect completed successfully! Room status:", r.state);
         setRoom(r);
         connectingRef.current = false;
+
+        // The token is the source of truth for publish rights (webinar
+        // participants get canPublish: false). Don't attempt to publish —
+        // the server would reject it — and reflect the denial in the UI.
+        if (!canParticipantPublish(r.localParticipant)) {
+          if (videoEnabled || audioEnabled) {
+            toast.info(
+              "Microphone and camera are not allowed without host permission in this meeting.",
+            );
+          }
+          setAudioEnabled(false);
+          setVideoEnabled(false);
+          return;
+        }
 
         // Wait a short moment for any Pre-Join preview tracks to fully release their media handles
         await new Promise((resolve) => setTimeout(resolve, 400));
@@ -272,6 +289,8 @@ export function useRoomConnection({
   // Sync mic/camera state toggles in the active room with fallback logic and HD settings
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
+    // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
+    if (!canParticipantPublish(room.localParticipant)) return;
 
     let active = true;
 
@@ -351,6 +370,8 @@ export function useRoomConnection({
 
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
+    // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
+    if (!canParticipantPublish(room.localParticipant)) return;
 
     let active = true;
 

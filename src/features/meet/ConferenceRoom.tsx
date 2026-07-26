@@ -16,6 +16,7 @@ import { useTranscribe } from '@/hooks/media-server/useTranscribe';
 import CaptionOverlay from './CaptionOverlay';
 import MicVisualizer from './MicVisualizer';
 import { emitEmbedEvent, isEmbedded } from './embed-bridge';
+import { canParticipantPublish, isCoHostOrAbove, isHostRole } from './participant-permissions';
 
 import {
   Mic,
@@ -32,7 +33,6 @@ import {
 
 } from 'lucide-react';
 import LayoutManager from './layout/LayoutManager';
-import { ParticipantRole, ParticipantRoleHierarchy } from '@/app/backend/interfaces/user-interface';
 
 interface ConferenceRoomProps {
   room: Room;
@@ -51,6 +51,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     activeSidebar,
     toggleSidebar,
     unreadChatCount,
+    meetDetails,
   } = useMeetingStore();
   {/* Use Participants hook */}
   const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
@@ -89,21 +90,26 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  {/* Get IsHost */}
-  const getIsHost = () => {
-    try {
-      const metaStr = room.localParticipant?.metadata;
-      if (metaStr) {
-        const meta = JSON.parse(metaStr);
-        const role = meta.participant?.role as ParticipantRole;
-        return ParticipantRoleHierarchy[role] >= ParticipantRoleHierarchy[ParticipantRole.HOST];
-      }
-    } catch (err) {
-      console.error('Error parsing participant metadata:', err);
-    }
-    return false;
-  };
-  const isHost = getIsHost();
+  {/* Role comes from the token metadata, never from "is this me" */}
+  const isHost = isHostRole(room.localParticipant);
+
+  // Publish rights come from the LiveKit token (webinar attendees are issued
+  // canPublish: false). The server already rejects their publishes; disabling
+  // the controls here just stops users from trying.
+  const canPublish = canParticipantPublish(room.localParticipant);
+  const isWebinar = meetDetails?.type === 'webinar';
+  const noPublishReason = isWebinar
+    ? 'Not allowed without host permission in this webinar'
+    : 'Not allowed without host permission';
+
+  // In a webinar the stage belongs to hosts/co-hosts only: attendees never get
+  // a tile (they appear in the participants panel instead), and their screen
+  // shares are not staged either.
+  const stageParticipants = isWebinar
+    ? remoteParticipants.filter((p) => isCoHostOrAbove(p))
+    : remoteParticipants;
+  const stageLocalParticipant =
+    isWebinar && !isCoHostOrAbove(localParticipant) ? null : localParticipant;
   {/*Handle LeaveConfirm*/}
   const handleLeaveConfirm = () => {
     room.disconnect();
@@ -150,9 +156,12 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <LayoutManager
               updateKey={updateKey}
-              localParticipant={localParticipant}
-              remoteParticipants={remoteParticipants}
+              localParticipant={stageLocalParticipant}
+              remoteParticipants={stageParticipants}
               activeSpeaker={activeSpeaker}
+              emptyMessage={
+                isWebinar ? 'Waiting for the host to start presenting' : undefined
+              }
             />
             <CaptionOverlay room={room} />
           </div>
@@ -227,9 +236,12 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative">
             <LayoutManager
               updateKey={updateKey}
-              localParticipant={localParticipant}
-              remoteParticipants={remoteParticipants}
+              localParticipant={stageLocalParticipant}
+              remoteParticipants={stageParticipants}
               activeSpeaker={activeSpeaker}
+              emptyMessage={
+                isWebinar ? 'Waiting for the host to start presenting' : undefined
+              }
             />
           {/* Real-time Captions Overlay */}
           <CaptionOverlay room={room} />
@@ -277,12 +289,13 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         {/* Mute Mic */}
         <button
           onClick={toggleMicrophone}
-          className={`control-btn p-3.5 rounded-full border ${
+          disabled={!canPublish}
+          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
             audioEnabled
               ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
               : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
           }`}
-          title={audioEnabled ? 'Mute Mic' : 'Unmute Mic'}
+          title={canPublish ? (audioEnabled ? 'Mute Mic' : 'Unmute Mic') : noPublishReason}
         >
           {audioEnabled ? <Mic className="w-5 h-5 animate-pop-in" /> : <MicOff className="w-5 h-5 animate-pop-in" />}
         </button>
@@ -291,29 +304,46 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         {/* Toggle Camera */}
         <button
           onClick={toggleCamera}
-          className={`control-btn p-3.5 rounded-full border ${
+          disabled={!canPublish}
+          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
             videoEnabled
               ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
               : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
           }`}
-          title={videoEnabled ? 'Stop Camera' : 'Start Camera'}
+          title={canPublish ? (videoEnabled ? 'Stop Camera' : 'Start Camera') : noPublishReason}
         >
           {videoEnabled ? <VideoIcon className="w-5 h-5 animate-pop-in" /> : <VideoOff className="w-5 h-5 animate-pop-in" />}
         </button>
         {/* Screen Share */}
         <button
           onClick={toggleScreenShare}
-          disabled={remoteParticipants.length === 0}
+          disabled={!canPublish || remoteParticipants.length === 0}
           className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
             isScreenSharing
               ? 'bg-brand-orange hover:bg-brand-orange-hover text-white border-brand-orange'
               : 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
           }`}
-          title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
+          title={
+            canPublish
+              ? isScreenSharing
+                ? 'Stop Screen Share'
+                : 'Share Screen'
+              : noPublishReason
+          }
         >
           {isScreenSharing ? <MonitorOff className="w-5 h-5 animate-pop-in" /> : <Monitor className="w-5 h-5 animate-pop-in" />}
         </button>
       </footer>
+
+      {/* Attendee notice: publishing is denied by the meeting token */}
+      {!canPublish && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full glass-panel border border-brand-border/60 text-[11px] text-brand-text-secondary flex items-center gap-2 animate-fade-in-up">
+          <MicOff className="w-3.5 h-3.5 text-brand-orange" />
+          <span>
+            You&apos;re attending as a viewer. Microphone, camera, and screen share need host permission.
+          </span>
+        </div>
+      )}
 
       {/* Leave confirmation modal */}
       {showLeaveModal && (

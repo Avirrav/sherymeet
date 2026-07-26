@@ -3,14 +3,21 @@ import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/app/backend/types/error-types";
+import { canParticipantPublish } from "@/features/meet/participant-permissions";
 
 export function useScreenShare(room: Room | null) {
   const { isScreenSharing, toggleScreenShare } = useMeetingStore();
   const [screenSharePublication, setScreenSharePublication] =
     useState<LocalTrackPublication | null>(null);
+  // Mirrors the token grant: webinar attendees cannot publish anything.
+  const canShare = !room || canParticipantPublish(room.localParticipant);
 
   const startScreenShare = useCallback(async () => {
     if (!room) return;
+    if (!canParticipantPublish(room.localParticipant)) {
+      toast.info("Screen sharing is not allowed without host permission in this meeting.");
+      return;
+    }
     try {
       const pub = await room.localParticipant.setScreenShareEnabled(true, {
         audio: true, 
@@ -85,5 +92,6 @@ export function useScreenShare(room: Room | null) {
     isScreenSharing,
     toggleScreenShare: handleToggle,
     screenSharePublication,
+    canShare,
   };
 }

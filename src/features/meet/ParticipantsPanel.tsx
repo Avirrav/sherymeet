@@ -6,6 +6,7 @@ import { Room, Participant } from 'livekit-client';
 import { useParticipants } from '@/hooks/media-server/useParticipants';
 import { useConnectionQuality } from '@/hooks/media-server/useConnectionQuality';
 import { useMeetingStore } from '@/store/useMeetingStore';
+import { getParticipantRoleLabel } from './participant-permissions';
 
 interface ParticipantsPanelProps {
   room: Room;
@@ -83,7 +84,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
                     )}
                   </span>
                   <span className="text-[9px] text-brand-text-secondary">
-                    {isLocal ? 'Host' : 'Participant'}
+                    {getParticipantRoleLabel(p)}
                   </span>
                 </div>
               </div>

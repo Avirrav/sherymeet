@@ -12,6 +12,8 @@ interface LayoutManagerProps {
   remoteParticipants: RemoteParticipant[];
   activeSpeaker: Participant | null;
   updateKey?: number;
+  /** Shown when there is nothing to stage (e.g. webinar with no presenter yet). */
+  emptyMessage?: string;
 }
 
 export const LayoutManager: React.FC<LayoutManagerProps> = ({
@@ -19,6 +21,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
   remoteParticipants,
   activeSpeaker,
   updateKey,
+  emptyMessage,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -215,9 +218,16 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
         }
       })}
 
-      {mappedParticipants.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-brand-text-secondary text-sm">
-          No participants in call
+      {mappedParticipants.length === 0 && mappedScreenShares.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-brand-text-secondary text-sm animate-fade-in">
+          {emptyMessage ? (
+            <>
+              <span className="w-4 h-4 rounded-full border-2 border-brand-orange/60 border-t-transparent animate-spin" />
+              <span>{emptyMessage}</span>
+            </>
+          ) : (
+            <span>No participants in call</span>
+          )}
         </div>
       )}
     </div>
