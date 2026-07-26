@@ -15,6 +15,17 @@ interface RevealedSecret {
   clientSecret: string;
 }
 
+// Fixed locale + options so the server-rendered HTML and the client's
+// hydration pass produce byte-identical text regardless of either side's
+// default locale (bare toLocaleDateString() caused a hydration mismatch).
+function formatCreatedDate(value: string | Date): string {
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export default function ApiKeysDashboard({
   user,
   initialKeys,
@@ -171,7 +182,7 @@ export default function ApiKeysDashboard({
               <p className="font-medium">{key.name}</p>
               <p className="font-mono text-xs text-brand-text-secondary">{key.apiKey}</p>
               <p className="mt-1 text-xs text-brand-text-secondary">
-                {key.status} · {key.rateLimit} req/min · created {new Date(key.createdAt).toLocaleDateString()}
+                {key.status} · {key.rateLimit} req/min · created {formatCreatedDate(key.createdAt)}
               </p>
             </div>
             <button

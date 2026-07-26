@@ -72,9 +72,6 @@ export async function createApiClientHandler(req: AuthenticatedRequest): Promise
       );
     }
     const {_id,userName,avatarUrl} = req.user;
-    console.log("\n\n_id",_id)
-    console.log("\n\nuserName",userName)
-    console.log("\n\navatarUrl",avatarUrl)
     // Create API Client directly at root
     const result = await ApiClientService.createApiClient(
       name,
@@ -82,7 +79,6 @@ export async function createApiClientHandler(req: AuthenticatedRequest): Promise
       { id: _id, name: userName, avatarUrl: avatarUrl },
       !!allowRecording,
     );
-    console.log("result from createApiClientHandler", result)
     return NextResponse.json(
       {
         message: "API client registered successfully",

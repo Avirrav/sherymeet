@@ -236,10 +236,6 @@ export function useLocalMedia() {
           audioTrackRef.current = null;
         }
 
-        console.log(
-          "Creating local audio track preview for device:",
-          audioDeviceId,
-        );
         const track = await createLocalAudioTrack({
           deviceId: audioDeviceId || undefined,
           echoCancellation: true,

@@ -8,7 +8,6 @@ export class ApiClientDao {
     clientData: Partial<IApiClient>,
   ): Promise<IApiClient> {
     await dbConnect();
-    console.log("clientData", clientData);
     const client = new ApiClient(clientData);
     return await client.save();
   }

@@ -25,6 +25,9 @@ export type MeetingPermission =
   | "requestCoHost"
   | "acceptCoHost"
   | "rejectCoHost"
+  | "createParticipantJoinUrl"
+  | "getParticipantJoinUrl"
+  | "deleteParticipantJoinUrl"
 
 export type RecordingPermission =
   | "startRecording"

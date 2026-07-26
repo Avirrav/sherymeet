@@ -71,7 +71,7 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     auditMiddleware,
     authenticationMiddleware,
-    authorizationMiddleware(["joinMeeting"]),
+    authorizationMiddleware(["createParticipantJoinUrl"]),
     rateLimitMiddleware,
     replayProtectionMiddleware,
   ],

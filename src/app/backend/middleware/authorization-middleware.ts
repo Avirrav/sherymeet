@@ -34,7 +34,7 @@ export function authorizationMiddleware(requiredPermissions: Permission[]) {
         });
       }
     }
-
+    console.log("User", request.user)
     // 1. Resolve Role
     // Default to 'SERVICE_ACCOUNT' for direct API Client access if no user context is attached
     const role: UserRole = request.user ? request.user.role : UserRole.SERVICE_ACCOUNT;

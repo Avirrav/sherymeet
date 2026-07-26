@@ -32,6 +32,7 @@ export class ApiClientService {
       createdByName: creator?.name,
       createdByAvatarUrl: creator?.avatarUrl,
     });
+    console.log("\n\n\nClient created", clientDoc)
     return {
       client: clientDoc,
       plaintextSecret,
