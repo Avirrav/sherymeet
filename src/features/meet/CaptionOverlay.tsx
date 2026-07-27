@@ -101,13 +101,13 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
       {captionList.map(([identity, caption]) => (
         <div
           key={identity}
-          className="glass-panel px-4 py-2.5 rounded-2xl flex flex-col gap-0.5 text-center animate-scale-in shadow-xl backdrop-blur-md"
+          className="px-4 py-2.5 rounded-2xl flex flex-col gap-0.5 text-center animate-scale-in backdrop-blur-md"
           style={{ border: '1px solid rgba(255, 255, 255, 0.08)' }}
         >
-          <span className="text-[10px] uppercase tracking-wider font-extrabold text-brand-orange">
+          <span className="text-[10px] uppercase tracking-wider font-extrabold text-md-primary">
             {caption.name}
           </span>
-          <p className="text-sm font-medium text-white leading-relaxed select-none">
+          <p className="text-sm font-medium text-md-on-primary leading-relaxed select-none">
             {caption.text}
           </p>
         </div>

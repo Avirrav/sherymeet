@@ -1,27 +1,110 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Material Design 3 (Material You) — dark scheme
+   ------------------------------------------------------------
+   Color roles follow the M3 baseline palette. Every role has an
+   "on-" pair: whenever you use `bg-md-primary`, pair it with
+   `text-md-on-primary` so contrast is correct by construction.
+
+   To re-seed the whole product with a different brand hue, only
+   the values in this block need to change.
+   ============================================================ */
+
 @theme {
-  --color-brand-orange: #FF6B00;
-  --color-brand-orange-hover: #E05E00;
-  --color-brand-dark: #0A0A0A;
-  --color-brand-surface: #111111;
-  --color-brand-border: #222222;
-  --color-brand-border-active: #444444;
-  --color-brand-text-primary: #FFFFFF;
-  --color-brand-text-secondary: #A1A1AA;
-  
-  /* Motion system: one spring easing + a soft ease shared by every
-     animation so the whole app moves with a single "voice". */
-  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-soft: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Generated from source color #0B57D0 (Material blue).
+     Tones follow the M3 dark-scheme assignments, so every "on-" role
+     already meets contrast against its pair — don't hand-tweak one
+     without moving its partner. */
+
+  /* --- Primary --- */
+  --color-md-primary: #AEC6FF;
+  /* Slightly dimmed primary for hover on filled components. */
+  --color-md-primary-hover: #97B3F5;
+  --color-md-on-primary: #002E69;
+  --color-md-primary-container: #004494;
+  --color-md-on-primary-container: #D8E2FF;
+
+  /* --- Secondary --- */
+  --color-md-secondary: #BEC6DC;
+  --color-md-on-secondary: #283041;
+  --color-md-secondary-container: #3E4759;
+  --color-md-on-secondary-container: #DAE2F9;
+
+  /* --- Tertiary --- */
+  --color-md-tertiary: #DDBCE0;
+  --color-md-on-tertiary: #3F2844;
+  --color-md-tertiary-container: #573E5C;
+  --color-md-on-tertiary-container: #FAD8FD;
+
+  /* --- Error --- */
+  --color-md-error: #FFB4AB;
+  --color-md-on-error: #690005;
+  --color-md-error-container: #93000A;
+  --color-md-on-error-container: #FFDAD6;
+
+  /* --- Surfaces (neutral palette, subtly blue-tinted) --- */
+  --color-md-surface: #111318;
+  --color-md-on-surface: #E2E2E9;
+  --color-md-surface-variant: #44474F;
+  --color-md-on-surface-variant: #C4C6D0;
+  --color-md-surface-dim: #111318;
+  --color-md-surface-bright: #37393E;
+
+  /* Surface containers express elevation through tone, not shadow. */
+  --color-md-surface-container-lowest: #0C0E13;
+  --color-md-surface-container-low: #191C20;
+  --color-md-surface-container: #1D2024;
+  --color-md-surface-container-high: #282A2F;
+  --color-md-surface-container-highest: #33353A;
+
+  /* --- Outlines & utility --- */
+  --color-md-outline: #8E9099;
+  --color-md-outline-variant: #44474F;
+  --color-md-inverse-surface: #E2E2E9;
+  --color-md-inverse-on-surface: #2E3036;
+  --color-md-inverse-primary: #005AC1;
+  --color-md-scrim: #000000;
+
+  /* --- Type families --- */
+  --font-sans: var(--font-roboto), Roboto, system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
+  /* Brand typeface, used for Display/Headline roles only. */
+  --font-display: var(--font-display-family), Georgia, serif;
+
+  /* --- M3 shape scale --- */
+  --radius-md-xs: 4px;
+  --radius-md-sm: 8px;
+  --radius-md-md: 12px;
+  --radius-md-lg: 16px;
+  --radius-md-xl: 28px;
+  --radius-md-full: 9999px;
+
+  /* --- Motion: M3 emphasized/standard easing --- */
+  --ease-spring: cubic-bezier(0.2, 0, 0, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-fade-in: fadeIn 0.3s ease-out forwards;
+  --animate-fade-in: fadeIn 0.3s var(--ease-soft) forwards;
   --animate-scale-in: scaleIn 0.2s var(--ease-spring) forwards;
-  --animate-screen-in: screenIn 0.45s var(--ease-spring) forwards;
+  --animate-screen-in: screenIn 0.4s var(--ease-spring) forwards;
   --animate-pop-in: popIn 0.28s var(--ease-spring) forwards;
   --animate-message-in: messageIn 0.3s var(--ease-spring) forwards;
-  --animate-fade-in-up: fadeInUp 0.45s var(--ease-spring) forwards;
+  --animate-fade-in-up: fadeInUp 0.4s var(--ease-spring) forwards;
+}
+
+/* M3 elevation levels (shadow tokens, used sparingly — surfaces
+   primarily convey depth through tonal containers above). */
+:root {
+  --md-elevation-1: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-elevation-2: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px rgba(0, 0, 0, 0.3);
+  --md-elevation-4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px rgba(0, 0, 0, 0.3);
+  --md-elevation-5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px rgba(0, 0, 0, 0.3);
+
+  background-color: var(--color-md-surface);
+  color: var(--color-md-on-surface);
+  color-scheme: dark;
 }
 
 @keyframes fadeIn {
@@ -34,20 +117,17 @@
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Full-screen views (gate screens, pre-join, conference) breathe in. */
 @keyframes screenIn {
   from { opacity: 0; transform: scale(0.985); }
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Small state changes (toggled icons, badges) pop with overshoot. */
 @keyframes popIn {
   0% { transform: scale(0.5); opacity: 0; }
   70% { transform: scale(1.12); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Chat bubbles rise gently into place. */
 @keyframes messageIn {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -58,7 +138,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Side panels slide in from the right edge and slide back out. */
 @keyframes panelIn {
   from { opacity: 0; transform: translateX(48px); }
   to { opacity: 1; transform: translateX(0); }
@@ -69,74 +148,62 @@
   to { opacity: 0; transform: translateX(48px); }
 }
 
-:root {
-  background-color: #0A0A0A;
-  color: #FFFFFF;
-  color-scheme: dark;
-}
-
 html, body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #0A0A0A;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--color-md-surface);
+  /* Roboto is the Material type family; loaded via next/font in layout.tsx. */
+  font-family: var(--font-roboto), Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* Glassmorphism utility classes */
-.glass-panel {
-  background: rgba(17, 17, 17, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* ============================================================
+   M3 elevation utilities
+   ============================================================ */
+.md-elevation-1 { box-shadow: var(--md-elevation-1); }
+.md-elevation-2 { box-shadow: var(--md-elevation-2); }
+.md-elevation-3 { box-shadow: var(--md-elevation-3); }
+.md-elevation-4 { box-shadow: var(--md-elevation-4); }
+.md-elevation-5 { box-shadow: var(--md-elevation-5); }
+
+
+/* ============================================================
+   M3 state layers
+   Material expresses interaction as a translucent layer of the
+   "on" color over the component, at fixed opacities:
+   hover 8%, focus/pressed 12%.
+   ============================================================ */
+.md-state-layer {
+  position: relative;
+  isolation: isolate;
 }
 
-.glass-card {
-  background: rgba(20, 20, 20, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Panel enter/exit wrappers (driven by ConferenceRoom's mount state). */
-.panel-slide-in {
-  animation: panelIn 0.32s var(--ease-spring) forwards;
-}
-
-.panel-slide-out {
-  animation: panelOut 0.24s var(--ease-soft) forwards;
+.md-state-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-soft);
   pointer-events: none;
+  z-index: -1;
 }
 
-/* Circular control buttons: unified hover lift + tactile press. */
+.md-state-layer:hover::after { opacity: 0.08; }
+.md-state-layer:focus-visible::after { opacity: 0.12; }
+.md-state-layer:active::after { opacity: 0.12; }
+
+/* Icon buttons in the meeting toolbar / app bars. */
 .control-btn {
   transition:
     transform 0.18s var(--ease-spring),
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.25s ease;
+    background-color 0.2s var(--ease-soft),
+    color 0.2s var(--ease-soft),
+    border-color 0.2s var(--ease-soft),
+    box-shadow 0.25s var(--ease-soft);
 }
 
 .control-btn:hover {
@@ -148,13 +215,13 @@ html, body {
   transition-duration: 0.08s;
 }
 
-/* Primary CTA buttons (Start Meeting, Join, modal actions). */
+/* Filled / text buttons. */
 .btn-press {
   transition:
     transform 0.18s var(--ease-spring),
-    background-color 0.2s ease,
-    box-shadow 0.25s ease,
-    opacity 0.2s ease;
+    background-color 0.2s var(--ease-soft),
+    box-shadow 0.25s var(--ease-soft),
+    opacity 0.2s var(--ease-soft);
 }
 
 .btn-press:hover {
@@ -166,7 +233,46 @@ html, body {
   transition-duration: 0.08s;
 }
 
-/* Video grid scaling and layouts */
+/* Focus ring matching M3 focus indicator guidance. */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--color-md-primary);
+  outline-offset: 2px;
+}
+
+/* Panel enter/exit wrappers. */
+.panel-slide-in {
+  animation: panelIn 0.32s var(--ease-spring) forwards;
+}
+
+.panel-slide-out {
+  animation: panelOut 0.24s var(--ease-soft) forwards;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Scrollbars
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-md-outline-variant);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-md-outline);
+}
+
+/* ============================================================
+   Video surfaces
+   ============================================================ */
 .video-grid-container {
   display: grid;
   gap: 1rem;
@@ -178,21 +284,20 @@ html, body {
 
 .video-tile {
   position: relative;
-  background-color: #111111;
-  border-radius: 0.75rem;
+  background-color: var(--color-md-surface-container-low);
+  border-radius: var(--radius-md-lg);
   overflow: hidden;
-  border: 2px solid #222222;
+  border: 2px solid var(--color-md-outline-variant);
   transition:
-    border-color 0.3s ease,
-    transform 0.2s ease,
-    box-shadow 0.35s ease;
+    border-color 0.3s var(--ease-soft),
+    transform 0.2s var(--ease-soft),
+    box-shadow 0.35s var(--ease-soft);
   aspect-ratio: 16 / 9;
   animation: scaleIn 0.35s var(--ease-spring) both;
 }
 
 .video-tile.active-speaker {
-  border-color: #FF6B00;
-  box-shadow: 0 0 22px rgba(255, 107, 0, 0.28);
+  border-color: var(--color-md-primary);
 }
 
 /* Accessibility: collapse all motion for users who ask for it. */

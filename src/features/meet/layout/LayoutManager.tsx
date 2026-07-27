@@ -179,7 +179,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative overflow-hidden bg-brand-dark/40 rounded-3xl min-h-[450px]"
+      className="w-full h-full relative overflow-hidden bg-md-surface/40 rounded-3xl min-h-[450px]"
     >
       {virtualizedItems.map((item) => {
         if (item.type === 'screen') {
@@ -219,10 +219,10 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
       })}
 
       {mappedParticipants.length === 0 && mappedScreenShares.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-brand-text-secondary text-sm animate-fade-in">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-md-on-surface-variant text-sm animate-fade-in">
           {emptyMessage ? (
             <>
-              <span className="w-4 h-4 rounded-full border-2 border-brand-orange/60 border-t-transparent animate-spin" />
+              <span className="w-4 h-4 rounded-full border-2 border-md-primary/60 border-t-transparent animate-spin" />
               <span>{emptyMessage}</span>
             </>
           ) : (

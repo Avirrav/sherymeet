@@ -45,18 +45,18 @@ export default function SettingsPanel({
   const [controlsLocked, setControlsLocked] = useState(true);
 
   return (
-    <div className="w-80 h-full bg-brand-surface border-l border-brand-border rounded-xl flex flex-col justify-between relative z-20">
+    <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/40 rounded-md-lg flex flex-col justify-between relative z-20">
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Settings className="w-4 h-4 text-brand-orange" />
-          <h4 className="font-bold text-white text-sm uppercase tracking-wider">
+          <Settings className="w-4 h-4 text-md-primary" />
+          <h4 className="font-bold text-md-on-surface text-sm uppercase tracking-wider">
             Settings & Layout
           </h4>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 hover:bg-brand-border rounded-lg text-brand-text-secondary hover:text-white transition-colors"
+          className="p-1.5 hover:bg-md-outline-variant rounded-lg text-md-on-surface-variant hover:text-md-on-surface transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -65,7 +65,7 @@ export default function SettingsPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Section 1: Choose Layout */}
         <div className='mt-2'>
-          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-brand-text-secondary text-left">
+          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-md-on-surface-variant text-left">
             Choose Layout
           </div>
           <div className="flex flex-col gap-1.5">
@@ -88,8 +88,8 @@ export default function SettingsPanel({
                   }}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left w-full ${
                     isSelected
-                      ? 'bg-brand-orange text-white'
-                      : 'text-brand-text-primary hover:bg-brand-border hover:text-white bg-brand-dark/40 border border-brand-border/40'
+                      ? 'bg-md-primary text-md-on-primary'
+                      : 'text-md-on-surface hover:bg-md-outline-variant hover:text-md-on-surface bg-md-surface/40 border border-md-outline-variant/40'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -100,11 +100,11 @@ export default function SettingsPanel({
           </div>
         </div>
 
-        <div className="h-[1px] bg-brand-border" />
+        <div className="h-[1px] bg-md-outline-variant" />
 
         {/* Section 2: General Settings */}
         <div className='mt-2'>
-          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-brand-text-secondary text-left">
+          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-md-on-surface-variant text-left">
             Transcription
           </div>
           <button
@@ -113,8 +113,8 @@ export default function SettingsPanel({
             }}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
               captionsEnabled
-                ? 'bg-brand-orange/10 text-brand-orange border-brand-orange/30'
-                : 'text-brand-text-primary hover:bg-brand-border bg-brand-dark/40 border-brand-border/40'
+                ? 'bg-md-primary/10 text-md-primary border-md-primary/30'
+                : 'text-md-on-surface hover:bg-md-outline-variant bg-md-surface/40 border-md-outline-variant/40'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -127,11 +127,11 @@ export default function SettingsPanel({
           </button>
         </div>
 
-        <div className="h-[1px] bg-brand-border" />
+        <div className="h-[1px] bg-md-outline-variant" />
 
         {/* Section 3: Call Actions */}
         <div className='mt-2'>
-          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-brand-text-secondary text-left">
+          <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-extrabold text-md-on-surface-variant text-left">
             Meeting Actions
           </div>
           <div className="flex flex-col gap-2">
@@ -145,7 +145,7 @@ export default function SettingsPanel({
                       onClose();
                       handleEndMeeting();
                     }}
-                    className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    className="btn-press w-full flex items-center justify-center gap-2 bg-md-error hover:bg-md-error/90 text-md-on-error py-2.5 px-4 rounded-md-full text-xs font-medium cursor-pointer"
                   >
                     <XCircle className="w-4 h-4" />
                     <span>End Meeting</span>
@@ -156,7 +156,7 @@ export default function SettingsPanel({
                     onClose();
                     setShowLeaveModal(true);
                   }}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="btn-press md-state-layer w-full flex items-center justify-center gap-2 border border-md-error/50 text-md-error py-2.5 px-4 rounded-md-full text-xs font-medium cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Leave Room</span>

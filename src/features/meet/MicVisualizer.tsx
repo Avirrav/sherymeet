@@ -125,7 +125,7 @@ export default function MicVisualizer({ isActive }: MicVisualizerProps) {
   return (
     // Rectangle container styled to match control bar buttons
     <div
-      className="flex items-center justify-center px-2 bg-brand-surface border border-brand-border rounded-full overflow-hidden"
+      className="flex items-center justify-center px-2 bg-md-surface-container border border-md-outline-variant rounded-full overflow-hidden"
       style={{ width: '140px', height: '46px' }}
       title="Microphone level"
     >
@@ -133,6 +133,27 @@ export default function MicVisualizer({ isActive }: MicVisualizerProps) {
       <canvas ref={canvasRef} width={88} height={28} style={{ display: 'block' }} />
     </div>
   );
+}
+
+// Canvas needs literal colors, so resolve the theme tokens from the document
+// and cache them — this keeps the visualizer in sync with the palette instead
+// of hardcoding a brand color. Cache is keyed so a runtime theme change can
+// invalidate it by clearing themeColorCache.
+let themeColorCache: { active: string; idle: string } | null = null;
+
+function getBarColors(): { active: string; idle: string } {
+  if (themeColorCache) return themeColorCache;
+  if (typeof window === 'undefined') {
+    return { active: '#AEC6FF', idle: '#44474F' };
+  }
+  const styles = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) =>
+    styles.getPropertyValue(name).trim() || fallback;
+  themeColorCache = {
+    active: read('--color-md-primary', '#AEC6FF'),
+    idle: read('--color-md-outline-variant', '#44474F'),
+  };
+  return themeColorCache;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +172,7 @@ function drawBars(
   const gap      = 2;
   const barWidth = (width - (BAR_COUNT - 1) * gap) / BAR_COUNT;
   const centerY  = height / 2;
+  const colors   = getBarColors();
 
   bars.forEach((value, i) => {
     // bars[] values are already shaped by RMS × cos curve (pre-computed).
@@ -160,10 +182,10 @@ function drawBars(
     const x = i * (barWidth + gap);
     const y = centerY - barHeight / 2;
 
-    // Orange when mic is active and bar is non-trivially tall (speaking)
-    // Gray when silent or muted
+    // Primary when mic is active and the bar is non-trivially tall (speaking),
+    // muted outline color when silent or muted.
     const isSpeaking = value > 0.03;
-    ctx.fillStyle    = isActive && isSpeaking ? '#f97316' : '#374151';
+    ctx.fillStyle    = isActive && isSpeaking ? colors.active : colors.idle;
 
     ctx.beginPath();
     if (ctx.roundRect) {

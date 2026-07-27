@@ -146,7 +146,7 @@ export default function ParticipantTile({
       return <SignalHigh className={`${size} text-green-500`} />;
     }
     if (quality === 'poor') {
-      return <SignalLow className={`${size} text-red-500`} />;
+      return <SignalLow className={`${size} text-md-error`} />;
     }
     return <SignalMedium className={`${size} text-yellow-500`} />;
   };
@@ -154,8 +154,8 @@ export default function ParticipantTile({
   return (
     <div
       onDoubleClick={onPinToggle}
-      className={`group relative w-full h-full bg-brand-surface rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
-        isSpeaker ? 'border-brand-orange shadow-lg shadow-brand-orange/10' : 'border-brand-border'
+      className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+        isSpeaker ? 'border-md-primary' : 'border-md-outline-variant'
       } ${className}`}
     >
       {/* Video element */}
@@ -172,17 +172,17 @@ export default function ParticipantTile({
       {/* Avatar placeholder (camera off, or warming up before first frame) */}
       {(videoMuted || !videoTrack || !isVideoLive || isVirtual) && (
         <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 absolute inset-0">
-          <div className="w-20 h-20 rounded-full bg-brand-orange/15 border border-brand-orange/30 flex items-center justify-center text-brand-orange font-bold text-3xl shadow-inner">
+          <div className="w-20 h-20 rounded-full bg-md-primary/15 border border-md-primary/30 flex items-center justify-center text-md-primary font-bold text-3xl">
             {(participant.name || participant.identity || 'P').charAt(0).toUpperCase()}
           </div>
           {isVirtual && (
-            <span className="text-[10px] text-brand-text-secondary mt-2">
+            <span className="text-[10px] text-md-on-surface-variant mt-2">
               (Stream virtualized)
             </span>
           )}
           {!isVirtual && !videoMuted && isLocal && (
-            <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-brand-text-secondary animate-fade-in">
-              <span className="w-3 h-3 rounded-full border-2 border-brand-orange/60 border-t-transparent animate-spin" />
+            <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-md-on-surface-variant animate-fade-in">
+              <span className="w-3 h-3 rounded-full border-2 border-md-primary/60 border-t-transparent animate-spin" />
               Starting camera...
             </span>
           )}
@@ -196,9 +196,9 @@ export default function ParticipantTile({
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
         {/* Name and identity */}
         <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-2 pointer-events-auto">
-          <span className="text-xs font-semibold text-white">
+          <span className="text-xs font-semibold text-md-on-surface">
             {participant.name || participant.identity}
-            {isLocal && <span className="text-brand-orange ml-1 text-[10px] font-bold uppercase">(You)</span>}
+            {isLocal && <span className="text-md-primary ml-1 text-[10px] font-bold uppercase">(You)</span>}
           </span>
           {renderConnectionQuality()}
         </div>
@@ -208,7 +208,7 @@ export default function ParticipantTile({
           {pinned && (
             <button
               onClick={onPinToggle}
-              className="bg-brand-orange text-white p-1.5 rounded-lg flex items-center justify-center shadow-lg border border-brand-orange-hover hover:bg-brand-orange-hover transition-all cursor-pointer"
+              className="bg-md-primary text-md-on-primary p-1.5 rounded-lg flex items-center justify-center border border-md-primary-hover hover:bg-md-primary-hover transition-all cursor-pointer"
               title="Unpin Participant"
             >
               <Pin className="w-3.5 h-3.5 transform rotate-45" />
@@ -217,14 +217,14 @@ export default function ParticipantTile({
           {!pinned && onPinToggle && (
             <button
               onClick={onPinToggle}
-              className="bg-black/60 hover:bg-black/80 text-white/70 hover:text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg border border-white/5 transition-all cursor-pointer"
+              className="bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center border border-white/5 transition-all cursor-pointer"
               title="Pin Participant"
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
           )}
           {isHandRaised && (
-            <div className="bg-brand-orange text-white p-1.5 rounded-lg flex items-center justify-center shadow-lg border border-brand-orange-hover animate-scale-in">
+            <div className="bg-md-primary text-md-on-primary p-1.5 rounded-lg flex items-center justify-center border border-md-primary-hover animate-scale-in">
               <Hand className="w-3.5 h-3.5" />
             </div>
           )}
@@ -235,13 +235,13 @@ export default function ParticipantTile({
       <div className="absolute bottom-4 right-4 flex items-center gap-2">
         <div className={`p-2 rounded-full backdrop-blur-md border transition-colors duration-150 ${
           audioMuted
-            ? 'bg-red-500/20 border-red-500/40 text-red-500'
-            : 'bg-black/60 border-white/5 text-white'
+            ? 'bg-md-error-container border-md-error/40 text-md-on-error-container'
+            : 'bg-black/60 border-white/5 text-md-on-surface'
         }`}>
           {audioMuted ? <MicOff className="w-3.5 h-3.5 animate-pop-in" /> : <Mic className="w-3.5 h-3.5 animate-pop-in" />}
         </div>
         {videoMuted && (
-          <div className="p-2 rounded-full backdrop-blur-md border bg-red-500/20 border-red-500/40 text-red-500 animate-pop-in">
+          <div className="p-2 rounded-full backdrop-blur-md border bg-md-error-container border-md-error/40 text-md-on-error-container animate-pop-in">
             <VideoOff className="w-3.5 h-3.5" />
           </div>
         )}

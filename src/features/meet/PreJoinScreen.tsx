@@ -4,15 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocalMedia } from '@/hooks/media-server/useLocalMedia';
 import { useMeetingStore } from '@/store/useMeetingStore';
 import { toast } from 'sonner';
-import {
-  Video,
-  VideoOff,
-  Mic,
-  MicOff,
-  User,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, User, ArrowRight, ChevronDown } from 'lucide-react';
 
 interface PreJoinScreenProps {
   roomId: string;
@@ -105,22 +97,31 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
     onJoin(inputName.trim());
   };
 
+  const initial = (inputName || userName || 'You').trim().charAt(0).toUpperCase();
+
+  const selectClass =
+    'w-full appearance-none rounded-md-md bg-md-surface-container border border-md-outline-variant ' +
+    'px-4 py-3 pr-10 text-sm text-md-on-surface outline-none transition-colors ' +
+    'focus:border-md-primary disabled:opacity-50';
+
   return (
-    <div className="relative min-h-screen bg-brand-dark flex flex-col justify-center items-center p-4 font-sans">
-      {/* Background radial glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] aspect-square rounded-full bg-brand-orange/5 blur-[120px] pointer-events-none" />
-
-      {/* Main card */}
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-8 bg-brand-surface border border-brand-border p-6 md:p-8 rounded-3xl glass-panel shadow-2xl">
-        
-        {/* Left Side: Video Preview Card (7 cols) */}
-        <div className="md:col-span-7 flex flex-col justify-between gap-4">
-          <h3 className="text-xl font-bold text-white tracking-wide">
-            Room Code: <span className="text-brand-orange">{roomId}</span>
-          </h3>
-
-          {/* Local Feed Screen */}
-          <div className="relative w-full aspect-video bg-black/40 border border-brand-border rounded-2xl overflow-hidden flex items-center justify-center">
+    <div className="relative min-h-screen bg-md-surface px-6 py-10 md:px-12 md:py-14  flex flex-col justify-center items-center animate-fade-in">
+      <div className="w-full max-w-lg mx-auto">
+      {/* Room identifier */}
+      <div className="flex items-center gap-2.5 mb-10">
+        <span className="w-1.5 h-1.5 rounded-full bg-md-primary" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-md-on-surface-variant">
+          Room
+        </span>
+        <span className="text-md-outline">·</span>
+        <span className="font-mono text-[13px] font-medium uppercase tracking-[0.12em] text-md-on-surface">
+          {roomId}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-10 lg:gap-16 items-start">
+        {/* ---------- Left: preview + device pickers ---------- */}
+        <div className="flex flex-col gap-6">
+          <div className="relative w-full aspect-video rounded-md-lg bg-md-surface-container-low border border-md-outline-variant overflow-hidden flex items-center justify-center">
             {videoEnabled && videoTrack ? (
               <video
                 ref={videoRef}
@@ -130,142 +131,137 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                 className="w-full h-full object-cover transform -scale-x-100"
               />
             ) : (
-              <div className="flex flex-col items-center gap-2 text-brand-text-secondary">
-                <VideoOff className="w-12 h-12 text-brand-text-secondary/40" />
-                <span className="text-xs">Camera is turned off</span>
+              <div className="w-[128px] h-[128px] rounded-full bg-md-primary text-md-on-primary flex items-center justify-center">
+                <span className="font-display text-5xl font-bold leading-none">{initial}</span>
               </div>
             )}
 
-            {/* Quick action buttons overlay */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            {/* Live mic chip */}
+            {audioEnabled && (
+              <div className="absolute top-4 left-4 flex items-center gap-2 rounded-md-full bg-md-surface-container border border-md-outline-variant px-3 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-md-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+                  Live mic
+                </span>
+              </div>
+            )}
+
+            {/* Media toggles */}
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3">
               <button
                 type="button"
                 onClick={toggleMicrophone}
-                className={`control-btn p-3 rounded-full border ${
+                className={`control-btn w-12 h-12 rounded-full flex items-center justify-center border ${
                   audioEnabled
-                    ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
-                    : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
+                    ? 'bg-md-surface-container border-md-outline-variant text-md-on-surface hover:bg-md-surface-container-high'
+                    : 'bg-md-error-container border-transparent text-md-on-error-container'
                 }`}
-                title={audioEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
+                title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
               >
-                {audioEnabled ? <Mic className="w-5 h-5 animate-pop-in" /> : <MicOff className="w-5 h-5 animate-pop-in" />}
+                {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
               </button>
 
               <button
                 type="button"
                 onClick={toggleCamera}
-                className={`control-btn p-3 rounded-full border ${
+                className={`control-btn w-12 h-12 rounded-full flex items-center justify-center border ${
                   videoEnabled
-                    ? 'bg-brand-surface hover:bg-brand-border text-white border-brand-border'
-                    : 'bg-red-500/20 border-red-500/40 text-red-500 hover:bg-red-500/35'
+                    ? 'bg-md-surface-container border-md-outline-variant text-md-on-surface hover:bg-md-surface-container-high'
+                    : 'bg-md-error-container border-transparent text-md-on-error-container'
                 }`}
-                title={videoEnabled ? 'Stop Video' : 'Start Video'}
+                title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
-                {videoEnabled ? <Video className="w-5 h-5 animate-pop-in" /> : <VideoOff className="w-5 h-5 animate-pop-in" />}
+                {videoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
               </button>
             </div>
-
-            {/* Audio Indicator */}
-            {audioEnabled && (
-              <div className="absolute top-4 left-4 bg-brand-surface/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-brand-border flex items-center gap-1.5">
-                <Mic className="w-3.5 h-3.5 text-brand-orange animate-pulse" />
-                <span className="text-[10px] uppercase font-bold tracking-wider text-brand-orange">
-                  Live Mic
-                </span>
-              </div>
-            )}
           </div>
-
-          {/* Dropdown Selectors */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-brand-text-secondary uppercase tracking-wider font-bold">
-                Camera source
-              </label>
-              <select
-                value={videoDeviceId}
-                onChange={(e) => selectCamera(e.target.value)}
-                disabled={!videoEnabled}
-                className="bg-brand-dark border border-brand-border focus:border-brand-orange/50 px-3 py-2 rounded-xl text-xs text-white outline-none disabled:opacity-50 transition-colors"
-              >
-                {videoDevices.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {d.label || `Camera ${d.deviceId.substring(0, 4)}`}
-                  </option>
-                ))}
-                {videoDevices.length === 0 && <option>No cameras found</option>}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-brand-text-secondary uppercase tracking-wider font-bold">
-                Microphone source
-              </label>
-              <select
-                value={audioDeviceId}
-                onChange={(e) => selectMicrophone(e.target.value)}
-                disabled={!audioEnabled}
-                className="bg-brand-dark border border-brand-border focus:border-brand-orange/50 px-3 py-2 rounded-xl text-xs text-white outline-none disabled:opacity-50 transition-colors"
-              >
-                {audioDevices.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {d.label || `Microphone ${d.deviceId.substring(0, 4)}`}
-                  </option>
-                ))}
-                {audioDevices.length === 0 && <option>No microphones found</option>}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Identity Form (5 cols) */}
-        <div className="md:col-span-5 flex flex-col justify-center border-t md:border-t-0 md:border-l border-brand-border/60 pt-6 md:pt-0 md:pl-8">
-          <div className="mb-6">
-            <div className="flex items-center gap-1.5 text-xs text-brand-orange font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ready to Join?</span>
-            </div>
-            <h2 className="text-2xl font-black text-white leading-tight">
-              Pre-Join Setup
-            </h2>
-            <p className="text-xs text-brand-text-secondary mt-1">
-              Configure your camera and name before connecting.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-brand-text-secondary uppercase tracking-wider font-bold">
-                Your Display Name
+          {/* Device pickers */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+                Camera
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-brand-text-secondary/50" />
+                <select
+                  value={videoDeviceId}
+                  onChange={(e) => selectCamera(e.target.value)}
+                  disabled={!videoEnabled}
+                  className={selectClass}
+                >
+                  {videoDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Camera ${d.deviceId.substring(0, 4)}`}
+                    </option>
+                  ))}
+                  {videoDevices.length === 0 && <option>No cameras found</option>}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+                Microphone
+              </label>
+              <div className="relative">
+                <select
+                  value={audioDeviceId}
+                  onChange={(e) => selectMicrophone(e.target.value)}
+                  disabled={!audioEnabled}
+                  className={selectClass}
+                >
+                  {audioDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Microphone ${d.deviceId.substring(0, 4)}`}
+                    </option>
+                  ))}
+                  {audioDevices.length === 0 && <option>No microphones found</option>}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
+              </div>
+            </div>
+          </div>
+          {/* Start Button */}
+          <div className="flex flex-col lg:pt-2">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+                Your display name
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-[18px] w-[18px] text-md-on-surface-variant" />
                 </span>
                 <input
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="Enter your name"
                   value={inputName}
                   onChange={(e) => setInputName(e.target.value)}
                   disabled={!!userName}
                   readOnly={!!userName}
-                  className={`w-full bg-brand-dark border border-brand-border focus:border-brand-orange/50 pl-10 pr-4 py-3 rounded-xl text-sm text-white outline-none transition-colors duration-200 ${
+                  className={`w-full rounded-md-md bg-md-surface-container border border-md-outline-variant pl-12 pr-4 py-4 text-base text-md-on-surface outline-none transition-colors focus:border-md-primary ${
                     userName ? 'opacity-60 cursor-not-allowed select-none' : ''
                   }`}
                 />
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn-press w-full flex items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white py-3.5 px-6 rounded-xl font-bold shadow-lg shadow-brand-orange/20 hover:shadow-brand-orange/35 text-sm uppercase tracking-wider mt-2 group"
-            >
-              <span>Enter Meet</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="submit"
+                className="btn-press group w-full flex items-center justify-center gap-2.5 rounded-md-full bg-md-primary hover:bg-md-primary-hover text-md-on-primary py-4 px-8 text-lg font-medium"
+              >
+                <span>Step into the room</span>
+                <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" />
+              </button>
+              <p className="text-sm text-md-on-surface-variant">
+                Others will see you the moment you enter
+              </p>
+            </div>
           </form>
+          </div>
         </div>
-
+      </div>
       </div>
     </div>
   );

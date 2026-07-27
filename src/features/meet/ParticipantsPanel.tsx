@@ -30,25 +30,25 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
       return <SignalHigh className={`${size} text-green-500`} />;
     }
     if (quality === 'poor') {
-      return <SignalLow className={`${size} text-red-500`} />;
+      return <SignalLow className={`${size} text-md-error`} />;
     }
     return <SignalMedium className={`${size} text-yellow-500`} />;
   };
 
   return (
-    <div className="w-80 h-full bg-brand-surface border-l border-brand-border rounded-xl flex flex-col justify-between relative z-20">
+    <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/40 rounded-md-lg flex flex-col justify-between relative z-20">
       
       {/* Header */}
-      <div className="p-4 border-b border-brand-border flex items-center justify-between">
+      <div className="p-4 border-b border-md-outline-variant flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-brand-orange" />
-          <h4 className="font-bold text-white text-sm uppercase tracking-wider">
+          <Users className="w-4 h-4 text-md-primary" />
+          <h4 className="font-bold text-md-on-surface text-sm uppercase tracking-wider">
             Participants ({allParticipants.length})
           </h4>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 hover:bg-brand-border rounded-lg text-brand-text-secondary hover:text-white transition-colors"
+          className="p-1.5 hover:bg-md-outline-variant rounded-lg text-md-on-surface-variant hover:text-md-on-surface transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -65,25 +65,25 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
           return (
             <div
               key={p.identity}
-              className="flex items-center justify-between p-3 bg-brand-dark/40 border border-brand-border/60 hover:border-brand-border rounded-xl transition-all"
+              className="flex items-center justify-between p-3 bg-md-surface-container border border-md-outline-variant/40 hover:border-md-outline rounded-md-md transition-all"
             >
               <div className="flex items-center gap-2.5 overflow-hidden">
                 {/* Mini Avatar */}
-                <div className="w-8 h-8 rounded-full bg-brand-orange/15 border border-brand-orange/30 flex items-center justify-center text-brand-orange font-bold text-xs flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-md-primary/15 border border-md-primary/30 flex items-center justify-center text-md-primary font-bold text-xs flex-shrink-0">
                   {(p.name || p.identity || 'P').charAt(0).toUpperCase()}
                 </div>
 
                 {/* Name */}
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-white truncate">
+                  <span className="text-xs font-semibold text-md-on-surface truncate">
                     {p.name || p.identity}
                     {isLocal && (
-                      <span className="text-brand-orange text-[9px] font-black ml-1 uppercase">
+                      <span className="text-md-primary text-[9px] font-black ml-1 uppercase">
                         (You)
                       </span>
                     )}
                   </span>
-                  <span className="text-[9px] text-brand-text-secondary">
+                  <span className="text-[9px] text-md-on-surface-variant">
                     {getParticipantRoleLabel(p)}
                   </span>
                 </div>
@@ -92,18 +92,18 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
               {/* Status Icons */}
               <div className="flex items-center gap-2">
                 {hasHandRaised && (
-                  <Hand className="w-3.5 h-3.5 text-brand-orange animate-bounce" />
+                  <Hand className="w-3.5 h-3.5 text-md-primary animate-bounce" />
                 )}
-                <div className="flex items-center gap-1.5 bg-brand-dark border border-brand-border px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1.5 bg-md-surface border border-md-outline-variant px-2 py-1 rounded-lg">
                   {isMuted ? (
-                    <MicOff className="w-3 h-3 text-red-500" />
+                    <MicOff className="w-3 h-3 text-md-error" />
                   ) : (
-                    <Mic className="w-3 h-3 text-brand-text-secondary" />
+                    <Mic className="w-3 h-3 text-md-on-surface-variant" />
                   )}
                   {isCamOff ? (
-                    <VideoOff className="w-3 h-3 text-red-500" />
+                    <VideoOff className="w-3 h-3 text-md-error" />
                   ) : (
-                    <Video className="w-3 h-3 text-brand-text-secondary" />
+                    <Video className="w-3 h-3 text-md-on-surface-variant" />
                   )}
                   {renderQuality(p)}
                 </div>

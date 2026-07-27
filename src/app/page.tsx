@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/app/backend/services/session-service';
 
@@ -21,36 +20,30 @@ export default async function LandingPage({
   const { authError } = await searchParams;
   const errorMessage = authError ? AUTH_ERROR_MESSAGES[authError] || 'Sign-in failed. Please try again.' : null;
   return (
-    <div className="relative h-screen bg-brand-dark flex flex-col justify-between overflow-hidden font-sans">
-      {/* Decorative background glow circles */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] aspect-square rounded-full bg-brand-orange/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-brand-orange/5 blur-[120px] pointer-events-none" />
-
-      {/* Grid Pattern overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-
+    <div className="relative h-screen bg-md-surface flex flex-col justify-between overflow-hidden font-sans">
       {/* Main Hero */}
       <main className="relative z-10 max-w-4xl mx-auto w-full px-6 py-16 md:py-24 flex flex-col items-center text-center my-auto">
-        {/* Sheryians Logo */}
-        <div className="mb-10 flex items-center gap-4 bg-brand-surface/40 border border-brand-border/40 px-6 py-4 rounded-2xl backdrop-blur-md">
-          <Image
-            src="https://dfdx9u0psdezh.cloudfront.net/logos/full-logo.webp"
-            alt="Sheryians Coding School"
-            width={200}
-            height={48}
-            className="h-10 md:h-12 w-auto object-contain"
-            priority
-          />
+        {/* Product mark */}
+        <div className="mb-8 flex items-center justify-center w-20 h-20 rounded-md-xl bg-md-primary-container text-md-on-primary-container">
+          <svg viewBox="0 0 24 24" className="w-10 h-10" fill="currentColor" aria-hidden="true">
+            <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
+          </svg>
         </div>
+        <h1 className="mb-3 text-4xl md:text-5xl font-normal tracking-tight text-md-on-surface">
+          Meet
+        </h1>
+        <p className="mb-10 max-w-md text-base text-md-on-surface-variant">
+          Secure, high-quality video meetings for your product.
+        </p>
         {errorMessage && (
-          <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          <p className="mb-6 rounded-md-sm border border-md-error/40 bg-md-error-container/40 px-4 py-3 text-sm text-md-on-error-container">
             {errorMessage}
           </p>
         )}
-        {/* Login with Google */}
+        {/* Login with Google — M3 filled button */}
         <a
           href="/api/private/auth/google"
-          className="flex items-center gap-3 rounded-xl border border-brand-border bg-white px-6 py-3 font-medium text-brand-dark transition-colors hover:bg-neutral-200"
+          className="btn-press md-state-layer flex items-center gap-3 rounded-md-full bg-md-primary px-6 py-3.5 text-sm font-medium text-md-on-primary"
         >
           <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>

@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const result = await listMyApiKeysAction();
 
   return (
-    <div className="min-h-screen bg-brand-dark text-brand-text-primary">
+    <div className="min-h-screen bg-md-surface text-md-on-surface">
       <ApiKeysDashboard
         user={{ userName: user.userName, email: user.email }}
         initialKeys={result.success ? result.keys ?? [] : []}

@@ -7,8 +7,7 @@ import { useRoomConnection } from '@/hooks/media-server/useRoomConnection';
 import { initEmbedBridge, emitEmbedEvent } from '@/features/meet/embed-bridge';
 import PreJoinScreen from '@/features/meet/PreJoinScreen';
 import ConferenceRoom from '@/features/meet/ConferenceRoom';
-import { Loader2, Clock, RefreshCw, Lock, PlayCircle } from 'lucide-react';
-import Image from 'next/image';
+import { Loader2, Clock, RefreshCw, Lock, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -22,43 +21,57 @@ interface MeetingPageClientProps {
 
 type GateStatus = 'verifying' | 'noAccess' | 'start' | 'waitingHost' | 'ready' | 'error';
 
+/**
+ * Full-bleed hero gate: an overhead spotlight, a glowing filled status disc,
+ * an overline, a display-serif headline, and a single wide action. Used for
+ * every pre-room state so they read as one family.
+ */
 function GateScreen({
+  eyebrow,
   icon,
   title,
   description,
+  tone = 'primary',
   children,
 }: {
+  eyebrow?: string;
   icon: React.ReactNode;
   title: string;
   description: string;
+  tone?: 'primary' | 'error';
   children?: React.ReactNode;
 }) {
+  const discTone =
+    tone === 'error'
+      ? 'bg-md-error-container text-md-on-error-container'
+      : 'bg-md-primary text-md-on-primary';
+  const eyebrowTone = tone === 'error' ? 'text-md-error' : 'text-md-primary';
+
   return (
-    <div className="relative min-h-screen bg-brand-dark flex flex-col justify-center items-center overflow-hidden font-sans p-6 animate-screen-in">
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] aspect-square rounded-full bg-brand-orange/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-brand-orange/5 blur-[120px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
-
-      <div className="relative z-10 w-full max-w-md glass-panel rounded-2xl border border-brand-border/40 p-8 flex flex-col items-center text-center shadow-2xl animate-fade-in-up">
-        <div className="mb-8 flex items-center gap-4 bg-brand-surface/40 border border-brand-border/40 px-5 py-3 rounded-xl backdrop-blur-md">
-          <Image
-            src="https://dfdx9u0psdezh.cloudfront.net/logos/full-logo.webp"
-            alt="Sheryians Coding School"
-            width={160}
-            height={38}
-            className="h-8 w-auto object-contain"
-            priority
-          />
-        </div>
-
-        <div className="w-16 h-16 rounded-full bg-brand-orange/10 border border-brand-orange/20 flex items-center justify-center text-brand-orange mb-6 animate-pulse-slow">
+    <div className="min-h-screen bg-md-surface flex flex-col justify-center items-center p-6 animate-fade-in">
+      <div className="flex flex-col items-center text-center max-w-xl">
+        {/* Status disc */}
+        <div
+          className={`w-[104px] h-[104px] rounded-full flex items-center justify-center mb-10 ${discTone}`}
+        >
           {icon}
         </div>
 
-        <h1 className="text-2xl font-bold tracking-tight text-brand-text-primary mb-3">{title}</h1>
-        <p className="text-sm text-brand-text-secondary leading-relaxed mb-8 max-w-sm">{description}</p>
+        {eyebrow && (
+          <p className={`mb-5 text-[11px] font-semibold uppercase tracking-[0.28em] ${eyebrowTone}`}>
+            {eyebrow}
+          </p>
+        )}
 
-        <div className="w-full flex flex-col gap-3">{children}</div>
+        <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight text-md-on-surface mb-5 text-balance">
+          {title}
+        </h1>
+
+        <p className="text-lg text-md-on-surface-variant leading-relaxed mb-11 max-w-md text-balance">
+          {description}
+        </p>
+
+        <div className="w-full max-w-sm flex flex-col items-center gap-4">{children}</div>
       </div>
     </div>
   );
@@ -304,10 +317,14 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
 
   if (gateStatus === 'verifying') {
     return (
-      <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center text-center animate-fade-in">
-        <Loader2 className="w-12 h-12 text-brand-orange animate-spin mb-4" />
-        <h3 className="text-xl font-bold text-white mb-2">Verifying meeting link</h3>
-        <p className="text-brand-text-secondary text-sm">Hang tight while we confirm access...</p>
+      <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in p-6">
+        <div className="flex flex-col items-center">
+          <Loader2 className="w-10 h-10 text-md-primary animate-spin mb-8" />
+          <h1 className="font-display text-4xl font-bold tracking-tight text-md-on-surface mb-3">
+            Checking your invite
+          </h1>
+          <p className="text-md-on-surface-variant text-base">Just a moment while we confirm access.</p>
+        </div>
       </div>
     );
   }
@@ -315,13 +332,15 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
   if (gateStatus === 'noAccess') {
     return (
       <GateScreen
-        icon={<Lock className="w-8 h-8" />}
-        title="You don't have access to this meeting"
-        description="This link is missing a valid access token. Ask the host or organizer for a fresh joining link."
+        eyebrow="Invite only"
+        tone="error"
+        icon={<Lock className="w-10 h-10" />}
+        title="This door is locked"
+        description="Your link is missing a valid access token. Ask the host for a fresh invite and you'll be right in."
       >
         <Link
           href="/"
-          className="inline-flex w-full items-center justify-center text-xs text-brand-text-secondary hover:text-brand-text-primary transition-colors py-2"
+          className="btn-press md-state-layer inline-flex items-center justify-center rounded-md-full border border-md-outline px-7 py-3 text-sm font-medium text-md-primary"
         >
           Go back home
         </Link>
@@ -331,14 +350,20 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
 
   if (gateStatus === 'error') {
     return (
-      <GateScreen icon={<Clock className="w-8 h-8" />} title="Unable to join meeting" description={gateMessage}>
+      <GateScreen
+        eyebrow="Something went wrong"
+        tone="error"
+        icon={<Clock className="w-10 h-10" />}
+        title="We couldn't get you in"
+        description={gateMessage}
+      >
         <button
           type="button"
           onClick={verifyToken}
-          className="btn-press inline-flex w-full items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white px-5 py-3 rounded-xl font-medium cursor-pointer shadow-lg shadow-brand-orange/20"
+          className="btn-press inline-flex w-full items-center justify-center gap-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 rounded-md-full text-lg font-medium cursor-pointer"
         >
-          <RefreshCw className="w-4 h-4" />
-          Check Status
+          <RefreshCw className="w-5 h-5" />
+          Try again
         </button>
       </GateScreen>
     );
@@ -347,11 +372,12 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
   if (gateStatus === 'waitingHost') {
     return (
       <GateScreen
-        icon={<Clock className="w-8 h-8" />}
-        title="Waiting for the host"
-        description="The meeting hasn't started yet. You'll be let in automatically as soon as the host starts it."
+        eyebrow="Almost there"
+        icon={<Clock className="w-11 h-11" />}
+        title="Waiting in the wings"
+        description="The host hasn't opened the room yet. Stay here — you'll be let in the moment they start."
       >
-        <div className="inline-flex w-full items-center justify-center gap-2 text-brand-text-secondary text-sm py-2">
+        <div className="inline-flex items-center justify-center gap-2.5 text-md-on-surface-variant text-sm">
           <Loader2 className="w-4 h-4 animate-spin" />
           Checking for the host...
         </div>
@@ -362,22 +388,23 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
   if (gateStatus === 'start') {
     return (
       <GateScreen
-        icon={<PlayCircle className="w-8 h-8" />}
-        title="Ready to start the meeting?"
+        eyebrow="The floor is yours"
+        icon={<Lightbulb className="w-11 h-11" />}
+        title="Take the stage"
         description={
           meetDetails?.isRecording
-            ? 'Starting the meeting will open the room to participants and automatically begin recording.'
-            : 'Starting the meeting will open the room for participants to join.'
+            ? "Open the room and your guests step in. Recording begins with you — you're the first voice they'll hear."
+            : "Open the room and your guests step in. You're the first voice they'll hear."
         }
       >
         <button
           type="button"
           onClick={startMeeting}
           disabled={isStarting}
-          className="btn-press inline-flex w-full items-center justify-center gap-2 bg-brand-orange hover:bg-brand-orange-hover text-white px-5 py-3 rounded-xl font-medium cursor-pointer shadow-lg shadow-brand-orange/20 disabled:opacity-60 disabled:pointer-events-none"
+          className="btn-press inline-flex w-full items-center justify-center gap-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 rounded-md-full text-lg font-medium cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
         >
-          {isStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
-          {isStarting ? 'Starting...' : 'Start Meeting'}
+          {isStarting && <Loader2 className="w-5 h-5 animate-spin" />}
+          {isStarting ? 'Starting...' : 'Start meeting'}
         </button>
       </GateScreen>
     );
@@ -386,10 +413,10 @@ export default function MeetingPageClient({ roomId, token, userName, email, isRe
   if (hasEntered) {
     if (isConnecting && !isConnected) {
       return (
-        <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center text-center animate-fade-in">
-          <Loader2 className="w-12 h-12 text-brand-orange animate-spin mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Connecting to Room</h3>
-          <p className="text-brand-text-secondary text-sm">Securing your peer connection...</p>
+        <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in">
+          <Loader2 className="w-12 h-12 text-md-primary animate-spin mb-4" />
+          <h3 className="text-xl font-bold text-md-on-surface mb-2">Connecting to Room</h3>
+          <p className="text-md-on-surface-variant text-sm">Securing your peer connection...</p>
         </div>
       );
     }
