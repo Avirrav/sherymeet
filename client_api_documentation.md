@@ -6,6 +6,8 @@ This document describes how client applications authenticate and interact with S
 
 ## 1. Environment & Base URL Configuration
 
+Sherymeet is single-tenant and has no login or dashboard — the one API key/secret pair is provisioned by the deployer via `pnpm create-client` (see `scripts/create-client.ts`), which prints the credentials once. Store them securely; they cannot be retrieved again, only rotated (rerun the script to mint a new pair).
+
 Before calling the APIs, the client must configure the following environment variables in their backend service's `.env` configuration file:
 
 ```env
@@ -188,7 +190,6 @@ Initializes a scheduled room in the MongoDB database. This does not instantiate 
 
 * **HTTP Method**: `POST`
 * **URL**: `/api/v1/client/meet`
-* **Permissions Required**: `createMeeting`
 
 #### Request Body
 | Field | Type | Required | Description |
@@ -225,13 +226,17 @@ Verifies client credentials, checks passcode, transitions the meeting status to 
 
 * **HTTP Method**: `POST`
 * **URL**: `/api/v1/client/meet/create-start-url`
-* **Permissions Required**: `createMeeting`
 
 #### Request Body
+Sherymeet has no login of its own — `host` identifies who is starting the meeting so the returned link is minted in their name.
 ```json
 {
   "roomId": "abc-defg-hij",
-  "passcode": "123456"
+  "passcode": "123456",
+  "host": {
+    "userName": "Jane Doe",
+    "email": "jane@example.com"
+  }
 }
 ```
 
@@ -255,7 +260,6 @@ Checks if the meeting has been started by the host, verifies the passcode, and r
 
 * **HTTP Method**: `POST`
 * **URL**: `/api/v1/client/meet/join-as-user`
-* **Permissions Required**: `joinMeeting`
 
 #### Request Body
 `passcode` is required when the meeting was created with one. `participantData.name` is the documented field (`username` is still accepted for backwards compatibility).
@@ -296,7 +300,6 @@ Ends a meeting from your backend: transitions status to `"ended"`, stops any act
 
 * **HTTP Method**: `POST`
 * **URL**: `/api/v1/client/meet/end-meet`
-* **Permissions Required**: `endMeeting`
 
 #### Request Body
 ```json

@@ -6,7 +6,6 @@ import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
 import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
 import { auditMiddleware } from "@/server/middleware/audit-middleware";
 import { replayProtectionMiddleware } from "@/server/middleware/replay-protection-middleware";
 import { config } from "@/server/utils/config";
@@ -51,7 +50,6 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     auditMiddleware,
     authenticationMiddleware,
-    authorizationMiddleware(["createMeeting"]),
     rateLimitMiddleware,
     replayProtectionMiddleware,
   ],

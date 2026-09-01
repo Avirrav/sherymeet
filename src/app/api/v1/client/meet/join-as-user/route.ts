@@ -6,7 +6,6 @@ import { IParticipant, ParticipantRole } from "@/types/roles";
 import { MeetDao } from "@/server/dao/meet-dao";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { replayProtectionMiddleware } from "@/server/middleware/replay-protection-middleware";
@@ -72,7 +71,6 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     auditMiddleware,
     authenticationMiddleware,
-    authorizationMiddleware(["createParticipantJoinUrl"]),
     rateLimitMiddleware,
     replayProtectionMiddleware,
   ],

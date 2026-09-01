@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "create-client": "tsx scripts/create-client.ts",
     "prepare": "husky || true"
   },
   "lint-staged": {
@@ -40,6 +41,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

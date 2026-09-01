@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { Document } from "mongoose";
-import { IUser } from "@/types/roles";
 
 // --- Request Augmentation ---
+// Single-tenant app: the only identity on a request is the HMAC-authenticated
+// API client (see authentication-middleware.ts) — there is no platform-user
+// concept, so this carries no `user` field.
 export interface AuthenticatedRequest extends NextRequest {
   client?: IApiClient;
-  user?: IUser;
   requestId?: string;
   rawBody?: Buffer;
 }
@@ -19,9 +20,9 @@ export interface IRevokedApiKey extends Document {
 export interface IApiClient extends Document {
   name: string;
   apiKey: string;
-  createdBy?: string; // ObjectId of the platform User who created this client (dashboard self-service)
-  createdByName?: string; // Denormalized snapshot of the creating user's name at creation time
-  createdByAvatarUrl?: string; // Denormalized snapshot of the creating user's Google avatar at creation time
+  createdBy?: string; // Unused in single-tenant mode (no platform user); kept for schema/API compatibility
+  createdByName?: string; // Unused in single-tenant mode; kept for schema/API compatibility
+  createdByAvatarUrl?: string; // Unused in single-tenant mode; kept for schema/API compatibility
   currentSecret: string; // Encrypted with AWS KMS or fallback AES-256
   previousSecret?: string; // Encrypted with AWS KMS or fallback AES-256
   currentSecretVersion: number;
@@ -37,52 +38,6 @@ export interface IApiClient extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// --- Roles & Permissions Definitions ---
-export type MeetingPermission =
-  | "createMeeting"
-  | "updateMeeting"
-  | "deleteMeeting"
-  | "getMeeting"
-  | "startMeeting"
-  | "endMeeting"
-  | "joinMeeting"
-  | "muteParticipants"
-  | "unmuteParticipants"
-  | "removeParticipant"
-  | "requestParticipantVideo"
-  | "rejectParticipantVideo"
-  | "acceptParticipantVideo"
-  | "requestCoHost"
-  | "acceptCoHost"
-  | "rejectCoHost"
-  | "createParticipantJoinUrl"
-  | "getParticipantJoinUrl"
-  | "deleteParticipantJoinUrl"
-
-export type RecordingPermission =
-  | "startRecording"
-  | "stopRecording"
-  | "viewRecording"
-  | "deleteRecording"
-  | "downloadRecording";
-
-export type OrganizationPermission =
-  | "createApiKey"
-  | "manageApiKeys"
-  | "manageMembers"
-  | "manageBilling";
-
-export type UserPermission =
-  | "manageUsers"
-  | "assignRoles"
-  | "suspendUsers";
-
-export type Permission =
-  | MeetingPermission
-  | RecordingPermission
-  | OrganizationPermission
-  | UserPermission;
 
 // IAuditLog — Mongoose document interface for the AuditLog collection.
 // Tracks every authenticated API request for security auditing.

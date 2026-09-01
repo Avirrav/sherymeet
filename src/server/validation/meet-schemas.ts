@@ -31,6 +31,12 @@ export const createMeetSchema = z.object({
 export const createStartUrlSchema = z.object({
   roomId: roomIdSchema,
   passcode: z.string().max(128).optional(),
+  // Sherymeet has no login of its own — the integrating client app tells us
+  // who the host is so we can mint them a host-privileged token/link.
+  host: z.object({
+    userName: displayNameSchema,
+    email: z.email("Invalid host email").trim(),
+  }),
 });
 
 export const joinAsUserSchema = z.object({

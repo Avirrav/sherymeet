@@ -39,10 +39,6 @@ const envSchema = z.object({
     .string()
     .min(32, "must be at least 32 characters")
     .optional(),
-  SESSION_SECRET: z
-    .string()
-    .min(32, "must be at least 32 characters")
-    .optional(),
 
   // Public URLs
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
@@ -66,9 +62,6 @@ const envSchema = z.object({
   AWS_S3_BUCKET_NAME: z.string().default("sherymeet-recordings"),
   AWS_S3_REGION: z.string().default("ap-south-1"),
 
-  // Google OAuth
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 function collectRawEnv() {
@@ -82,7 +75,6 @@ function collectRawEnv() {
     LIVEKIT_TOKEN_TTL: process.env.LIVEKIT_TOKEN_TTL,
     ROOM_EMPTY_TIMEOUT: process.env.ROOM_EMPTY_TIMEOUT,
     ENCRYPTION_MASTER_KEY: process.env.ENCRYPTION_MASTER_KEY,
-    SESSION_SECRET: process.env.SESSION_SECRET,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     REDIS_URL: process.env.REDIS_URL,
     LOG_LEVEL: process.env.LOG_LEVEL,
@@ -95,8 +87,6 @@ function collectRawEnv() {
     AWS_TRANSCRIBE_REGION: process.env.AWS_TRANSCRIBE_REGION,
     AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
     AWS_S3_REGION: process.env.AWS_S3_REGION,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   };
 }
 
@@ -130,7 +120,6 @@ const requiredInProduction = z.object({
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
-  SESSION_SECRET: z.string().min(32, "must be at least 32 characters"),
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
 });

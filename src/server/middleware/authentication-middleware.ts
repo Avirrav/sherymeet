@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
 import { ApiClientService } from "../services/auth/api-client";
 import { SignatureService } from "../services/auth/signature";
-import { UserService } from "../services/auth/user";
 import { logger } from "../utils/logger";
 
 /**
@@ -56,20 +55,6 @@ export async function authenticationMiddleware(
       { status: 401 },
     );
   }
-  // 3b. Resolve the platform user who owns this API client (if any) and attach to the request
-  if (client.createdBy) {
-    const owner = await UserService.getUserById(client.createdBy);
-    if (owner) {
-      request.user = {
-        _id: owner._id.toString(),
-        userName: owner.userName,
-        email: owner.email,
-        role: owner.role,
-        avatarUrl: owner.avatarUrl,
-      };
-    }
-  }
-
   // 4. Validate Timestamp Drift (5 minutes drift allowed)
   const timestamp = parseInt(timestampStr, 10);
   if (isNaN(timestamp)) {

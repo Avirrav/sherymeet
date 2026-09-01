@@ -29,7 +29,6 @@ export async function auditMiddleware(
     void AuditService.logEvent({
       requestId: req.requestId || "unknown",
       apiKey: req.client?.apiKey,
-      userId: req.user?._id?.toString(),
       ip,
       origin,
       method,
@@ -80,7 +79,6 @@ export async function auditMiddleware(
   void AuditService.logEvent({
     requestId: req.requestId || "unknown",
     apiKey: req.client?.apiKey,
-    userId: req.user?._id?.toString(),
     ip,
     origin,
     method,

@@ -5,7 +5,6 @@ import { endMeetSchema, parseJsonBody } from "@/server/validation/meet-schemas";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
 import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
 import { replayProtectionMiddleware } from "@/server/middleware/replay-protection-middleware";
 import { auditMiddleware } from "@/server/middleware/audit-middleware";
@@ -30,7 +29,6 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     auditMiddleware,
     authenticationMiddleware,
-    authorizationMiddleware(["endMeeting"]),
     rateLimitMiddleware,
     replayProtectionMiddleware
   ],
