@@ -1,18 +1,19 @@
-import { createInstantMeet } from "@/server/services/meet-services/create-instant-meet";
+import { createInstantMeet } from "@/server/services/meet/create-instant-meet";
 import { ApiResponse } from "@/server/utils/api-helper";
 import { createMeetSchema, parseJsonBody } from "@/server/validation/meet-schemas";
-import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { AuthenticatedRequest } from "@/server/types/auth.types";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
 import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
 import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
 import { auditMiddleware } from "@/server/middleware/audit-middleware";
-import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection-middleware";
+import { config } from "@/server/utils/config";
 
 // GET /api/private/meet - Returns the public LiveKit server URL
 export async function GET() {
-  const serverUrl = process.env.LIVEKIT_URL;
+  const serverUrl = config.LIVEKIT_URL;
   if (!serverUrl) {
     return ApiResponse.failure("LiveKit URL is not configured.", 500);
   }

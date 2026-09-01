@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { SESSION_COOKIE_NAME } from "@/server/services/session-service";
+import { SESSION_COOKIE_NAME } from "@/server/services/auth/session";
+import { config } from "@/server/utils/config";
 
 export interface ApiKeySummary {
   id: string;
@@ -18,7 +19,7 @@ export interface ApiKeySummary {
 }
 
 function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  return config.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 }
 
 /**

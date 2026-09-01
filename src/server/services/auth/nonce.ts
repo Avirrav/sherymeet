@@ -1,4 +1,4 @@
-import { getStore } from '../utils/store';
+import { getStore } from '../../utils/store';
 
 export class NonceService {
   private static NONCE_TTL_SECONDS = 300; // 5 minutes matching timestamp drift allowance

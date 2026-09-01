@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
-import { IApiClient } from "../interfaces/auth-interface";
+import { IApiClient } from "../types/auth.types";
+import { config } from "../utils/config";
 
 const ApiClientSchema = new Schema<IApiClient>(
   {
@@ -24,7 +25,7 @@ const ApiClientSchema = new Schema<IApiClient>(
   { timestamps: true },
 );
 
-if (process.env.NODE_ENV === "development" && mongoose.models.ApiClient) {
+if (config.NODE_ENV === "development" && mongoose.models.ApiClient) {
   delete mongoose.models.ApiClient;
 }
 

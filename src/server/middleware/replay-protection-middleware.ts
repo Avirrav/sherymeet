@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { AuthenticatedRequest, NextMiddleware } from "../types/auth-types";
-import { NonceService } from "../services/nonce-service";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
+import { NonceService } from "../services/auth/nonce";
 
 /**
  * Replay Protection Middleware.

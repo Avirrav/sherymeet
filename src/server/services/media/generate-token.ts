@@ -4,12 +4,13 @@ import {
   IParticipant,
   ParticipantRole,
   ParticipantRoleHierarchy,
-} from "@/server/interfaces/user-interface";
+} from "@/types/roles";
 import { logger } from "@/server/utils/logger";
 import { MeetDao } from "@/server/dao/meet-dao";
+import { config } from "@/server/utils/config";
 
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
 
 interface GenerateTokenOptions {
   roomName: string;
@@ -37,7 +38,7 @@ export async function generateToken(
     name: participant.name,
     // Long meetings need reconnects after the default window; keep this
     // configurable per deployment.
-    ttl: process.env.LIVEKIT_TOKEN_TTL || "2h",
+    ttl: config.LIVEKIT_TOKEN_TTL,
   });
   let meetType: "webinar" | "meet" = "meet";
   try {

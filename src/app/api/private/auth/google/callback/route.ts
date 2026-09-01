@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/server/services/google-oauth-service";
-import { UserService } from "@/server/services/user-service";
+import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/server/services/auth/google-oauth";
+import { UserService } from "@/server/services/auth/user";
 import {
   createSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
-} from "@/server/services/session-service";
+} from "@/server/services/auth/session";
 import { logger } from "@/server/utils/logger";
+import { config, isProduction } from "@/server/utils/config";
 
 /**
  * Completes the "Login with Google" flow: exchanges the auth code, upserts the
@@ -14,7 +15,7 @@ import { logger } from "@/server/utils/logger";
  * GET /api/private/auth/google/callback
  */
 export async function GET(req: NextRequest): Promise<Response> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || req.nextUrl.origin;
+  const baseUrl = config.NEXT_PUBLIC_API_URL || req.nextUrl.origin;
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
   const oauthError = req.nextUrl.searchParams.get("error");
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     response.cookies.delete(OAUTH_STATE_COOKIE_NAME);
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction(),
       sameSite: "lax",
       maxAge: SESSION_MAX_AGE_SECONDS,
       path: "/",

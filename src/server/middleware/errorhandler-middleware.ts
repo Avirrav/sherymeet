@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AuthenticatedRequest } from "../types/auth-types";
+import { AuthenticatedRequest } from "../types/auth.types";
 import { logger } from "../utils/logger";
 
 export interface ApiError extends Error {

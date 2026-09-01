@@ -1,4 +1,4 @@
-import { getStore } from '../utils/store';
+import { getStore } from '../../utils/store';
 
 export class RateLimitService {
   /**

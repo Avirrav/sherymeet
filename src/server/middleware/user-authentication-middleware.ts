@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { NextMiddleware } from "../types/auth-types";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "../services/session-service";
-import { UserService } from "../services/user-service";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "../services/auth/session";
+import { UserService } from "../services/auth/user";
 import { logger } from "../utils/logger";
 
 /**

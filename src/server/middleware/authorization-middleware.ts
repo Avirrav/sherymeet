@@ -3,9 +3,9 @@ import {
   AuthenticatedRequest,
   NextMiddleware,
   Permission,
-  UserRole,
-} from "../types/auth-types";
-import { AuthorizationService } from "../services/authorization.service";
+} from "../types/auth.types";
+import { UserRole } from "@/types/roles";
+import { AuthorizationService } from "../services/auth/authorization";
 import { logger } from "../utils/logger";
 /**
  * Authorization Middleware Factory.

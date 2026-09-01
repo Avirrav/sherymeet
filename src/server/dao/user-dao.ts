@@ -1,6 +1,6 @@
 import { dbConnect } from "../utils/db-connect";
 import User from "../models/user-model";
-import { IUserDocument } from "../interfaces/user-interface";
+import { IUserDocument } from "../types/user.types";
 
 export class UserDao {
   static async createUser(

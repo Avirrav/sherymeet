@@ -1,17 +1,18 @@
-import { generateToken } from "@/server/services/media-server-services/generate-token";
+import { generateToken } from "@/server/services/media/generate-token";
 import { ApiError, ApiResponse } from "@/server/utils/api-helper";
-import { IParticipant, ParticipantRole } from "@/server/interfaces/user-interface";
+import { IParticipant, ParticipantRole } from "@/types/roles";
 import { MeetDao } from "@/server/dao/meet-dao";
 import bcrypt from "bcryptjs";
-import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { AuthenticatedRequest } from "@/server/types/auth.types";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
 import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
 import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
 import { auditMiddleware } from "@/server/middleware/audit-middleware";
-import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection-middleware";
 import { createStartUrlSchema, parseJsonBody } from "@/server/validation/meet-schemas";
+import { config } from "@/server/utils/config";
 
 /**
  * POST /api/private/meet/join-as-host
@@ -65,7 +66,7 @@ export async function startMeetHandler(request: AuthenticatedRequest) {
 
     // Token travels in the hash fragment so it never reaches server logs,
     // proxies, or Referer headers. The meet page reads the fragment client-side.
-    const startUrl = `${process.env.NEXT_PUBLIC_API_URL}/meet/${roomId}#token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}&userName=${encodeURIComponent(user.userName)}`;
+    const startUrl = `${config.NEXT_PUBLIC_API_URL}/meet/${roomId}#token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}&userName=${encodeURIComponent(user.userName)}`;
     return ApiResponse.success(
       {
         startUrl,

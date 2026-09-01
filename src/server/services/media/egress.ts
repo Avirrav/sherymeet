@@ -4,11 +4,12 @@ import {
   S3Upload,
   EncodingOptions,
 } from "livekit-server-sdk";
+import { config } from "../../utils/config";
 
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
-const livekitUrl = process.env.LIVEKIT_URL;
-// const customBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
+const livekitUrl = config.LIVEKIT_URL;
+// const customBaseUrl = config.NEXT_PUBLIC_API_URL;
 
 export async function startRoomRecording(roomName: string, filepath: string) {
   if (!apiKey || !apiSecret || !livekitUrl) {
@@ -22,10 +23,10 @@ export async function startRoomRecording(roomName: string, filepath: string) {
     .replace("ws://", "http://");
   const client = new EgressClient(host, apiKey, apiSecret);
 
-  const s3Bucket = process.env.AWS_S3_BUCKET_NAME || "sherymeet-recordings";
-  const s3AccessKey = process.env.AWS_ACCESS_KEY_ID || "";
-  const s3Secret = process.env.AWS_SECRET_ACCESS_KEY || "";
-  const s3Region = process.env.AWS_S3_REGION || "ap-south-1";
+  const s3Bucket = config.AWS_S3_BUCKET_NAME;
+  const s3AccessKey = config.AWS_ACCESS_KEY_ID || "";
+  const s3Secret = config.AWS_SECRET_ACCESS_KEY || "";
+  const s3Region = config.AWS_S3_REGION;
   // const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
 
   // Starts recording the room using a web-composite template and uploads to S3

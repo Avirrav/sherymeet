@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, ApiResponse } from "@/server/utils/api-helper";
-import { endMeet } from "@/server/services/meet-services/end-meet";
-import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
+import { endMeet } from "@/server/services/meet/end-meet";
+import { verifyRoomToken } from "@/server/services/media/verify-room-token";
 import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";

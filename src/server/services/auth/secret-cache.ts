@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import { apiKeyEncryption } from "./keyencryption-service";
-import { memoryStore } from "../utils/memory-store";
+import { apiKeyEncryption } from "./keyencryption";
+import { memoryStore } from "../../utils/memory-store";
 export class SecretCacheService {
   private static CACHE_TTL_SECONDS = 300; // 5 minutes cache
   /**

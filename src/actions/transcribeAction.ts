@@ -1,6 +1,6 @@
 "use server";
 
-import { getTranscribeUrl } from "@/server/services/media-server-services/transcribe-service";
+import { getTranscribeUrl } from "@/server/services/media/transcribe";
 
 export async function getTranscribeUrlAction(): Promise<{ success: boolean; url?: string; error?: string }> {
   try {

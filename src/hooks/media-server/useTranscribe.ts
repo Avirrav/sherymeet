@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/server/types/error-types";
+import { toAppError } from "@/types/error-types";
 import { getTranscribeUrlAction } from "@/actions/transcribeAction";
 
 // GZIP-compatible CRC32 implementation for EventStream message envelopes

@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
-import { IUserDocument, UserRole } from "../interfaces/user-interface";
+import { IUserDocument } from "../types/user.types";
+import { UserRole } from "@/types/roles";
+import { config } from "../utils/config";
 
 const UserSchema = new Schema<IUserDocument>(
   {
@@ -14,7 +16,7 @@ const UserSchema = new Schema<IUserDocument>(
   { timestamps: true },
 );
 
-if (process.env.NODE_ENV === "development" && mongoose.models.User) {
+if (config.NODE_ENV === "development" && mongoose.models.User) {
   delete mongoose.models.User;
 }
 

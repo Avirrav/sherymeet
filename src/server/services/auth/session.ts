@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
-import { hmacSha256, timingSafeEqual } from "../utils/crypto-helper";
-import { UserService } from "./user-service";
-import { IUser, UserRole } from "../interfaces/user-interface";
+import { hmacSha256, timingSafeEqual } from "../../utils/crypto-helper";
+import { UserService } from "./user";
+import { IUser, UserRole } from "@/types/roles";
+import { config, isProduction } from "../../utils/config";
 
 export const SESSION_COOKIE_NAME = "sherymeet_session";
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
@@ -11,9 +12,9 @@ export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const DEV_SESSION_SECRET_FALLBACK = "sherymeet_default_dev_session_secret_change_me!";
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
+  const secret = config.SESSION_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
+    if (isProduction()) {
       throw new Error("SESSION_SECRET must be set in production");
     }
     return DEV_SESSION_SECRET_FALLBACK;

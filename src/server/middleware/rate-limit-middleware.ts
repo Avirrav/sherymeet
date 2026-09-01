@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { NextMiddleware } from "../types/auth-types";
-import { RateLimitService } from "../services/rate-limit-service";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
+import { RateLimitService } from "../services/auth/rate-limit";
 
 /**
  * Rate Limiting Middleware.

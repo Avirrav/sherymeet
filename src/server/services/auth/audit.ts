@@ -1,6 +1,6 @@
-import { AuditDao } from "../dao/audit-dao";
-import { IAuditLog } from "../types/auth-types";
-import { logger } from "../utils/logger";
+import { AuditDao } from "../../dao/audit-dao";
+import { IAuditLog } from "../../types/auth.types";
+import { logger } from "../../utils/logger";
 
 export class AuditService {
   /**

@@ -1,7 +1,7 @@
-import { USER_ROLE_PERMISSIONS } from "../constants/roles";
-import { UserRoleHierarchy } from "../interfaces/user-interface";
-import { UserRole, Permission } from "../types/auth-types";
-import { ApiError } from "../utils/api-helper";
+import { USER_ROLE_PERMISSIONS } from "../../constants/roles";
+import { UserRole, UserRoleHierarchy } from "@/types/roles";
+import { Permission } from "../../types/auth.types";
+import { ApiError } from "../../utils/api-helper";
 
 export class AuthorizationService {
   /**

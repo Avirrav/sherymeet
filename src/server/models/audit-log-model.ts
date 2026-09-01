@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
-import { IAuditLog } from "../types/auth-types";
+import { IAuditLog } from "../types/auth.types";
+import { config } from "../utils/config";
 
 const AuditLogSchema = new Schema<IAuditLog>({
   requestId: { type: String, required: true, index: true },
@@ -19,7 +20,7 @@ const AuditLogSchema = new Schema<IAuditLog>({
     index: true,
     // TTL index: audit logs are pruned automatically so the collection
     // doesn't grow without bound. Configurable in days via AUDIT_LOG_TTL_DAYS.
-    expires: 60 * 60 * 24 * Number(process.env.AUDIT_LOG_TTL_DAYS || 90),
+    expires: 60 * 60 * 24 * config.AUDIT_LOG_TTL_DAYS,
   },
 });
 

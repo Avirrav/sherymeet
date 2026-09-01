@@ -1,6 +1,6 @@
-import { AppMiddleware, NextMiddleware } from "../types/auth-types";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
+import { AppMiddleware, AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
 import { ApiError } from "@/server/utils/api-helper";
+import { config } from "@/server/utils/config";
 
 /**
  * Server API Middleware — per-route defense-in-depth twin of src/proxy.ts.
@@ -29,7 +29,7 @@ export const serverApiMiddleware: AppMiddleware = async (
   }
 
   try {
-    const allowedOrigin = process.env.NEXT_PUBLIC_API_URL;
+    const allowedOrigin = config.NEXT_PUBLIC_API_URL;
     if (!allowedOrigin) {
       throw new ApiError("Server configuration error: NEXT_PUBLIC_API_URL is not set", 500);
     }

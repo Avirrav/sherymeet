@@ -9,7 +9,7 @@ import {
 } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/server/types/error-types";
+import { toAppError } from "@/types/error-types";
 
 /**
  * Hook to manage local camera and microphone previews on the Pre-Join screen.

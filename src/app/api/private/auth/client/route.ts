@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/server/utils/db-connect";
-import { ApiClientService } from "@/server/services/api-client-service";
+import { ApiClientService } from "@/server/services/auth/api-client";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { userAuthenticationMiddleware } from "@/server/middleware/user-authentication-middleware";
 import { logger } from "@/server/utils/logger";
-import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { AuthenticatedRequest } from "@/server/types/auth.types";
 
 /**
  * Lists the API clients created by the logged-in platform user.

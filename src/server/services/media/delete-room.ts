@@ -1,8 +1,9 @@
 import { RoomServiceClient } from 'livekit-server-sdk';
+import { config } from '../../utils/config';
 
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
-const livekitUrl = process.env.LIVEKIT_URL;
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
+const livekitUrl = config.LIVEKIT_URL;
 
 export async function deleteRoom(roomName: string): Promise<void> {
   if (!apiKey || !apiSecret || !livekitUrl) {

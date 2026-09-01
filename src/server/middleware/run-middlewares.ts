@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { AppMiddleware } from "../types/auth-types";
+import { AppMiddleware, AuthenticatedRequest } from "../types/auth.types";
 import { errorHandlerMiddleware } from "./errorhandler-middleware";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
 
 /**
  * Higher-order runner that sequences an array of AppMiddleware functions,

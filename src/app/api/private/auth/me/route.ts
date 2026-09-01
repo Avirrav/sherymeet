@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { auditMiddleware } from "@/server/middleware/audit-middleware";
 import { userAuthenticationMiddleware } from "@/server/middleware/user-authentication-middleware";
-import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { AuthenticatedRequest } from "@/server/types/auth.types";
 
 /**
  * Returns the currently logged-in platform user (based on the session cookie).

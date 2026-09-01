@@ -1,5 +1,6 @@
-import { UserDao } from "../dao/user-dao";
-import { IUserDocument, UserRole } from "../interfaces/user-interface";
+import { UserDao } from "../../dao/user-dao";
+import { IUserDocument } from "../../types/user.types";
+import { UserRole } from "@/types/roles";
 
 export interface GoogleProfile {
   sub: string;

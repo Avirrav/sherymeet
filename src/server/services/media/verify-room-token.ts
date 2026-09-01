@@ -1,9 +1,10 @@
 import { TokenVerifier } from "livekit-server-sdk";
 import { ApiError } from "@/server/utils/api-helper";
-import { IParticipant } from "@/server/interfaces/user-interface";
+import { IParticipant } from "@/types/roles";
+import { config } from "@/server/utils/config";
 
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
 
 export interface VerifiedRoomToken {
   participant: IParticipant | null;

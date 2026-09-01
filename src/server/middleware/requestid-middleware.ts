@@ -1,6 +1,5 @@
 import crypto from "crypto";
-import { NextMiddleware } from "../types/auth-types";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
 
 /**
  * Injects a unique trace correlation ID (X-REQUEST-ID) into the request context

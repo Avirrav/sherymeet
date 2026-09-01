@@ -1,5 +1,5 @@
-import { deleteRoom } from "../media-server-services/delete-room";
-import { stopEgress } from "../media-server-services/egress";
+import { deleteRoom } from "../media/delete-room";
+import { stopEgress } from "../media/egress";
 import { MeetDao } from "../../dao/meet-dao";
 import { RecordingDao } from "../../dao/recording-dao";
 import { ApiError } from "../../utils/api-helper";

@@ -1,6 +1,7 @@
 import Redis from "ioredis";
 import { memoryStore } from "./memory-store";
 import { logger } from "./logger";
+import { config } from "./config";
 
 /**
  * Shared distributed store for rate limiting and replay (nonce) protection.
@@ -101,7 +102,7 @@ declare global {
  */
 export function getStore(): AppStore {
   if (!global.appStoreSingleton) {
-    const redisUrl = process.env.REDIS_URL;
+    const redisUrl = config.REDIS_URL;
     if (redisUrl) {
       logger.info("Using Redis-backed store for rate limiting and replay protection");
       global.appStoreSingleton = new RedisAppStore(redisUrl);

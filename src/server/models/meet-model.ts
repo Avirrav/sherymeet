@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { config } from "../utils/config";
 
 const MeetSchema = new mongoose.Schema(
   {
@@ -46,7 +47,7 @@ const MeetSchema = new mongoose.Schema(
   },
 );
 
-if (process.env.NODE_ENV === "development" && mongoose.models.Meet) {
+if (config.NODE_ENV === "development" && mongoose.models.Meet) {
   delete mongoose.models.Meet;
 }
 

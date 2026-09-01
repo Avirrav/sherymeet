@@ -2,15 +2,16 @@ import { NextRequest } from "next/server";
 import { ApiError, ApiResponse } from "@/server/utils/api-helper";
 import { MeetDao } from "@/server/dao/meet-dao";
 import { RecordingDao } from "@/server/dao/recording-dao";
-import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
-import { createRoom } from "@/server/services/media-server-services/create-room";
-import { startRoomRecording } from "@/server/services/media-server-services/egress";
+import { verifyRoomToken } from "@/server/services/media/verify-room-token";
+import { createRoom } from "@/server/services/media/create-room";
+import { startRoomRecording } from "@/server/services/media/egress";
 import { logger } from "@/server/utils/logger";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
 import { parseJsonBody, serverRoomTokenSchema } from "@/server/validation/meet-schemas";
+import { config } from "@/server/utils/config";
 
 /**
  * POST /api/server/meet/start-meeting
@@ -68,8 +69,8 @@ export async function startMeetingHandler(request: NextRequest) {
             egressId: egressInfo.egressId,
             recordingStatus: "recording",
             startedAt: new Date(),
-            s3Bucket: process.env.AWS_S3_BUCKET_NAME || "sherymeet-recordings",
-            s3Region: process.env.AWS_REGION || "ap-south-1",
+            s3Bucket: config.AWS_S3_BUCKET_NAME,
+            s3Region: config.AWS_REGION,
             s3ObjectKey: filepath,
           });
           logger.info(`Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`);

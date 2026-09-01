@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IRevokedApiKey } from "../interfaces/auth-interface";
+import { IRevokedApiKey } from "../types/auth.types";
 
 const RevokedApiKeySchema = new Schema<IRevokedApiKey>({
   apiKey: { type: String, required: true, unique: true, index: true },

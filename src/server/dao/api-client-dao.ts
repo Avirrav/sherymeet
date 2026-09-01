@@ -1,7 +1,7 @@
 import { dbConnect } from "../utils/db-connect";
 import ApiClient from "../models/api-client-model";
 import RevokedApiKey from "../models/revoked-api-key-model";
-import { IApiClient } from "../interfaces/auth-interface";
+import { IApiClient } from "../types/auth.types";
 
 export class ApiClientDao {
   static async createApiClient(

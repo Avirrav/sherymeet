@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IApiKeyUsageLog } from "../types/auth-types";
+import { IApiKeyUsageLog } from "../types/auth.types";
 
 const ApiKeyUsageLogSchema = new Schema<IApiKeyUsageLog>({
   apiKey: { type: String, required: true, index: true },

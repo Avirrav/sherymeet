@@ -1,8 +1,9 @@
 import { RoomServiceClient, Room } from "livekit-server-sdk";
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
-const livekitUrl = process.env.LIVEKIT_URL;
-const roomEmptyTimeout = process.env.ROOM_EMPTY_TIMEOUT || 300; // 5 minutes
+import { config } from "../../utils/config";
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
+const livekitUrl = config.LIVEKIT_URL;
+const roomEmptyTimeout = config.ROOM_EMPTY_TIMEOUT; // 5 minutes
 
 // Helper to generate a format like abc-defg-hij
 function generateRoomCode(): string {

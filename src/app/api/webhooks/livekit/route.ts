@@ -3,9 +3,10 @@ import { WebhookReceiver } from "livekit-server-sdk";
 import { RecordingDao, IRecordingUpdate } from "@/server/dao/recording-dao";
 import { dbConnect } from "@/server/utils/db-connect";
 import { logger } from "@/server/utils/logger";
+import { config } from "@/server/utils/config";
 
-const apiKey = process.env.LIVEKIT_API_KEY;
-const apiSecret = process.env.LIVEKIT_API_SECRET;
+const apiKey = config.LIVEKIT_API_KEY;
+const apiSecret = config.LIVEKIT_API_SECRET;
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       // Unsigned payloads are only tolerated in local development; in any
       // other environment a failed signature check must reject the request,
       // otherwise anyone can forge egress events and corrupt recording state.
-      if (process.env.NODE_ENV !== "development") {
+      if (config.NODE_ENV !== "development") {
         logger.warn("Rejected LiveKit webhook with invalid signature", err);
         return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
       }

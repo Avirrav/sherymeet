@@ -1,5 +1,5 @@
-import { Permission } from "../types/auth-types";
-import { ParticipantRole, UserRole } from "../interfaces/user-interface";
+import { Permission } from "../types/auth.types";
+import { ParticipantRole, UserRole } from "@/types/roles";
 
 export const USER_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.SUPER_ADMIN]: [

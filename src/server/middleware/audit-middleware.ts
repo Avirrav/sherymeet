@@ -1,6 +1,5 @@
-import { NextMiddleware } from "../types/auth-types";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
-import { AuditService } from "../services/audit-service";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
+import { AuditService } from "../services/auth/audit";
 
 /**
  * Security Audit Middleware.

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { config as appConfig } from "@/server/utils/config";
 
 /**
  * Centralized gate for the browser-facing /api/server/* routes (Next.js 16
@@ -28,7 +29,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Layer 2: Origin/Referer allowlist.
-  const allowedOrigin = process.env.NEXT_PUBLIC_API_URL;
+  const allowedOrigin = appConfig.NEXT_PUBLIC_API_URL;
   if (!allowedOrigin) {
     return NextResponse.json(
       { error: "Server configuration error" },

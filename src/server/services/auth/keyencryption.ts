@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { config, isProduction } from "../../utils/config";
 
 const ALGORITHM = "aes-256-gcm";
 const LOCAL_PREFIX = "local:";
@@ -8,9 +9,9 @@ const DEV_MASTER_KEY_FALLBACK = "sherymeet_default_32byte_masterkey!";
 
 export class apiKeyEncryption {
   private static getMasterKey(): Buffer {
-    let keyStr = process.env.ENCRYPTION_MASTER_KEY;
+    let keyStr = config.ENCRYPTION_MASTER_KEY;
     if (!keyStr) {
-      if (process.env.NODE_ENV === "production") {
+      if (isProduction()) {
         throw new Error("ENCRYPTION_MASTER_KEY must be set in production");
       }
       keyStr = DEV_MASTER_KEY_FALLBACK;

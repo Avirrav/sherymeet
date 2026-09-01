@@ -1,7 +1,7 @@
 import { dbConnect } from "../utils/db-connect";
 import AuditLog from "../models/audit-log-model";
 import ApiKeyUsageLog from "../models/api-key-usage-log-model";
-import { IAuditLog } from "../types/auth-types";
+import { IAuditLog } from "../types/auth.types";
 
 export class AuditDao {
   static async createAuditLog(data: Partial<IAuditLog>): Promise<IAuditLog> {

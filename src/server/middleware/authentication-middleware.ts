@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { NextMiddleware } from "../types/auth-types";
-import { AuthenticatedRequest } from "../interfaces/auth-interface";
-import { ApiClientService } from "../services/api-client-service";
-import { SignatureService } from "../services/signature.service";
-import { UserService } from "../services/user-service";
+import { AuthenticatedRequest, NextMiddleware } from "../types/auth.types";
+import { ApiClientService } from "../services/auth/api-client";
+import { SignatureService } from "../services/auth/signature";
+import { UserService } from "../services/auth/user";
 import { logger } from "../utils/logger";
 
 /**

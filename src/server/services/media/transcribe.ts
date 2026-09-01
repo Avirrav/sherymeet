@@ -1,10 +1,11 @@
 import aws4 from "aws4";
+import { config } from "@/server/utils/config";
 
 export async function getTranscribeUrl(): Promise<string> {
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const sessionToken = process.env.AWS_SESSION_TOKEN;
-  const region = process.env.AWS_TRANSCRIBE_REGION || "us-east-1";
+  const accessKeyId = config.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = config.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = config.AWS_SESSION_TOKEN;
+  const region = config.AWS_TRANSCRIBE_REGION;
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(

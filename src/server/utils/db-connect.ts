@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import { logger } from "./logger";
+import { config, isProduction } from "./config";
 
 function getMongoUri(): string {
-  const uri = process.env.MONGODB_URI;
+  const uri = config.MONGODB_URI;
   if (!uri) {
-    if (process.env.NODE_ENV === "production") {
+    if (isProduction()) {
       throw new Error("MONGODB_URI must be set in production");
     }
     return "mongodb://localhost:27017/sherymeet";
