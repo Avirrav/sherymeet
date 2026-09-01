@@ -3,7 +3,7 @@ import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/server/types/error-types";
-import { getTranscribeUrlAction } from "@/app/actions/transcribeAction";
+import { getTranscribeUrlAction } from "@/server/actions/transcribeAction";
 
 // GZIP-compatible CRC32 implementation for EventStream message envelopes
 const makeCRCTable = () => {

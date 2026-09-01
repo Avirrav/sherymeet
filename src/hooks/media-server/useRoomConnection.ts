@@ -3,7 +3,7 @@ import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/server/types/error-types";
-import { canParticipantPublish } from "@/features/meet/participant-permissions";
+import { canParticipantPublish } from "@/components/meet/participant-permissions";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/server/services/session-service';
-import { listMyApiKeysAction } from '@/app/actions/api-key-actions';
+import { listMyApiKeysAction } from '@/server/actions/api-key-actions';
 import ApiKeysDashboard from './ApiKeysDashboard';
 
 export default async function DashboardPage() {
