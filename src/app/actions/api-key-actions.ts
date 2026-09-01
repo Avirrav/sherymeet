@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { SESSION_COOKIE_NAME } from "@/app/backend/services/session-service";
+import { SESSION_COOKIE_NAME } from "@/server/services/session-service";
 
 export interface ApiKeySummary {
   id: string;

@@ -1,5 +1,5 @@
-import { dbConnect } from "@/app/backend/utils/db-connect";
-import Meet from "@/app/backend/models/meet-model";
+import { dbConnect } from "@/server/utils/db-connect";
+import Meet from "@/server/models/meet-model";
 
 export class MeetDao {
   /**

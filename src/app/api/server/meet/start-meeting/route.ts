@@ -1,16 +1,16 @@
 import { NextRequest } from "next/server";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { MeetDao } from "@/app/backend/dao/meet-dao";
-import { RecordingDao } from "@/app/backend/dao/recording-dao";
-import { verifyRoomToken } from "@/app/backend/services/media-server-services/verify-room-token";
-import { createRoom } from "@/app/backend/services/media-server-services/create-room";
-import { startRoomRecording } from "@/app/backend/services/media-server-services/egress";
-import { logger } from "@/app/backend/utils/logger";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middleware";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { ipRateLimitMiddleware } from "@/app/backend/middleware/ip-rate-limit-middleware";
-import { parseJsonBody, serverRoomTokenSchema } from "@/app/backend/validation/meet-schemas";
+import { ApiError, ApiResponse } from "@/server/utils/api-helper";
+import { MeetDao } from "@/server/dao/meet-dao";
+import { RecordingDao } from "@/server/dao/recording-dao";
+import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
+import { createRoom } from "@/server/services/media-server-services/create-room";
+import { startRoomRecording } from "@/server/services/media-server-services/egress";
+import { logger } from "@/server/utils/logger";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
+import { parseJsonBody, serverRoomTokenSchema } from "@/server/validation/meet-schemas";
 
 /**
  * POST /api/server/meet/start-meeting

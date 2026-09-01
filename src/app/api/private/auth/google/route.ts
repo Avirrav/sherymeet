@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/app/backend/services/google-oauth-service";
+import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/server/services/google-oauth-service";
 
 /**
  * Begins the "Login with Google" flow.

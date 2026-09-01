@@ -1,17 +1,17 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import { generateToken } from "@/app/backend/services/media-server-services/generate-token";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { IParticipant, ParticipantRole } from "@/app/backend/interfaces/user-interface";
-import { MeetDao } from "@/app/backend/dao/meet-dao";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
-import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
-import { joinAsUserSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
+import { generateToken } from "@/server/services/media-server-services/generate-token";
+import { ApiError, ApiResponse } from "@/server/utils/api-helper";
+import { IParticipant, ParticipantRole } from "@/server/interfaces/user-interface";
+import { MeetDao } from "@/server/dao/meet-dao";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
+import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
+import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
+import { joinAsUserSchema, parseJsonBody } from "@/server/validation/meet-schemas";
 
 /**
  * POST /api/v1/client/meet/join-as-user

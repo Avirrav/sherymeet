@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiErrorDetail } from "@/app/backend/types/error-types";
+import { ApiErrorDetail } from "@/server/types/error-types";
 import { logger } from "./logger";
 
 /**

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/app/backend/services/session-service';
+import { getSessionUser } from '@/server/services/session-service';
 import { listMyApiKeysAction } from '@/app/actions/api-key-actions';
 import ApiKeysDashboard from './ApiKeysDashboard';
 

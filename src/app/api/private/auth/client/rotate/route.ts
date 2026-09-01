@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { dbConnect } from "@/app/backend/utils/db-connect";
-import { ApiClientService } from "@/app/backend/services/api-client-service";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { userAuthenticationMiddleware } from "@/app/backend/middleware/user-authentication-middleware";
-import { logger } from "@/app/backend/utils/logger";
-import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
+import { dbConnect } from "@/server/utils/db-connect";
+import { ApiClientService } from "@/server/services/api-client-service";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { userAuthenticationMiddleware } from "@/server/middleware/user-authentication-middleware";
+import { logger } from "@/server/utils/logger";
+import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
 
 /**
  * Rotates client secret for an API client.

@@ -1,5 +1,5 @@
-import { dbConnect } from "@/app/backend/utils/db-connect";
-import Recording from "@/app/backend/models/recording-model";
+import { dbConnect } from "@/server/utils/db-connect";
+import Recording from "@/server/models/recording-model";
 
 export class RecordingDao {
   /**

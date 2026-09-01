@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WebhookReceiver } from "livekit-server-sdk";
-import { RecordingDao, IRecordingUpdate } from "@/app/backend/dao/recording-dao";
-import { dbConnect } from "@/app/backend/utils/db-connect";
-import { logger } from "@/app/backend/utils/logger";
+import { RecordingDao, IRecordingUpdate } from "@/server/dao/recording-dao";
+import { dbConnect } from "@/server/utils/db-connect";
+import { logger } from "@/server/utils/logger";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;

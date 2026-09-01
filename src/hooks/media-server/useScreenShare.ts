@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/app/backend/types/error-types";
+import { toAppError } from "@/server/types/error-types";
 import { canParticipantPublish } from "@/features/meet/participant-permissions";
 
 export function useScreenShare(room: Room | null) {

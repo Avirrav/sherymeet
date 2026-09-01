@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import { getMeetDetails } from "@/app/backend/services/meet-services/get-meet-details";
-import { ApiResponse, ApiError } from "@/app/backend/utils/api-helper";
-import { verifyRoomToken } from "@/app/backend/services/media-server-services/verify-room-token";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middleware";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { ipRateLimitMiddleware } from "@/app/backend/middleware/ip-rate-limit-middleware";
+import { getMeetDetails } from "@/server/services/meet-services/get-meet-details";
+import { ApiResponse, ApiError } from "@/server/utils/api-helper";
+import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
 
 /**
  * GET /api/server/meet/details?roomId=...

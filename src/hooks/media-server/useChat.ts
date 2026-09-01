@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { Room, RoomEvent, Participant } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
-import { toAppError } from "@/app/backend/types/error-types";
+import { toAppError } from "@/server/types/error-types";
 
 export function useChat(room: Room | null) {
   const {

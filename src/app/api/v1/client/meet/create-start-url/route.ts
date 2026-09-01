@@ -1,17 +1,17 @@
-import { generateToken } from "@/app/backend/services/media-server-services/generate-token";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { IParticipant, ParticipantRole } from "@/app/backend/interfaces/user-interface";
-import { MeetDao } from "@/app/backend/dao/meet-dao";
+import { generateToken } from "@/server/services/media-server-services/generate-token";
+import { ApiError, ApiResponse } from "@/server/utils/api-helper";
+import { IParticipant, ParticipantRole } from "@/server/interfaces/user-interface";
+import { MeetDao } from "@/server/dao/meet-dao";
 import bcrypt from "bcryptjs";
-import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
-import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
-import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
-import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
-import { createStartUrlSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
+import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
+import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
+import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
+import { createStartUrlSchema, parseJsonBody } from "@/server/validation/meet-schemas";
 
 /**
  * POST /api/private/meet/join-as-host

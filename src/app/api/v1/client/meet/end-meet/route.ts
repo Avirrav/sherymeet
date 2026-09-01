@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
-import { endMeet } from "@/app/backend/services/meet-services/end-meet";
-import { ApiResponse } from "@/app/backend/utils/api-helper";
-import { endMeetSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
-import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
-import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
+import { endMeet } from "@/server/services/meet-services/end-meet";
+import { ApiResponse } from "@/server/utils/api-helper";
+import { endMeetSchema, parseJsonBody } from "@/server/validation/meet-schemas";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
+import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
+import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
 
 /**
  * POST /api/private/meet/end-meet

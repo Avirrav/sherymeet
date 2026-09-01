@@ -1,6 +1,6 @@
 import { AppMiddleware, NextMiddleware } from "../types/auth-types";
 import { AuthenticatedRequest } from "../interfaces/auth-interface";
-import { ApiError } from "@/app/backend/utils/api-helper";
+import { ApiError } from "@/server/utils/api-helper";
 
 /**
  * Server API Middleware — per-route defense-in-depth twin of src/proxy.ts.

@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { endMeet } from "@/app/backend/services/meet-services/end-meet";
-import { verifyRoomToken } from "@/app/backend/services/media-server-services/verify-room-token";
-import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middleware";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { ipRateLimitMiddleware } from "@/app/backend/middleware/ip-rate-limit-middleware";
-import { parseJsonBody, serverRoomTokenSchema } from "@/app/backend/validation/meet-schemas";
+import { ApiError, ApiResponse } from "@/server/utils/api-helper";
+import { endMeet } from "@/server/services/meet-services/end-meet";
+import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
+import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
+import { parseJsonBody, serverRoomTokenSchema } from "@/server/validation/meet-schemas";
 
 /**
  * POST /api/server/meet/end-meet

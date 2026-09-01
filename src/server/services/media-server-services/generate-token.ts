@@ -4,9 +4,9 @@ import {
   IParticipant,
   ParticipantRole,
   ParticipantRoleHierarchy,
-} from "@/app/backend/interfaces/user-interface";
-import { logger } from "@/app/backend/utils/logger";
-import { MeetDao } from "@/app/backend/dao/meet-dao";
+} from "@/server/interfaces/user-interface";
+import { logger } from "@/server/utils/logger";
+import { MeetDao } from "@/server/dao/meet-dao";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;

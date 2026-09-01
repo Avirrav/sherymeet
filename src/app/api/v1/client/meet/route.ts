@@ -1,14 +1,14 @@
-import { createInstantMeet } from "@/app/backend/services/meet-services/create-instant-meet";
-import { ApiResponse } from "@/app/backend/utils/api-helper";
-import { createMeetSchema, parseJsonBody } from "@/app/backend/validation/meet-schemas";
-import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { rateLimitMiddleware } from "@/app/backend/middleware/rate-limit-middleware";
-import { authenticationMiddleware } from "@/app/backend/middleware/authentication-middleware";
-import { authorizationMiddleware } from "@/app/backend/middleware/authorization-middleware";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
-import { replayProtectionMiddleware } from "@/app/backend/middleware/replay-protection.middleware";
+import { createInstantMeet } from "@/server/services/meet-services/create-instant-meet";
+import { ApiResponse } from "@/server/utils/api-helper";
+import { createMeetSchema, parseJsonBody } from "@/server/validation/meet-schemas";
+import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { rateLimitMiddleware } from "@/server/middleware/rate-limit-middleware";
+import { authenticationMiddleware } from "@/server/middleware/authentication-middleware";
+import { authorizationMiddleware } from "@/server/middleware/authorization-middleware";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
+import { replayProtectionMiddleware } from "@/server/middleware/replay-protection.middleware";
 
 // GET /api/private/meet - Returns the public LiveKit server URL
 export async function GET() {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { dbConnect } from "@/app/backend/utils/db-connect";
+import { dbConnect } from "@/server/utils/db-connect";
 
 /**
  * GET /api/health

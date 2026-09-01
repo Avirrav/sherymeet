@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import { ApiError, ApiResponse } from "@/app/backend/utils/api-helper";
-import { MeetDao } from "@/app/backend/dao/meet-dao";
-import { verifyRoomToken } from "@/app/backend/services/media-server-services/verify-room-token";
-import { toPublicMeetDetails } from "@/app/backend/services/meet-services/get-meet-details";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { serverApiMiddleware } from "@/app/backend/middleware/server-api-middleware";
-import { requestIdMiddleware } from "@/app/backend/middleware/requestid-middleware";
-import { ipRateLimitMiddleware } from "@/app/backend/middleware/ip-rate-limit-middleware";
-import { parseJsonBody, verifyTokenSchema } from "@/app/backend/validation/meet-schemas";
+import { ApiError, ApiResponse } from "@/server/utils/api-helper";
+import { MeetDao } from "@/server/dao/meet-dao";
+import { verifyRoomToken } from "@/server/services/media-server-services/verify-room-token";
+import { toPublicMeetDetails } from "@/server/services/meet-services/get-meet-details";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
+import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
+import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
+import { parseJsonBody, verifyTokenSchema } from "@/server/validation/meet-schemas";
 
 /**
  * POST /api/server/meet/verify-token

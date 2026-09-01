@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
-import { userAuthenticationMiddleware } from "@/app/backend/middleware/user-authentication-middleware";
-import { AuthenticatedRequest } from "@/app/backend/interfaces/auth-interface";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
+import { userAuthenticationMiddleware } from "@/server/middleware/user-authentication-middleware";
+import { AuthenticatedRequest } from "@/server/interfaces/auth-interface";
 
 /**
  * Returns the currently logged-in platform user (based on the session cookie).

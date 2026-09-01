@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/app/backend/services/google-oauth-service";
-import { UserService } from "@/app/backend/services/user-service";
+import { GoogleOAuthService, OAUTH_STATE_COOKIE_NAME } from "@/server/services/google-oauth-service";
+import { UserService } from "@/server/services/user-service";
 import {
   createSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
-} from "@/app/backend/services/session-service";
-import { logger } from "@/app/backend/utils/logger";
+} from "@/server/services/session-service";
+import { logger } from "@/server/utils/logger";
 
 /**
  * Completes the "Login with Google" flow: exchanges the auth code, upserts the

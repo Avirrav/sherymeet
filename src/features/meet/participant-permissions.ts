@@ -2,7 +2,7 @@ import { Participant } from 'livekit-client';
 import {
   ParticipantRole,
   ParticipantRoleHierarchy,
-} from '@/app/backend/interfaces/user-interface';
+} from '@/server/interfaces/user-interface';
 
 /**
  * Client-side mirrors of the server's token grants. The LiveKit token is the

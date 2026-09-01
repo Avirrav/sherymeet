@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import { Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getMeetDetails } from '@/app/backend/services/meet-services/get-meet-details';
+import { getMeetDetails } from '@/server/services/meet-services/get-meet-details';
 
 interface Params {
   token?: string;

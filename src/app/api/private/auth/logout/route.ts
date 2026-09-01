@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { runMiddlewares } from "@/app/backend/middleware/run-middlewares";
-import { auditMiddleware } from "@/app/backend/middleware/audit-middleware";
-import { SESSION_COOKIE_NAME } from "@/app/backend/services/session-service";
+import { runMiddlewares } from "@/server/middleware/run-middlewares";
+import { auditMiddleware } from "@/server/middleware/audit-middleware";
+import { SESSION_COOKIE_NAME } from "@/server/services/session-service";
 
 /**
  * Logs the platform user out by clearing the session cookie.

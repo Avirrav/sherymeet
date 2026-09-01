@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/app/backend/services/session-service';
+import { getSessionUser } from '@/server/services/session-service';
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   google_denied: 'Google sign-in was cancelled. Please try again.',

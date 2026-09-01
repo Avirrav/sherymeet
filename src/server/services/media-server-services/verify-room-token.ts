@@ -1,6 +1,6 @@
 import { TokenVerifier } from "livekit-server-sdk";
-import { ApiError } from "@/app/backend/utils/api-helper";
-import { IParticipant } from "@/app/backend/interfaces/user-interface";
+import { ApiError } from "@/server/utils/api-helper";
+import { IParticipant } from "@/server/interfaces/user-interface";
 
 const apiKey = process.env.LIVEKIT_API_KEY;
 const apiSecret = process.env.LIVEKIT_API_SECRET;
