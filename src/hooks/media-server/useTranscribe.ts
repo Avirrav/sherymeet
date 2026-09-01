@@ -120,6 +120,15 @@ function encodeEventStreamMessage(payload: Uint8Array): Uint8Array {
   return buffer;
 }
 
+// WebSocket.send requires an ArrayBuffer-backed view; Uint8Array's buffer type
+// is ArrayBufferLike (which also covers SharedArrayBuffer), so copy into a
+// fresh ArrayBuffer to satisfy the stricter DOM typing.
+function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(new ArrayBuffer(bytes.byteLength));
+  copy.set(bytes);
+  return copy;
+}
+
 export function useTranscribe(room: Room | null) {
   const { captionsEnabled, setTranscription, transcriptions } =
     useMeetingStore();
@@ -177,7 +186,7 @@ export function useTranscribe(room: Room | null) {
         // Send an empty audio event to signal end of stream to AWS if open
         try {
           const emptyAudioEvent = encodeEventStreamMessage(new Uint8Array(0));
-          wsRef.current.send(emptyAudioEvent);
+          wsRef.current.send(toArrayBufferView(emptyAudioEvent));
         } catch (unknownErr) {
           console.log("AWS", unknownErr);
         }
@@ -266,7 +275,7 @@ export function useTranscribe(room: Room | null) {
             // Frame inside EventStream and send
             const pcmBytes = new Uint8Array(downsampled.buffer);
             const message = encodeEventStreamMessage(pcmBytes);
-            wsRef.current.send(message);
+            wsRef.current.send(toArrayBufferView(message));
           };
         } catch (unknownErr) {
           const err = toAppError(unknownErr);
