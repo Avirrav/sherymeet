@@ -8,7 +8,7 @@ import {
   createMyApiKeyAction,
   listMyApiKeysAction,
   rotateMyApiKeyAction,
-} from '@/server/actions/api-key-actions';
+} from '@/actions/api-key-actions';
 
 interface RevealedSecret {
   apiKey: string;
