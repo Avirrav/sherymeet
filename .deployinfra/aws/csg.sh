@@ -4,11 +4,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 set -a
-# Strip Windows CRLF line endings before sourcing: if .env.deploy was ever
-# saved with \r\n (e.g. edited on Windows), a plain `source` embeds a
-# trailing \r into every variable's value. AWS's EC2 API is XML-based and
-# rejects that raw control character with "InvalidCharacter" errors that
-# look nothing like their actual cause.
 source <(tr -d '\r' < "$PROJECT_ROOT/.env.deploy")
 set +a
 
