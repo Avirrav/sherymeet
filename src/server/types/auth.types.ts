@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends NextRequest {
   client?: IApiClient;
   requestId?: string;
   rawBody?: Buffer;
+  validatedBody?: unknown;
 }
 
 export interface IRevokedApiKey extends Document {

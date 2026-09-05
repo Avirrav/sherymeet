@@ -13,14 +13,7 @@ import { replayProtectionMiddleware } from "@/server/middleware/replay-protectio
 import { createStartUrlSchema, parseJsonBody } from "@/server/validation/meet-schemas";
 import { config } from "@/server/utils/config";
 
-/**
- * POST /api/private/meet/join-as-host
- * Generates an Access Token for joining a specific room as a host and
- * returns the signed token. Sherymeet has no login of its own — the
- * integrating client app identifies the host in the request body (`host`);
- * a valid HMAC-signed API-client request is the only authorization needed.
- */
-export async function startMeetHandler(request: NextRequest) {
+export async function startWebinarHandler(request: NextRequest) {
   try {
     const { roomId, passcode, host } = await parseJsonBody(request, createStartUrlSchema);
     // Fetch meeting details from database
@@ -77,8 +70,10 @@ export const POST = runMiddlewares(
     requestIdMiddleware,
     auditMiddleware,
     authenticationMiddleware,
+    
+
     rateLimitMiddleware,
     replayProtectionMiddleware,
   ],
-  startMeetHandler,
+  startWebinarHandler,
 );

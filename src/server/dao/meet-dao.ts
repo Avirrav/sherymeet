@@ -1,5 +1,6 @@
 import { dbConnect } from "@/server/utils/db-connect";
 import Meet from "@/server/models/meet-model";
+import { StatusType, MeetType, meet } from "@/server/types/meet.types";
 
 export class MeetDao {
   /**
@@ -9,24 +10,22 @@ export class MeetDao {
   static async createMeet(meetData: {
     roomId: string;
     roomCode: string;
-    status?: "scheduled" | "active" | "ended";
-    type?: "webinar" | "meet";
+    status?: StatusType;
+    type?: MeetType;
     startedAt?: Date | null;
     endedAt?: Date | null;
     passcode?: string | null;
     isRecording?: boolean;
-  }) {
+  }): Promise<Partial<meet>> {
     await dbConnect();
     const meet = new Meet(meetData);
     const savedMeet = await meet.save()
-
     const meetObj = savedMeet.toObject();
     delete meetObj._id;
     delete meetObj.passcode;
     delete meetObj.createdAt;
     delete meetObj.updatedAt;
     delete meetObj.__v;
-    
     return meetObj;
   }
 

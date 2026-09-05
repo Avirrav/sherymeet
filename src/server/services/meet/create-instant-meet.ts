@@ -3,6 +3,7 @@ import { MeetDao } from "../../dao/meet-dao";
 import { ApiError } from "../../utils/api-helper";
 import bcrypt from "bcryptjs";
 import { logger } from "../../utils/logger";
+import { StatusType, MeetType } from "../../types/meet.types";
 
 interface CreateInstantMeetOptions {
   passcode?: string | null;
@@ -37,7 +38,6 @@ function isDuplicateKeyError(err: unknown): boolean {
  */
 export async function createInstantMeet({
   passcode,
-  type,
   isRecording,
 }: CreateInstantMeetOptions) {
   // 1. Hash passcode if provided using production-grade bcrypt
@@ -46,9 +46,6 @@ export async function createInstantMeet({
     const salt = await bcrypt.genSalt(10);
     hashedPasscode = await bcrypt.hash(passcode, salt);
   }
-
-  // 2. Save meeting details, retrying on the (rare) room-code collision that
-  // surfaces as a duplicate-key error from the unique index.
   const MAX_ATTEMPTS = 5;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const roomName = generateRoomCode();
@@ -56,8 +53,8 @@ export async function createInstantMeet({
       const meet = await MeetDao.createMeet({
         roomId: roomName,
         roomCode: roomName,
-        status: "scheduled" as const,
-        type,
+        status: StatusType.Creating,
+        type: MeetType.Meeting,
         startedAt: null,
         endedAt: null,
         passcode: hashedPasscode,
