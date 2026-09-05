@@ -1,0 +1,12 @@
+# Same intent as eslint.config.mjs's ignores — build output and vendored
+# files should never be reformatted.
+.next
+out
+build
+node_modules
+pnpm-lock.yaml
+next-env.d.ts
+packages/*/dist
+
+# Deploy scripts are plain bash, not something Prettier understands.
+.deployinfra

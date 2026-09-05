@@ -7,11 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "create-client": "tsx scripts/create-client.ts",
     "prepare": "husky || true"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs}": "eslint --fix"
+    "*.{ts,tsx,js,jsx,mjs}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,md}": "prettier --write"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.14",
@@ -39,8 +45,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
     "typescript": "^5"
