@@ -2,6 +2,8 @@ import { z } from "zod";
 import { logger } from "./logger";
 
 const envSchema = z.object({
+  NEXT_PUBLIC_LIVEKIT_URL: z.url(),
+  NEXT_PUBLIC_API_URL: z.url(),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
@@ -9,25 +11,22 @@ const envSchema = z.object({
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
-  NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
-  LIVEKIT_TOKEN_TTL: z.string().default("2h"),
-  ROOM_EMPTY_TIMEOUT: z.coerce.number().int().positive().default(300),
+  REDIS_URL: z.url(),
   ENCRYPTION_MASTER_KEY: z
     .string()
-    .min(32, "must be at least 32 characters")
-    .optional(),
-  NEXT_PUBLIC_API_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
-  LOG_FORMAT: z.enum(["json", "pretty"]),
+    .min(32, "must be at least 32 characters"),
+  LIVEKIT_TOKEN_TTL: z.string().default("2h"),
+  ROOM_EMPTY_TIMEOUT: z.coerce.number().int().positive().default(300),
   AUDIT_LOG_TTL_DAYS: z.coerce.number().int().positive().default(90),
-  AWS_ACCESS_KEY_ID: z.string().optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().optional(),
-  AWS_SESSION_TOKEN: z.string().optional(),
   AWS_REGION: z.string().default("ap-south-1"),
   AWS_TRANSCRIBE_REGION: z.string().default("us-east-1"),
   AWS_S3_BUCKET_NAME: z.string().default("sherymeet-recordings"),
   AWS_S3_REGION: z.string().default("ap-south-1"),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_SESSION_TOKEN: z.string().optional(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
+  LOG_FORMAT: z.enum(["json", "pretty"]).optional(),
 });
 
 function collectRawEnv() {

@@ -1,3 +1,5 @@
+import { config } from "./config";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LOG_LEVELS: Record<LogLevel, number> = {
@@ -8,14 +10,14 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 // Default log level from environment or 'info'
-const CURRENT_LOG_LEVEL = (process.env.LOG_LEVEL?.toLowerCase() as LogLevel) ||
-  (process.env.NODE_ENV === "production" ? "info" : "debug");
+const CURRENT_LOG_LEVEL = (config.LOG_LEVEL as LogLevel) ||
+  (config.NODE_ENV === "production" ? "info" : "debug");
 
 // Production emits one JSON object per line so log aggregators can parse
 // fields; development keeps the human-readable format. LOG_FORMAT overrides.
 const USE_JSON_LOGS =
-  process.env.LOG_FORMAT === "json" ||
-  (process.env.LOG_FORMAT !== "pretty" && process.env.NODE_ENV === "production");
+  config.LOG_FORMAT === "json" ||
+  (config.LOG_FORMAT !== "pretty" && config.NODE_ENV === "production");
 
 interface LogContext {
   requestId?: string;
