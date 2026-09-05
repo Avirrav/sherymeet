@@ -3,32 +3,29 @@ import {
   EncodedFileOutput,
   S3Upload,
   EncodingOptions,
+  EgressInfo,
 } from "livekit-server-sdk";
 import { config } from "../../utils/config";
+import { logger } from "@/server/utils/logger";
 
-const apiKey = config.LIVEKIT_API_KEY;
-const apiSecret = config.LIVEKIT_API_SECRET;
-const livekitUrl = config.LIVEKIT_URL;
-// const customBaseUrl = config.NEXT_PUBLIC_API_URL;
-
-export async function startRoomRecording(roomName: string, filepath: string) {
-  if (!apiKey || !apiSecret || !livekitUrl) {
-    throw new Error(
-      "LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set",
-    );
-  }
-
-  const host = livekitUrl
+export async function startRoomRecording(roomName: string, filepath: string) :  Promise<EgressInfo | null> {
+  // const customBaseUrl = config.NEXT_PUBLIC_API_URL;
+  const host =  (config.LIVEKIT_URL)
     .replace("wss://", "https://")
     .replace("ws://", "http://");
-  const client = new EgressClient(host, apiKey, apiSecret);
-
+  const client = new EgressClient(host, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
   const s3Bucket = config.AWS_S3_BUCKET_NAME;
   const s3AccessKey = config.AWS_ACCESS_KEY_ID || "";
   const s3Secret = config.AWS_SECRET_ACCESS_KEY || "";
   const s3Region = config.AWS_S3_REGION;
   // const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
-
+  if(!s3Bucket || !s3AccessKey || !s3Secret || !s3Region) {
+    if(config.NODE_ENV === "production") {
+      throw new Error("AWS S3 configuration is missing. Recording cannot be started.");
+    }
+    logger.error("AWS S3 configuration is missing. skipping the recording.");
+    return null;
+  }
   // Starts recording the room using a web-composite template and uploads to S3
   const egressInfo = await client.startRoomCompositeEgress(
     roomName,
@@ -55,21 +52,14 @@ export async function startRoomRecording(roomName: string, filepath: string) {
       }),
     },
   );
-
   return egressInfo;
 }
 
-export async function stopEgress(egressId: string) {
-  if (!apiKey || !apiSecret || !livekitUrl) {
-    throw new Error(
-      "LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set",
-    );
-  }
-  const host = livekitUrl
+export async function stopEgress(egressId: string): Promise<EgressInfo> {
+  const host = (config.LIVEKIT_URL)
     .replace("wss://", "https://")
     .replace("ws://", "http://");
-  const client = new EgressClient(host, apiKey, apiSecret);
-
+  const client = new EgressClient(host, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
   const egressInfo = await client.stopEgress(egressId);
   return egressInfo;
 }
