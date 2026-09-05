@@ -14,12 +14,8 @@ export async function startRoomRecording(roomName: string, filepath: string) :  
     .replace("wss://", "https://")
     .replace("ws://", "http://");
   const client = new EgressClient(host, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
-  const s3Bucket = config.AWS_S3_BUCKET_NAME;
-  const s3AccessKey = config.AWS_ACCESS_KEY_ID || "";
-  const s3Secret = config.AWS_SECRET_ACCESS_KEY || "";
-  const s3Region = config.AWS_S3_REGION;
   // const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
-  if(!s3Bucket || !s3AccessKey || !s3Secret || !s3Region) {
+  if(!config.AWS_ACCESS_KEY_ID || !config.AWS_SECRET_ACCESS_KEY) {
     if(config.NODE_ENV === "production") {
       throw new Error("AWS S3 configuration is missing. Recording cannot be started.");
     }
@@ -34,10 +30,10 @@ export async function startRoomRecording(roomName: string, filepath: string) :  
       output: {
         case: "s3",
         value: new S3Upload({
-          accessKey: s3AccessKey,
-          secret: s3Secret,
-          region: s3Region,
-          bucket: s3Bucket,
+          accessKey: config.AWS_ACCESS_KEY_ID,
+          secret: config.AWS_SECRET_ACCESS_KEY,
+          region: config.AWS_S3_REGION,
+          bucket: config.AWS_S3_BUCKET_NAME,
         }),
       },
     }),

@@ -24,10 +24,10 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_SESSION_TOKEN: z.string().optional(),
-  AWS_REGION: z.string().default("ap-south-1").optional(),
-  AWS_TRANSCRIBE_REGION: z.string().default("us-east-1").optional(),
-  AWS_S3_BUCKET_NAME: z.string().default("sherymeet-recordings").optional(),
-  AWS_S3_REGION: z.string().default("ap-south-1").optional(),
+  AWS_REGION: z.string().default("ap-south-1"),
+  AWS_TRANSCRIBE_REGION: z.string().default("us-east-1"),
+  AWS_S3_BUCKET_NAME: z.string().default("sherymeet-recordings"),
+  AWS_S3_REGION: z.string().default("ap-south-1"),
 });
 
 function collectRawEnv() {
@@ -81,6 +81,13 @@ const requiredInProduction = z.object({
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
+  REDIS_URL: z.string().url(),
+  AWS_ACCESS_KEY_ID: z.string().min(1),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1),
+  AWS_REGION: z.string().min(1),
+  AWS_TRANSCRIBE_REGION: z.string().min(1),
+  AWS_S3_BUCKET_NAME: z.string().min(1),
+  AWS_S3_REGION: z.string().min(1),
 });
 
 /**

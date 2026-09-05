@@ -47,9 +47,6 @@ export async function startMeetingHandler(request: NextRequest) {
 
     const updatedMeet = await MeetDao.startMeet(roomId);
     if (!updatedMeet) {
-      // startMeet only flips scheduled -> active, so a null here usually means
-      // a concurrent request won the race. Treat an already-active meet as
-      // success instead of a 500.
       const current = await MeetDao.getMeetByRoomId(roomId);
       if (current?.status === "active") {
         return ApiResponse.success({ status: current.status, isRecording: current.isRecording });
@@ -70,7 +67,7 @@ export async function startMeetingHandler(request: NextRequest) {
             recordingStatus: "recording",
             startedAt: new Date(),
             s3Bucket: config.AWS_S3_BUCKET_NAME,
-            s3Region: config.AWS_REGION,
+            s3Region: config.AWS_S3_REGION,
             s3ObjectKey: filepath,
           });
           logger.info(`Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`);
@@ -80,7 +77,6 @@ export async function startMeetingHandler(request: NextRequest) {
         // We log and continue so the host can still join even if recording service fails
       }
     }
-
     return ApiResponse.success({ status: updatedMeet.status, isRecording: updatedMeet.isRecording });
   } catch (error) {
     return ApiResponse.fromError(error, "Failed to start meeting");
