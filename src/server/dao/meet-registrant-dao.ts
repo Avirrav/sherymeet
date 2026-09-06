@@ -8,7 +8,6 @@ export interface ICreateRegistrantInput {
   email: string;
   firstName: string;
   lastName: string;
-  joinUrl: string;
 }
 
 export class MeetRegistrantDao {

@@ -18,6 +18,7 @@ export enum ParticipantRole {
 export interface IParticipant {
   name: string;
   role: ParticipantRole;
+  email?: string;
 }
 
 export const ParticipantRoleHierarchy = {

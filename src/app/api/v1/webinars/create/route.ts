@@ -39,7 +39,7 @@ export async function createWebinarHandler(request: AuthenticatedRequest) {
       throw new ApiError("Failed to generate token", 500);
     }
     const startUrl = `${config.NEXT_PUBLIC_API_URL}/meet/${webinar.roomId}#token=${encodeURIComponent(token)}`;
-    const registrationUrl = `${config.NEXT_PUBLIC_API_URL}/webinar/${webinar.roomId}/registrants`;
+    const registrationUrl = "";
     // Provide clean joining links without pre-signed token hashes
     return ApiResponse.success(
       {
