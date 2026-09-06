@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const RecordingSchema = new mongoose.Schema(
   {
-    meetId: {
+    conferenceRoomId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Meet",
+      ref: "ConferenceRoom",
       required: true,
       index: true,
     },
@@ -24,13 +24,7 @@ const RecordingSchema = new mongoose.Schema(
 
     recordingStatus: {
       type: String,
-      enum: [
-        "starting",
-        "recording",
-        "completed",
-        "failed",
-        "aborted",
-      ],
+      enum: ["starting", "recording", "completed", "failed", "aborted"],
       default: "starting",
     },
 
@@ -93,7 +87,7 @@ const RecordingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.models.Recording || mongoose.model("Recording", RecordingSchema);

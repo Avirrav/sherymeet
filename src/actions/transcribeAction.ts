@@ -1,8 +1,12 @@
 "use server";
 
-import { getTranscribeUrl } from "@/server/services/media/transcribe";
+import { getTranscribeUrl } from "@/server/services/livekit/transcribe";
 
-export async function getTranscribeUrlAction(): Promise<{ success: boolean; url?: string; error?: string }> {
+export async function getTranscribeUrlAction(): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> {
   try {
     const url = await getTranscribeUrl();
     return { success: true, url };

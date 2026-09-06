@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WebhookReceiver } from "livekit-server-sdk";
 import { RecordingDao, IRecordingUpdate } from "@/server/dao/recording-dao";
+import { RecordingStatus } from "@/server/types/conferenceroom.types";
 import { dbConnect } from "@/server/utils/db-connect";
 import { logger } from "@/server/utils/logger";
 import { config } from "@/server/utils/config";
@@ -30,7 +31,10 @@ export async function POST(request: NextRequest) {
         logger.warn("Rejected LiveKit webhook with invalid signature", err);
         return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
       }
-      logger.warn("Webhook signature verification failed. Parsing raw JSON directly for development.", err);
+      logger.warn(
+        "Webhook signature verification failed. Parsing raw JSON directly for development.",
+        err,
+      );
       event = JSON.parse(bodyText);
     }
 
@@ -46,7 +50,7 @@ export async function POST(request: NextRequest) {
         const recording = await RecordingDao.getRecordingByEgressId(egressId);
         if (recording) {
           const statusVal = egressInfo.status;
-          let recordingStatus = "recording";
+          let recordingStatus: RecordingStatus = "recording";
 
           // LiveKit status values mapping:
           // EGRESS_STARTING = 1, EGRESS_ACTIVE = 2, EGRESS_ENDING = 3, EGRESS_COMPLETE = 4, EGRESS_FAILED = 5
@@ -66,16 +70,20 @@ export async function POST(request: NextRequest) {
               code: "EGRESS_UPLOAD_FAILED",
               message: egressInfo.error,
             };
-            logger.error(`LiveKit Egress ${egressId} reported error during execution/upload: ${egressInfo.error}`);
+            logger.error(
+              `LiveKit Egress ${egressId} reported error during execution/upload: ${egressInfo.error}`,
+            );
           }
 
           // Populate S3 file results if present
           if (egressInfo.fileResults && egressInfo.fileResults.length > 0) {
-            updateData.fileResults = egressInfo.fileResults.map((f: { filename: string; location: string; size: number | string }) => ({
-              filename: f.filename,
-              location: f.location,
-              size: Number(f.size),
-            }));
+            updateData.fileResults = egressInfo.fileResults.map(
+              (f: { filename: string; location: string; size: number | string }) => ({
+                filename: f.filename,
+                location: f.location,
+                size: Number(f.size),
+              }),
+            );
 
             // Save the S3 path and public URL
             updateData.recordingUrl = egressInfo.fileResults[0].location;

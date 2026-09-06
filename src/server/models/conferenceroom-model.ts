@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { config } from "../utils/config";
 
-const MeetSchema = new mongoose.Schema(
+const ConferenceRoomSchema = new mongoose.Schema(
   {
     roomId: {
       type: String,
@@ -47,8 +47,9 @@ const MeetSchema = new mongoose.Schema(
   },
 );
 
-if (config.NODE_ENV === "development" && mongoose.models.Meet) {
-  delete mongoose.models.Meet;
+if (config.NODE_ENV === "development" && mongoose.models.ConferenceRoom) {
+  delete mongoose.models.ConferenceRoom;
 }
 
-export default mongoose.models.Meet || mongoose.model("Meet", MeetSchema);
+export default mongoose.models.ConferenceRoom ||
+  mongoose.model("ConferenceRoom", ConferenceRoomSchema);

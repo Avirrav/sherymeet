@@ -5,10 +5,10 @@ import {
   RecordingStatus,
   IRecordingFileResult,
   IRecordingError,
-} from "@/server/types/meet.types";
+} from "@/server/types/conferenceroom.types";
 
 export interface ICreateRecordingInput {
-  meetId: string;
+  conferenceRoomId: string;
   roomId: string;
   egressId: string;
   recordingStatus: RecordingStatus;
@@ -67,7 +67,7 @@ export class RecordingDao {
     return await Recording.findOneAndUpdate(
       { egressId },
       { $set: updateData },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
   }
 }

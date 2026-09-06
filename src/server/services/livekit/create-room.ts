@@ -9,27 +9,20 @@ const roomEmptyTimeout = config.ROOM_EMPTY_TIMEOUT; // 5 minutes
 function generateRoomCode(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz";
   const part = (len: number) =>
-    Array.from(
-      { length: len },
-      () => chars[Math.floor(Math.random() * chars.length)],
-    ).join("");
+    Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   return `${part(3)}-${part(4)}-${part(3)}`;
 }
 
 // Create Room Service
 export async function createRoom(roomName?: string, maxParticipants: number = 10): Promise<Room> {
   if (!apiKey || !apiSecret || !livekitUrl) {
-    throw new Error(
-      "LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set",
-    );
+    throw new Error("LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set");
   }
   if (!roomName) {
     roomName = generateRoomCode();
   }
   // Convert wss:// to https://
-  const host = livekitUrl
-    .replace("wss://", "https://")
-    .replace("ws://", "http://");
+  const host = livekitUrl.replace("wss://", "https://").replace("ws://", "http://");
   const roomService = new RoomServiceClient(host, apiKey, apiSecret);
   // Check if room already exists
   try {
@@ -40,13 +33,13 @@ export async function createRoom(roomName?: string, maxParticipants: number = 10
   } catch (error) {
     throw new Error("Failed to list rooms: " + error);
   }
- try {
-  return await roomService.createRoom({
-    name: roomName,
-    emptyTimeout: Number(roomEmptyTimeout),
-    maxParticipants,
-  });
- } catch (error) {
-  throw new Error("Failed to create room: " + error);
- }
+  try {
+    return await roomService.createRoom({
+      name: roomName,
+      emptyTimeout: Number(roomEmptyTimeout),
+      maxParticipants,
+    });
+  } catch (error) {
+    throw new Error("Failed to create room: " + error);
+  }
 }

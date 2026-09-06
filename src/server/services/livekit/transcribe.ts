@@ -9,7 +9,7 @@ export async function getTranscribeUrl(): Promise<string> {
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error(
-      "AWS credentials (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY) are not configured on the server."
+      "AWS credentials (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY) are not configured on the server.",
     );
   }
 

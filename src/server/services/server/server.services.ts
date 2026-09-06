@@ -1,38 +1,39 @@
-import { deleteRoom } from "../media/delete-room";
-import { stopEgress } from "../media/egress";
-import { MeetDao } from "../../dao/meet-dao";
+import { deleteRoom } from "../livekit/delete-room";
+import { stopEgress } from "../livekit/egress";
+import { ConferenceRoomDao } from "../../dao/conferenceroom-dao";
 import { RecordingDao } from "../../dao/recording-dao";
 import { ApiError } from "../../utils/api-helper";
 import { dbConnect } from "../../utils/db-connect";
 import { logger } from "../../utils/logger";
+import { StatusType, IConferenceRoomDocument } from "@/server/types/conferenceroom.types";
 
-interface EndMeetOptions {
+export interface EndSessionOptions {
   roomId: string;
 }
 
-export async function endMeet({ roomId }: EndMeetOptions) {
-  await dbConnect();
+export interface GetSessionOptions {
+  roomId: string;
+}
 
-  // 1. Fetch meeting
-  const meet = await MeetDao.getMeetByRoomId(roomId);
-  if (!meet) {
+export async function endSession({ roomId }: EndSessionOptions): Promise<IConferenceRoomDocument> {
+  await dbConnect();
+  // 1. Fetch conference room
+  const conferenceRoom = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  if (!conferenceRoom) {
     throw new ApiError("Meeting not found", 404);
   }
-
-  if (meet.status === "ended") {
-    return meet; // Already ended
+  if (conferenceRoom.status === StatusType.Ended) {
+    return conferenceRoom;
   }
-
-  // 2. Update meet status to ended in MongoDB
-  const endedMeet = await MeetDao.endMeet(roomId);
-  if (!endedMeet) {
+  // 2. Update status to ended in MongoDB
+  const endedConferenceRoom = await ConferenceRoomDao.endConferenceRoom(roomId);
+  if (!endedConferenceRoom) {
     throw new ApiError("Failed to end meeting in database", 500);
   }
 
   // 3. Stop any active recordings (egress) associated with this room
   try {
     const activeRecordings = await RecordingDao.getActiveRecordingsByRoomId(roomId);
-
     for (const rec of activeRecordings) {
       logger.info(`Stopping egress recording for room: ${roomId}, egressId: ${rec.egressId}`);
       try {
@@ -62,5 +63,18 @@ export async function endMeet({ roomId }: EndMeetOptions) {
     // Ignore if room does not exist on LiveKit anymore
   }
 
-  return endedMeet;
+  return endedConferenceRoom;
+}
+
+export async function getSessionDetails({
+  roomId,
+}: GetSessionOptions): Promise<IConferenceRoomDocument> {
+  if (!roomId) {
+    throw new ApiError("Room ID is required", 400);
+  }
+  const sessionDetails = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  if (!sessionDetails) {
+    throw new ApiError("Meeting not found", 404);
+  }
+  return sessionDetails;
 }

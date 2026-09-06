@@ -1,6 +1,6 @@
 import { dbConnect } from "@/server/utils/db-connect";
 import MeetRegistrant from "@/server/models/meet-registrant";
-import { IMeetRegistrantDocument } from "@/server/types/meet.types";
+import { IMeetRegistrantDocument } from "@/server/types/conferenceroom.types";
 
 export interface ICreateRegistrantInput {
   webinarId: string;
