@@ -67,6 +67,39 @@ export async function createInstantWebinar(
   throw new ApiError("Failed to create webinar after multiple attempts", 500);
 }
 
+/**
+ * Public shape of a webinar: excludes the bcrypt passcode hash and other
+ * internal Mongo fields — same sanitization convention the old
+ * toPublicMeetDetails used before the ConferenceRoom rename.
+ */
+export interface PublicWebinarDetails {
+  roomId: string;
+  roomCode: string;
+  status: StatusType;
+  type: ConferenceRoomType;
+  isRecording: boolean;
+  hasPasscode: boolean;
+  startedAt: Date | null;
+  endedAt: Date | null;
+}
+
+export async function getWebinarDetails(roomId: string): Promise<PublicWebinarDetails> {
+  const webinar = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  if (!webinar) {
+    throw new ApiError("Webinar not found", 404);
+  }
+  return {
+    roomId: webinar.roomId,
+    roomCode: webinar.roomCode,
+    status: webinar.status,
+    type: webinar.type,
+    isRecording: webinar.isRecording,
+    hasPasscode: !!webinar.passcode,
+    startedAt: webinar.startedAt,
+    endedAt: webinar.endedAt,
+  };
+}
+
 export interface EndWebinarOptions {
   roomId: string;
 }

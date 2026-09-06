@@ -3,7 +3,7 @@ import MeetRegistrant from "@/server/models/meet-registrant";
 import { IMeetRegistrantDocument } from "@/server/types/conferenceroom.types";
 
 export interface ICreateRegistrantInput {
-  webinarId: string;
+  roomId: string;
   token: string;
   email: string;
   firstName: string;
@@ -29,5 +29,18 @@ export class MeetRegistrantDao {
   static async getRegistrantByToken(token: string): Promise<IMeetRegistrantDocument | null> {
     await dbConnect();
     return await MeetRegistrant.findOne({ token });
+  }
+
+  /**
+   * Retrieves a registrant by webinar + email — backed by the schema's
+   * unique { roomId, email } index (see meet-registrant.ts), so this is an
+   * indexed lookup, not a collection scan.
+   */
+  static async getRegistrantByEmail(
+    roomId: string,
+    email: string,
+  ): Promise<IMeetRegistrantDocument | null> {
+    await dbConnect();
+    return await MeetRegistrant.findOne({ roomId, email: email.trim().toLowerCase() });
   }
 }

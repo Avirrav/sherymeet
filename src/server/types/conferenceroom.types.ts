@@ -76,13 +76,15 @@ export interface IRecordingDocument extends Document {
 // IMeetRegistrantDocument — the full Mongoose document for the
 // MeetRegistrant collection (see meet-registrant.ts). Left as "Meet" —
 // out of scope for the ConferenceRoom rename; it's a separate model.
+// `roomId` here matches the actual schema field name in meet-registrant.ts —
+// it was previously (incorrectly) typed as `webinarId`, which doesn't exist
+// on the schema and made every registrant save with an unset room reference.
 export interface IMeetRegistrantDocument extends Document {
-  webinarId: string;
+  roomId: string;
   token: string;
   email: string;
   firstName: string;
   lastName: string;
-  joinUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -24,12 +24,25 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
+/**
+ * Pulls `webinarId` out of the URL path directly instead of a route-context
+ * `{ params }` argument: runMiddlewares() (run-middlewares.ts) only forwards
+ * the request itself to middlewares/handler, not Next's second route-context
+ * parameter, so `[webinarId]` never reaches the handler through the normal
+ * dynamic-segment mechanism. Path shape: /api/v1/webinars/{webinarId}/registrants.
+ */
 function getWebinarIdFromPath(request: AuthenticatedRequest): string | null {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean);
   const index = segments.indexOf("registrants");
   return index > 0 ? segments[index - 1] : null;
 }
 
+const registrantEmailQuerySchema = z.object({
+  email: z.email("Invalid email address").trim(),
+});
+
+// POST /api/v1/webinars/:webinarId/registrants — registers an attendee for a
+// webinar and mints their personal join token.
 export async function createRegistrantHandler(request: AuthenticatedRequest) {
   try {
     const webinarId = getWebinarIdFromPath(request);
@@ -59,7 +72,7 @@ export async function createRegistrantHandler(request: AuthenticatedRequest) {
       throw new ApiError("Failed to generate registrant token", 500);
     }
     const registrant = await MeetRegistrantDao.createRegistrant({
-      webinarId,
+      roomId: webinarId,
       token,
       email,
       firstName,
@@ -88,6 +101,50 @@ export async function createRegistrantHandler(request: AuthenticatedRequest) {
   }
 }
 
+// GET /api/v1/webinars/:webinarId/registrants?email=... — looks up a single
+// registrant's details by the email they registered with (backed by the
+// schema's unique { roomId, email } index).
+export async function getRegistrantHandler(request: AuthenticatedRequest) {
+  try {
+    const webinarId = getWebinarIdFromPath(request);
+    if (!webinarId) {
+      throw new ApiError("Webinar ID is required", 400);
+    }
+
+    const result = registrantEmailQuerySchema.safeParse({
+      email: request.nextUrl.searchParams.get("email"),
+    });
+    if (!result.success) {
+      throw new ApiError(
+        "Invalid or missing 'email' query parameter",
+        400,
+        result.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      );
+    }
+    const { email } = result.data;
+
+    const registrant = await MeetRegistrantDao.getRegistrantByEmail(webinarId, email);
+    if (!registrant) {
+      throw new ApiError("Registrant not found", 404);
+    }
+
+    return ApiResponse.success({
+      registrantId: registrant._id,
+      webinarId: registrant.roomId,
+      email: registrant.email,
+      firstName: registrant.firstName,
+      lastName: registrant.lastName,
+      token: registrant.token,
+      registeredAt: registrant.createdAt,
+    });
+  } catch (error) {
+    return ApiResponse.fromError(error, "Failed to fetch registrant");
+  }
+}
+
 export const POST = runMiddlewares(
   [
     requestIdMiddleware,
@@ -98,4 +155,9 @@ export const POST = runMiddlewares(
     replayProtectionMiddleware,
   ],
   createRegistrantHandler,
+);
+
+export const GET = runMiddlewares(
+  [requestIdMiddleware, auditMiddleware, authenticationMiddleware, rateLimitMiddleware],
+  getRegistrantHandler,
 );
