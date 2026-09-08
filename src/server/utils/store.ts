@@ -47,12 +47,15 @@ class RedisAppStore implements AppStore {
   }
 
   async connect(): Promise<void> {
-    // `lazyConnect: true` means the constructor above never actually opened
-    // a socket. `.connect()` performs the real TCP + RESP handshake (incl.
-    // AUTH if configured); `.ping()` on top of that proves the server is
-    // genuinely answering commands, not just accepting a TCP connection.
-    await this.redis.connect();
-    await this.redis.ping();
+    try {
+      logger.info("Connecting to Redis...");
+      await this.redis.connect();
+      await this.redis.ping();
+      logger.info("Redis connected successfully!");
+    } catch (error) {
+      logger.error("Redis connection failed", error);
+      throw error;
+    }
   }
 
   async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {

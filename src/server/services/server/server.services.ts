@@ -1,10 +1,12 @@
 import { deleteRoom } from "../livekit/delete-room";
-import { stopEgress } from "../livekit/egress";
+import { createRoom } from "../livekit/create-room";
+import { stopEgress, startRoomRecording } from "../livekit/egress";
 import { ConferenceRoomDao } from "../../dao/conferenceroom-dao";
 import { RecordingDao } from "../../dao/recording-dao";
 import { ApiError } from "../../utils/api-helper";
 import { dbConnect } from "../../utils/db-connect";
 import { logger } from "../../utils/logger";
+import { config } from "../../utils/config";
 import { StatusType, IConferenceRoomDocument } from "@/server/types/conferenceroom.types";
 
 export interface EndSessionOptions {
@@ -13,6 +15,36 @@ export interface EndSessionOptions {
 
 export interface GetSessionOptions {
   roomId: string;
+}
+
+export interface StartSessionOptions {
+  roomId: string;
+}
+
+// Public shape of a conference room, safe to return to the browser (never
+// includes the passcode hash itself — just whether one is set).
+export interface PublicMeetDetails {
+  roomId: string;
+  roomCode: string;
+  status: StatusType;
+  type: string;
+  isRecording: boolean;
+  hasPasscode: boolean;
+  startedAt: Date | null;
+  endedAt: Date | null;
+}
+
+export function toPublicMeetDetails(room: IConferenceRoomDocument): PublicMeetDetails {
+  return {
+    roomId: room.roomId,
+    roomCode: room.roomCode,
+    status: room.status,
+    type: room.type,
+    isRecording: room.isRecording,
+    hasPasscode: Boolean(room.passcode),
+    startedAt: room.startedAt,
+    endedAt: room.endedAt,
+  };
 }
 
 export async function endSession({ roomId }: EndSessionOptions): Promise<IConferenceRoomDocument> {
@@ -64,6 +96,64 @@ export async function endSession({ roomId }: EndSessionOptions): Promise<IConfer
   }
 
   return endedConferenceRoom;
+}
+
+export async function startSession({
+  roomId,
+}: StartSessionOptions): Promise<IConferenceRoomDocument> {
+  await dbConnect();
+
+  const conferenceRoom = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  if (!conferenceRoom) {
+    throw new ApiError("Meeting not found", 404);
+  }
+  if (conferenceRoom.status === StatusType.Ended) {
+    throw new ApiError("Meeting already ended", 400);
+  }
+  if (conferenceRoom.status === StatusType.Active) {
+    return conferenceRoom;
+  }
+
+  // Room must exist on the LiveKit server before Egress can record it.
+  await createRoom(roomId);
+
+  const startedConferenceRoom = await ConferenceRoomDao.startConferenceRoom(roomId);
+  if (!startedConferenceRoom) {
+    // Lost a race with a concurrent start — re-fetch and return the
+    // now-active room rather than erroring.
+    const current = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+    if (current?.status === StatusType.Active) {
+      return current;
+    }
+    throw new ApiError("Failed to start meeting", 500);
+  }
+
+  if (startedConferenceRoom.isRecording) {
+    try {
+      const filepath = `recordings/${roomId}_${Date.now()}.mp4`;
+      const egressInfo = await startRoomRecording(roomId, filepath);
+      if (egressInfo?.egressId) {
+        await RecordingDao.createRecording({
+          conferenceRoomId: String(startedConferenceRoom._id),
+          roomId,
+          egressId: egressInfo.egressId,
+          recordingStatus: "recording",
+          startedAt: new Date(),
+          s3Bucket: config.AWS_S3_BUCKET_NAME,
+          s3Region: config.AWS_S3_REGION,
+          s3ObjectKey: filepath,
+        });
+        logger.info(
+          `Meeting recording started for room ${roomId} with egressId: ${egressInfo.egressId}`,
+        );
+      }
+    } catch (recError) {
+      logger.error("Failed to start meeting recording", recError);
+      // Log and continue — the host can still join even if recording fails.
+    }
+  }
+
+  return startedConferenceRoom;
 }
 
 export async function getSessionDetails({
