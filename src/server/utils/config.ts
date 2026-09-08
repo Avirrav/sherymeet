@@ -4,17 +4,13 @@ import { logger } from "./logger";
 const envSchema = z.object({
   NEXT_PUBLIC_LIVEKIT_URL: z.url(),
   NEXT_PUBLIC_API_URL: z.url(),
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   MONGODB_URI: z.string().min(1),
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
   REDIS_URL: z.url(),
-  ENCRYPTION_MASTER_KEY: z
-    .string()
-    .min(32, "must be at least 32 characters"),
+  ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
   LIVEKIT_TOKEN_TTL: z.string().default("2h"),
   ROOM_EMPTY_TIMEOUT: z.coerce.number().int().positive().default(300),
   AUDIT_LOG_TTL_DAYS: z.coerce.number().int().positive().default(90),
@@ -80,7 +76,6 @@ const requiredInProduction = z.object({
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
-  REDIS_URL: z.string().url(),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
   AWS_REGION: z.string().min(1),
@@ -101,15 +96,10 @@ export function validateEnv(): void {
       .join("\n");
     const message = `Environment validation failed:\n${problems}`;
     if (isProduction()) {
-      if (!config.REDIS_URL) {
-        logger.warn(
-          "REDIS_URL is not set: rate limiting and replay protection will be per-process (in-memory). " +
-            "Set REDIS_URL before running more than one instance.",
-        );
-      }
       throw new Error(message);
     }
-    logger.warn(`Environment validation failed: ${message}\n(Continuing because NODE_ENV is not production.)`);
+    logger.warn(
+      `Environment validation failed: ${message}\n(Continuing because NODE_ENV is not production.)`,
+    );
   }
-
 }

@@ -1,5 +1,3 @@
-import { config } from "./config";
-
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LOG_LEVELS: Record<LogLevel, number> = {
@@ -10,14 +8,14 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 // Default log level from environment or 'info'
-const CURRENT_LOG_LEVEL = (config.LOG_LEVEL as LogLevel) ||
-  (config.NODE_ENV === "production" ? "info" : "debug");
+const CURRENT_LOG_LEVEL =
+  (process.env.LOG_LEVEL as LogLevel) || (process.env.NODE_ENV === "production" ? "info" : "debug");
 
 // Production emits one JSON object per line so log aggregators can parse
 // fields; development keeps the human-readable format. LOG_FORMAT overrides.
 const USE_JSON_LOGS =
-  config.LOG_FORMAT === "json" ||
-  (config.LOG_FORMAT !== "pretty" && config.NODE_ENV === "production");
+  process.env.LOG_FORMAT === "json" ||
+  (process.env.LOG_FORMAT !== "pretty" && process.env.NODE_ENV === "production");
 
 interface LogContext {
   requestId?: string;
@@ -42,13 +40,13 @@ class Logger {
     level: LogLevel,
     message: string,
     context?: LogContext | Error | unknown,
-    error?: Error
+    error?: Error,
   ) {
     if (!this.shouldLog(level)) return;
 
     const timestamp = new Date().toISOString();
     const levelTag = `[${level.toUpperCase()}]`;
-    
+
     let requestIdStr = "";
     let metadataStr = "";
     let errorStack = "";
@@ -60,7 +58,7 @@ class Logger {
         errorStack = `\n${context.stack || context.message}`;
       } else {
         const ctx = context as LogContext;
-        
+
         const reqObj = ctx.req as Record<string, unknown> | undefined;
         const requestObj = ctx.request as Record<string, unknown> | undefined;
 
@@ -69,7 +67,11 @@ class Logger {
           requestIdStr = ` [${ctx.requestId}]`;
         } else if (reqObj && typeof reqObj === "object" && typeof reqObj.requestId === "string") {
           requestIdStr = ` [${reqObj.requestId}]`;
-        } else if (requestObj && typeof requestObj === "object" && typeof requestObj.requestId === "string") {
+        } else if (
+          requestObj &&
+          typeof requestObj === "object" &&
+          typeof requestObj.requestId === "string"
+        ) {
           requestIdStr = ` [${requestObj.requestId}]`;
         }
 
@@ -131,7 +133,8 @@ class Logger {
 
   public error(message: string, error?: Error | unknown, context?: LogContext) {
     const errObj = error instanceof Error ? error : undefined;
-    const ctxObj = context || (error && !(error instanceof Error) ? error as LogContext : undefined);
+    const ctxObj =
+      context || (error && !(error instanceof Error) ? (error as LogContext) : undefined);
     this.logMessage("error", message, ctxObj || errObj, errObj);
   }
 }

@@ -1,16 +1,15 @@
 import Redis from "ioredis";
-import { memoryStore } from "./memory-store";
 import { logger } from "./logger";
 import { config } from "./config";
 
 /**
  * Shared distributed store for rate limiting and replay (nonce) protection.
  *
- * When REDIS_URL is set, sliding-window counters and nonces live in Redis so
- * they hold across restarts and multiple instances. Without it (local dev,
- * single instance) the in-memory store is used. If Redis errors at runtime we
- * fall back to the in-memory store for that call and log loudly — favoring
- * availability over strictness so a Redis blip doesn't take the API down.
+ * Backed exclusively by Redis (REDIS_URL is a required env var — see
+ * config.ts) so counters and nonces hold across restarts and multiple
+ * instances. There is no in-memory fallback: if Redis is unreachable, calls
+ * throw and are surfaced as a 5xx by the central error handler (see
+ * run-middlewares.ts) rather than silently degrading to per-process state.
  */
 
 export interface RateLimitResult {
@@ -24,21 +23,17 @@ export interface AppStore {
   setNx(key: string, value: string, ttlSeconds: number): Promise<boolean>;
   /** Sliding-window rate limit check that also records the current request. */
   checkRateLimit(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult>;
-}
-
-class MemoryAppStore implements AppStore {
-  async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
-    return memoryStore.setNx(key, value, ttlSeconds);
-  }
-
-  async checkRateLimit(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
-    return memoryStore.checkRateLimit(key, limit, windowSeconds);
-  }
+  /**
+   * Verifies the store is actually reachable. Forces the lazy connection
+   * open and round-trips a PING so a boot-time caller (instrumentation.ts)
+   * finds out immediately whether Redis is up, instead of on the first
+   * request.
+   */
+  connect(): Promise<void>;
 }
 
 class RedisAppStore implements AppStore {
   private redis: Redis;
-  private fallback = new MemoryAppStore();
 
   constructor(url: string) {
     this.redis = new Redis(url, {
@@ -51,44 +46,51 @@ class RedisAppStore implements AppStore {
     });
   }
 
-  async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
-    try {
-      const result = await this.redis.set(key, value, "EX", ttlSeconds, "NX");
-      return result === "OK";
-    } catch (err) {
-      logger.error("Redis setNx failed, falling back to in-memory store", err, { key });
-      return this.fallback.setNx(key, value, ttlSeconds);
-    }
+  async connect(): Promise<void> {
+    // `lazyConnect: true` means the constructor above never actually opened
+    // a socket. `.connect()` performs the real TCP + RESP handshake (incl.
+    // AUTH if configured); `.ping()` on top of that proves the server is
+    // genuinely answering commands, not just accepting a TCP connection.
+    await this.redis.connect();
+    await this.redis.ping();
   }
 
-  async checkRateLimit(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
+  async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.redis.set(key, value, "EX", ttlSeconds, "NX");
+    return result === "OK";
+  }
+
+  async checkRateLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+  ): Promise<RateLimitResult> {
     const now = Date.now();
     const windowMs = windowSeconds * 1000;
-    try {
-      // Sorted-set sliding window: drop entries outside the window, count
-      // what's left, and only record this request if it's under the limit.
-      const pruned = this.redis.multi().zremrangebyscore(key, 0, now - windowMs).zcard(key);
-      const results = await pruned.exec();
-      const count = (results?.[1]?.[1] as number) ?? 0;
 
-      if (count >= limit) {
-        const oldest = await this.redis.zrange(key, 0, 0, "WITHSCORES");
-        const oldestScore = oldest.length === 2 ? Number(oldest[1]) : now;
-        const reset = Math.max(1, Math.ceil((oldestScore + windowMs - now) / 1000));
-        return { allowed: false, remaining: 0, reset };
-      }
+    // Sorted-set sliding window: drop entries outside the window, count
+    // what's left, and only record this request if it's under the limit.
+    const pruned = this.redis
+      .multi()
+      .zremrangebyscore(key, 0, now - windowMs)
+      .zcard(key);
+    const results = await pruned.exec();
+    const count = (results?.[1]?.[1] as number) ?? 0;
 
-      await this.redis
-        .multi()
-        .zadd(key, now, `${now}:${Math.random().toString(36).slice(2, 8)}`)
-        .expire(key, windowSeconds)
-        .exec();
-
-      return { allowed: true, remaining: limit - count - 1, reset: windowSeconds };
-    } catch (err) {
-      logger.error("Redis rate limit check failed, falling back to in-memory store", err, { key });
-      return this.fallback.checkRateLimit(key, limit, windowSeconds);
+    if (count >= limit) {
+      const oldest = await this.redis.zrange(key, 0, 0, "WITHSCORES");
+      const oldestScore = oldest.length === 2 ? Number(oldest[1]) : now;
+      const reset = Math.max(1, Math.ceil((oldestScore + windowMs - now) / 1000));
+      return { allowed: false, remaining: 0, reset };
     }
+
+    await this.redis
+      .multi()
+      .zadd(key, now, `${now}:${Math.random().toString(36).slice(2, 8)}`)
+      .expire(key, windowSeconds)
+      .exec();
+
+    return { allowed: true, remaining: limit - count - 1, reset: windowSeconds };
   }
 }
 
@@ -102,13 +104,7 @@ declare global {
  */
 export function getStore(): AppStore {
   if (!global.appStoreSingleton) {
-    const redisUrl = config.REDIS_URL;
-    if (redisUrl) {
-      logger.info("Using Redis-backed store for rate limiting and replay protection");
-      global.appStoreSingleton = new RedisAppStore(redisUrl);
-    } else {
-      global.appStoreSingleton = new MemoryAppStore();
-    }
+    global.appStoreSingleton = new RedisAppStore(config.REDIS_URL);
   }
   return global.appStoreSingleton;
 }
