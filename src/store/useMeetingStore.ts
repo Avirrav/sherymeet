@@ -1,11 +1,11 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-// Shape returned by GET /api/server/meet/details (dates arrive as ISO strings)
+// Shape returned by GET /api/server/[sessionId]/details (dates arrive as ISO strings)
 export interface MeetDetails {
   roomId: string;
   roomCode: string;
-  status: 'scheduled' | 'active' | 'ended';
-  type: 'webinar' | 'meet';
+  status: "scheduled" | "active" | "ended";
+  type: "webinar" | "meet";
   isRecording: boolean;
   hasPasscode: boolean;
   startedAt: string | null;
@@ -28,7 +28,7 @@ interface MeetingState {
   videoEnabled: boolean;
   audioDeviceId: string;
   videoDeviceId: string;
-  
+
   // Meeting Connection Info
   roomId: string;
   token: string;
@@ -40,12 +40,12 @@ interface MeetingState {
   // Active UI Controls
   isScreenSharing: boolean;
   isHandRaised: boolean;
-  activeSidebar: 'chat' | 'participants' | 'settings' | null;
+  activeSidebar: "chat" | "participants" | "settings" | null;
   unreadChatCount: number;
   captionsEnabled: boolean;
 
   // Layout Options
-  layoutMode: 'grid' | 'spotlight' | 'sidebar' | 'presenter' | 'content-first' | 'pip';
+  layoutMode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
   pinnedParticipantIds: string[];
 
   // Sync state from LiveKit events
@@ -65,16 +65,18 @@ interface MeetingState {
   setMeetDetails: (details: MeetDetails | null) => void;
   toggleScreenShare: (active?: boolean) => void;
   toggleHandRaise: (active?: boolean) => void;
-  toggleSidebar: (panel: 'chat' | 'participants' | 'settings' | null) => void;
+  toggleSidebar: (panel: "chat" | "participants" | "settings" | null) => void;
   toggleCamera: () => void;
   toggleMicrophone: () => void;
-  addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  addChatMessage: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;
   clearChat: () => void;
   addRaisedHand: (identity: string) => void;
   removeRaisedHand: (identity: string) => void;
   toggleCaptions: (active?: boolean) => void;
   setTranscription: (identity: string, text: string) => void;
-  setLayoutMode: (mode: 'grid' | 'spotlight' | 'sidebar' | 'presenter' | 'content-first' | 'pip') => void;
+  setLayoutMode: (
+    mode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip",
+  ) => void;
   togglePinParticipant: (identity: string) => void;
   clearPins: () => void;
   resetMeetingStore: () => void;
@@ -82,16 +84,16 @@ interface MeetingState {
 
 export const useMeetingStore = create<MeetingState>((set) => ({
   // Local User Preferences defaults
-  username: '',
-  email: '',
+  username: "",
+  email: "",
   audioEnabled: true,
   videoEnabled: true,
-  audioDeviceId: '',
-  videoDeviceId: '',
+  audioDeviceId: "",
+  videoDeviceId: "",
 
   // Connection Info defaults
-  roomId: '',
-  token: '',
+  roomId: "",
+  token: "",
   isConnecting: false,
   isConnected: false,
   error: null,
@@ -105,7 +107,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   captionsEnabled: false,
 
   // Layout Options defaults
-  layoutMode: 'grid',
+  layoutMode: "grid",
   pinnedParticipantIds: [],
 
   // Event sync states defaults
@@ -123,7 +125,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   setMeetingInfo: (roomId, token) =>
     set(() => {
       let savedMessages: ChatMessage[] = [];
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         try {
           const cached = localStorage.getItem(`chat_messages_${roomId}`);
           if (cached) {
@@ -147,7 +149,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       const nextPanel = state.activeSidebar === panel ? null : panel;
       return {
         activeSidebar: nextPanel,
-        unreadChatCount: nextPanel === 'chat' ? 0 : state.unreadChatCount,
+        unreadChatCount: nextPanel === "chat" ? 0 : state.unreadChatCount,
       };
     }),
   toggleCamera: () => set((state) => ({ videoEnabled: !state.videoEnabled })),
@@ -160,7 +162,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         timestamp: Date.now(),
       };
       const newMessages = [...state.chatMessages, newMsg];
-      if (state.roomId && typeof window !== 'undefined') {
+      if (state.roomId && typeof window !== "undefined") {
         try {
           localStorage.setItem(`chat_messages_${state.roomId}`, JSON.stringify(newMessages));
         } catch (e) {
@@ -169,15 +171,12 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       }
       return {
         chatMessages: newMessages,
-        unreadChatCount:
-          state.activeSidebar === 'chat'
-            ? 0
-            : state.unreadChatCount + 1,
+        unreadChatCount: state.activeSidebar === "chat" ? 0 : state.unreadChatCount + 1,
       };
     }),
   clearChat: () =>
     set((state) => {
-      if (state.roomId && typeof window !== 'undefined') {
+      if (state.roomId && typeof window !== "undefined") {
         try {
           localStorage.removeItem(`chat_messages_${state.roomId}`);
         } catch (e) {
@@ -215,8 +214,8 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   clearPins: () => set({ pinnedParticipantIds: [] }),
   resetMeetingStore: () =>
     set({
-      roomId: '',
-      token: '',
+      roomId: "",
+      token: "",
       isConnecting: false,
       isConnected: false,
       error: null,
@@ -229,7 +228,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       raisedHands: [],
       captionsEnabled: false,
       transcriptions: {},
-      layoutMode: 'grid',
+      layoutMode: "grid",
       pinnedParticipantIds: [],
     }),
 }));

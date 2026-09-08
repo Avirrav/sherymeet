@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Room } from 'livekit-client';
-import { useParticipants } from '@/hooks/media-server/useParticipants';
-import { useScreenShare } from '@/hooks/media-server/useScreenShare';
-import { useChat } from '@/hooks/media-server/useChat';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import ChatPanel from './ChatPanel';
-import ParticipantsPanel from './ParticipantsPanel';
-import SettingsPanel from './SettingsPanel';
-import LeaveConfirmModal from './LeaveConfirmModal';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { useTranscribe } from '@/hooks/media-server/useTranscribe';
-import CaptionOverlay from './CaptionOverlay';
-import MicVisualizer from './MicVisualizer';
-import { emitEmbedEvent, isEmbedded } from './embed-bridge';
-import { canParticipantPublish, isCoHostOrAbove, isHostRole } from './participant-permissions';
+import React, { useState, useEffect } from "react";
+import { Room } from "livekit-client";
+import { useParticipants } from "@/hooks/media-server/useParticipants";
+import { useScreenShare } from "@/hooks/media-server/useScreenShare";
+import { useChat } from "@/hooks/media-server/useChat";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import ChatPanel from "./ChatPanel";
+import ParticipantsPanel from "./ParticipantsPanel";
+import SettingsPanel from "./SettingsPanel";
+import LeaveConfirmModal from "./LeaveConfirmModal";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useTranscribe } from "@/hooks/media-server/useTranscribe";
+import CaptionOverlay from "./CaptionOverlay";
+import MicVisualizer from "./MicVisualizer";
+import { emitEmbedEvent, isEmbedded } from "./embed-bridge";
+import { canParticipantPublish, isCoHostOrAbove, isHostRole } from "./participant-permissions";
 
 import {
   Mic,
@@ -30,9 +30,8 @@ import {
   Users,
   Clock,
   LayoutGrid,
-
-} from 'lucide-react';
-import LayoutManager from './layout/LayoutManager';
+} from "lucide-react";
+import LayoutManager from "./layout/LayoutManager";
 
 interface ConferenceRoomProps {
   room: Room;
@@ -40,7 +39,7 @@ interface ConferenceRoomProps {
 }
 
 export default function ConferenceRoom({ room, isRecorder = false }: ConferenceRoomProps) {
-  const router = useRouter(); 
+  const router = useRouter();
   const {
     roomId,
     token,
@@ -53,15 +52,25 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     unreadChatCount,
     meetDetails,
   } = useMeetingStore();
-  {/* Use Participants hook */}
+  {
+    /* Use Participants hook */
+  }
   const { localParticipant, remoteParticipants, activeSpeaker, updateKey } = useParticipants(room);
-  {/* Use ScreenShare hook */}
+  {
+    /* Use ScreenShare hook */
+  }
   const { isScreenSharing, toggleScreenShare } = useScreenShare(room);
-  {/* Use Chat hook */}
+  {
+    /* Use Chat hook */
+  }
   const { raiseHand, isHandRaised } = useChat(room);
-  {/* Initialize and run the auto-transcription / live captions hook */}
+  {
+    /* Initialize and run the auto-transcription / live captions hook */
+  }
   useTranscribe(room);
-  {/* States */}
+  {
+    /* States */
+  }
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   // Keeps the sidebar mounted briefly after close so it can slide out.
@@ -78,7 +87,9 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     const timer = setTimeout(() => setRenderedSidebar(null), 240);
     return () => clearTimeout(timer);
   }, [activeSidebar, renderedSidebar]);
-  {/*Timer effect*/}
+  {
+    /*Timer effect*/
+  }
   useEffect(() => {
     const interval = setInterval(() => {
       setDuration((d) => d + 1);
@@ -88,19 +99,21 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-  {/* Role comes from the token metadata, never from "is this me" */}
+  {
+    /* Role comes from the token metadata, never from "is this me" */
+  }
   const isHost = isHostRole(room.localParticipant);
 
   // Publish rights come from the LiveKit token (webinar attendees are issued
   // canPublish: false). The server already rejects their publishes; disabling
   // the controls here just stops users from trying.
   const canPublish = canParticipantPublish(room.localParticipant);
-  const isWebinar = meetDetails?.type === 'webinar';
+  const isWebinar = meetDetails?.type === "webinar";
   const noPublishReason = isWebinar
-    ? 'Not allowed without host permission in this webinar'
-    : 'Not allowed without host permission';
+    ? "Not allowed without host permission in this webinar"
+    : "Not allowed without host permission";
 
   // In a webinar the stage belongs to hosts/co-hosts only: attendees never get
   // a tile (they appear in the participants panel instead), and their screen
@@ -110,21 +123,25 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     : remoteParticipants;
   const stageLocalParticipant =
     isWebinar && !isCoHostOrAbove(localParticipant) ? null : localParticipant;
-  {/*Handle LeaveConfirm*/}
+  {
+    /*Handle LeaveConfirm*/
+  }
   const handleLeaveConfirm = () => {
     room.disconnect();
-    toast.info('Left the meeting');
+    toast.info("Left the meeting");
     // The embed bridge reports 'left' via the connection watcher in
     // MeetingPageClient; don't navigate away inside an embed iframe.
     if (!isEmbedded()) {
-      router.push('/');
+      router.push("/");
     }
   };
-  {/*Handle EndMeeting*/}
+  {
+    /*Handle EndMeeting*/
+  }
   const handleEndMeeting = async () => {
     if (confirm("Are you sure you want to end the meeting for everyone?")) {
       try {
-        const res = await fetch("/api/server/meet/end-meet", {
+        const res = await fetch(`/api/server/${roomId}/end`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -135,7 +152,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         if (res.ok) {
           toast.success("Meeting ended successfully");
           room.disconnect();
-          emitEmbedEvent('meeting-ended', { roomId });
+          emitEmbedEvent("meeting-ended", { roomId });
           if (!isEmbedded()) {
             router.push("/");
           }
@@ -159,9 +176,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
               localParticipant={stageLocalParticipant}
               remoteParticipants={stageParticipants}
               activeSpeaker={activeSpeaker}
-              emptyMessage={
-                isWebinar ? 'Waiting for the host to start presenting' : undefined
-              }
+              emptyMessage={isWebinar ? "Waiting for the host to start presenting" : undefined}
             />
             <CaptionOverlay room={room} />
           </div>
@@ -186,11 +201,11 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         <div className="flex items-center gap-2">
           {/* Participants Sidebar Toggle */}
           <button
-            onClick={() => toggleSidebar('participants')}
+            onClick={() => toggleSidebar("participants")}
             className={`control-btn p-3.5 rounded-full border ${
-              activeSidebar === 'participants'
-                ? 'bg-md-secondary-container text-md-on-secondary-container border-transparent'
-                : 'bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface'
+              activeSidebar === "participants"
+                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
             }`}
             title="Participants Panel"
           >
@@ -199,16 +214,16 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
 
           {/* Chat Sidebar Toggle */}
           <button
-            onClick={() => toggleSidebar('chat')}
+            onClick={() => toggleSidebar("chat")}
             className={`control-btn p-3.5 rounded-full border relative ${
-              activeSidebar === 'chat'
-                ? 'bg-md-secondary-container text-md-on-secondary-container border-transparent'
-                : 'bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface'
+              activeSidebar === "chat"
+                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
             }`}
             title="Chat Panel"
           >
             <MessageSquare className="w-5 h-5" />
-            {unreadChatCount > 0 && activeSidebar !== 'chat' && (
+            {unreadChatCount > 0 && activeSidebar !== "chat" && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-md-primary border-2 border-md-surface flex items-center justify-center text-[9px] font-extrabold text-md-on-primary animate-scale-in">
                 {unreadChatCount}
               </span>
@@ -217,11 +232,11 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
 
           {/* Settings & Layout Sidebar Toggle */}
           <button
-            onClick={() => toggleSidebar('settings')}
+            onClick={() => toggleSidebar("settings")}
             className={`control-btn p-3.5 rounded-full border ${
-              activeSidebar === 'settings'
-                ? 'bg-md-secondary-container text-md-on-secondary-container border-transparent'
-                : 'bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface'
+              activeSidebar === "settings"
+                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
             }`}
             title="Settings & Layout"
           >
@@ -234,15 +249,13 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
       <div className="flex-1 flex overflow-hidden relative mx-10">
         {/* Main Video Area */}
         <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative">
-            <LayoutManager
-              updateKey={updateKey}
-              localParticipant={stageLocalParticipant}
-              remoteParticipants={stageParticipants}
-              activeSpeaker={activeSpeaker}
-              emptyMessage={
-                isWebinar ? 'Waiting for the host to start presenting' : undefined
-              }
-            />
+          <LayoutManager
+            updateKey={updateKey}
+            localParticipant={stageLocalParticipant}
+            remoteParticipants={stageParticipants}
+            activeSpeaker={activeSpeaker}
+            emptyMessage={isWebinar ? "Waiting for the host to start presenting" : undefined}
+          />
           {/* Real-time Captions Overlay */}
           <CaptionOverlay room={room} />
         </div>
@@ -250,18 +263,18 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         {renderedSidebar && (
           <div
             key={renderedSidebar}
-            className={`h-full ${isPanelClosing ? 'panel-slide-out' : 'panel-slide-in'}`}
+            className={`h-full ${isPanelClosing ? "panel-slide-out" : "panel-slide-in"}`}
           >
-            {renderedSidebar === 'chat' && (
-              <ChatPanel room={room} onClose={() => toggleSidebar('chat')} />
+            {renderedSidebar === "chat" && (
+              <ChatPanel room={room} onClose={() => toggleSidebar("chat")} />
             )}
-            {renderedSidebar === 'participants' && (
-              <ParticipantsPanel room={room} onClose={() => toggleSidebar('participants')} />
+            {renderedSidebar === "participants" && (
+              <ParticipantsPanel room={room} onClose={() => toggleSidebar("participants")} />
             )}
-            {renderedSidebar === 'settings' && (
+            {renderedSidebar === "settings" && (
               <SettingsPanel
                 room={room}
-                onClose={() => toggleSidebar('settings')}
+                onClose={() => toggleSidebar("settings")}
                 isHost={isHost}
                 handleEndMeeting={handleEndMeeting}
                 setShowLeaveModal={setShowLeaveModal}
@@ -274,66 +287,78 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
       {/* Controls Bar — M3 toolbar on a tonal surface container */}
       <footer className="mb-4 py-2 px-6 flex items-center justify-center z-10">
         <div className="flex items-center gap-2 px-3 py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
-        {/* Raise Hand */}
-        <button
-          onClick={() => raiseHand(!isHandRaised)}
-          disabled={remoteParticipants.length === 0}
-          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
-            isHandRaised
-              ? 'bg-md-secondary-container text-md-on-secondary-container border-transparent'
-              : 'bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent'
-          }`}
-          title="Raise Hand"
-        >
-          <Hand className="w-5 h-5" />
-        </button>
-        {/* Mute Mic */}
-        <button
-          onClick={toggleMicrophone}
-          disabled={!canPublish}
-          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
-            audioEnabled
-              ? 'bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent'
-              : 'bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80'
-          }`}
-          title={canPublish ? (audioEnabled ? 'Mute Mic' : 'Unmute Mic') : noPublishReason}
-        >
-          {audioEnabled ? <Mic className="w-5 h-5 animate-pop-in" /> : <MicOff className="w-5 h-5 animate-pop-in" />}
-        </button>
-        {/* Mic Sound Bar Visualizer */}
-        <MicVisualizer isActive={audioEnabled} />
-        {/* Toggle Camera */}
-        <button
-          onClick={toggleCamera}
-          disabled={!canPublish}
-          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
-            videoEnabled
-              ? 'bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent'
-              : 'bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80'
-          }`}
-          title={canPublish ? (videoEnabled ? 'Stop Camera' : 'Start Camera') : noPublishReason}
-        >
-          {videoEnabled ? <VideoIcon className="w-5 h-5 animate-pop-in" /> : <VideoOff className="w-5 h-5 animate-pop-in" />}
-        </button>
-        {/* Screen Share */}
-        <button
-          onClick={toggleScreenShare}
-          disabled={!canPublish || remoteParticipants.length === 0}
-          className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
-            isScreenSharing
-              ? 'bg-md-secondary-container text-md-on-secondary-container border-transparent'
-              : 'bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent'
-          }`}
-          title={
-            canPublish
-              ? isScreenSharing
-                ? 'Stop Screen Share'
-                : 'Share Screen'
-              : noPublishReason
-          }
-        >
-          {isScreenSharing ? <MonitorOff className="w-5 h-5 animate-pop-in" /> : <Monitor className="w-5 h-5 animate-pop-in" />}
-        </button>
+          {/* Raise Hand */}
+          <button
+            onClick={() => raiseHand(!isHandRaised)}
+            disabled={remoteParticipants.length === 0}
+            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+              isHandRaised
+                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+            }`}
+            title="Raise Hand"
+          >
+            <Hand className="w-5 h-5" />
+          </button>
+          {/* Mute Mic */}
+          <button
+            onClick={toggleMicrophone}
+            disabled={!canPublish}
+            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+              audioEnabled
+                ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+                : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
+            }`}
+            title={canPublish ? (audioEnabled ? "Mute Mic" : "Unmute Mic") : noPublishReason}
+          >
+            {audioEnabled ? (
+              <Mic className="w-5 h-5 animate-pop-in" />
+            ) : (
+              <MicOff className="w-5 h-5 animate-pop-in" />
+            )}
+          </button>
+          {/* Mic Sound Bar Visualizer */}
+          <MicVisualizer isActive={audioEnabled} />
+          {/* Toggle Camera */}
+          <button
+            onClick={toggleCamera}
+            disabled={!canPublish}
+            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+              videoEnabled
+                ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+                : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
+            }`}
+            title={canPublish ? (videoEnabled ? "Stop Camera" : "Start Camera") : noPublishReason}
+          >
+            {videoEnabled ? (
+              <VideoIcon className="w-5 h-5 animate-pop-in" />
+            ) : (
+              <VideoOff className="w-5 h-5 animate-pop-in" />
+            )}
+          </button>
+          {/* Screen Share */}
+          <button
+            onClick={toggleScreenShare}
+            disabled={!canPublish || remoteParticipants.length === 0}
+            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+              isScreenSharing
+                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+            }`}
+            title={
+              canPublish
+                ? isScreenSharing
+                  ? "Stop Screen Share"
+                  : "Share Screen"
+                : noPublishReason
+            }
+          >
+            {isScreenSharing ? (
+              <MonitorOff className="w-5 h-5 animate-pop-in" />
+            ) : (
+              <Monitor className="w-5 h-5 animate-pop-in" />
+            )}
+          </button>
         </div>
       </footer>
 
@@ -342,7 +367,8 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full border border-md-outline-variant/60 text-[11px] text-md-on-surface-variant flex items-center gap-2 animate-fade-in-up">
           <MicOff className="w-3.5 h-3.5 text-md-primary" />
           <span>
-            You&apos;re attending as a viewer. Microphone, camera, and screen share need host permission.
+            You&apos;re attending as a viewer. Microphone, camera, and screen share need host
+            permission.
           </span>
         </div>
       )}
@@ -354,7 +380,6 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           onCancel={() => setShowLeaveModal(false)}
         />
       )}
-
     </div>
   );
 }
