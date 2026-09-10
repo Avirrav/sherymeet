@@ -13,6 +13,19 @@ import { deleteRoom } from "../livekit/delete-room";
 import { stopEgress } from "../livekit/egress";
 import { RecordingDao } from "../../dao/recording-dao";
 import { dbConnect } from "../../utils/db-connect";
+export interface PublicWebinarDetails {
+  roomId: string;
+  roomCode: string;
+  status: StatusType;
+  type: ConferenceRoomType;
+  isRecording: boolean;
+  hasPasscode: boolean;
+  startedAt: Date | null;
+  endedAt: Date | null;
+}
+export interface EndWebinarOptions {
+  roomId: string;
+}
 
 export function generateWebinarId(): string {
   return ulid();
@@ -32,6 +45,7 @@ export async function createInstantWebinar(
   isRecording: boolean,
   isTranscription: boolean,
 ): Promise<Partial<ConferenceRoom>> {
+  await dbConnect();
   let hashedPasscode = null;
   const salt = await bcrypt.genSalt(10);
   hashedPasscode = await bcrypt.hash(passcode, salt);
@@ -65,17 +79,6 @@ export async function createInstantWebinar(
   throw new ApiError("Failed to create webinar after multiple attempts", 500);
 }
 
-export interface PublicWebinarDetails {
-  roomId: string;
-  roomCode: string;
-  status: StatusType;
-  type: ConferenceRoomType;
-  isRecording: boolean;
-  hasPasscode: boolean;
-  startedAt: Date | null;
-  endedAt: Date | null;
-}
-
 export async function getWebinarDetails(roomId: string): Promise<PublicWebinarDetails> {
   const webinar = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
   if (!webinar) {
@@ -91,10 +94,6 @@ export async function getWebinarDetails(roomId: string): Promise<PublicWebinarDe
     startedAt: webinar.startedAt,
     endedAt: webinar.endedAt,
   };
-}
-
-export interface EndWebinarOptions {
-  roomId: string;
 }
 
 export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConferenceRoomDocument> {
