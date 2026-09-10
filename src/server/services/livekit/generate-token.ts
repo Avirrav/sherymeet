@@ -14,7 +14,7 @@ interface GenerateTokenOptions {
 
 export async function generateToken(options: GenerateTokenOptions): Promise<string> {
   const { roomId, participant } = options;
-  const conferenceRoom = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const conferenceRoom = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!conferenceRoom) {
     throw new ApiError(`Meet not found for roomId: ${roomId}. Cannot generate token.`, 404);
   }

@@ -7,7 +7,7 @@ import { ApiError } from "../../utils/api-helper";
 import { dbConnect } from "../../utils/db-connect";
 import { logger } from "../../utils/logger";
 import { config } from "../../utils/config";
-import { StatusType, IConferenceRoomDocument } from "@/server/types/conferenceroom.types";
+import { StatusType, IConferenceRoom } from "@/server/types/conferenceroom.types";
 
 export interface EndSessionOptions {
   roomId: string;
@@ -34,7 +34,7 @@ export interface PublicMeetDetails {
   endedAt: Date | null;
 }
 
-export function toPublicMeetDetails(room: IConferenceRoomDocument): PublicMeetDetails {
+export function toPublicMeetDetails(room: IConferenceRoom): PublicMeetDetails {
   return {
     roomId: room.roomId,
     roomCode: room.roomCode,
@@ -47,10 +47,10 @@ export function toPublicMeetDetails(room: IConferenceRoomDocument): PublicMeetDe
   };
 }
 
-export async function endSession({ roomId }: EndSessionOptions): Promise<IConferenceRoomDocument> {
+export async function endSession({ roomId }: EndSessionOptions): Promise<IConferenceRoom> {
   await dbConnect();
   // 1. Fetch conference room
-  const conferenceRoom = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const conferenceRoom = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!conferenceRoom) {
     throw new ApiError("Meeting not found", 404);
   }
@@ -98,12 +98,10 @@ export async function endSession({ roomId }: EndSessionOptions): Promise<IConfer
   return endedConferenceRoom;
 }
 
-export async function startSession({
-  roomId,
-}: StartSessionOptions): Promise<IConferenceRoomDocument> {
+export async function startSession({ roomId }: StartSessionOptions): Promise<IConferenceRoom> {
   await dbConnect();
 
-  const conferenceRoom = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const conferenceRoom = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!conferenceRoom) {
     throw new ApiError("Meeting not found", 404);
   }
@@ -121,7 +119,7 @@ export async function startSession({
   if (!startedConferenceRoom) {
     // Lost a race with a concurrent start — re-fetch and return the
     // now-active room rather than erroring.
-    const current = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+    const current = await ConferenceRoomDao.getConferenceRoom({ roomId });
     if (current?.status === StatusType.Active) {
       return current;
     }
@@ -156,13 +154,11 @@ export async function startSession({
   return startedConferenceRoom;
 }
 
-export async function getSessionDetails({
-  roomId,
-}: GetSessionOptions): Promise<IConferenceRoomDocument> {
+export async function getSessionDetails({ roomId }: GetSessionOptions): Promise<IConferenceRoom> {
   if (!roomId) {
     throw new ApiError("Room ID is required", 400);
   }
-  const sessionDetails = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const sessionDetails = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!sessionDetails) {
     throw new ApiError("Meeting not found", 404);
   }

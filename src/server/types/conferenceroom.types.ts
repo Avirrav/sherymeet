@@ -10,7 +10,7 @@ export enum StatusType {
   Ended = "ended",
 }
 
-export interface ConferenceRoom {
+export interface IConferenceRoom {
   roomId: string;
   roomCode: string;
   status: StatusType;
@@ -21,7 +21,6 @@ export interface ConferenceRoom {
   isRecording: boolean;
   isTranscription: boolean;
 }
-
 export interface IConferenceRoomDocument extends Document {
   roomId: string;
   roomCode: string;

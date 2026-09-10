@@ -5,8 +5,8 @@ import { ulid } from "ulid";
 import {
   StatusType,
   ConferenceRoomType,
-  ConferenceRoom,
   IConferenceRoomDocument,
+  IConferenceRoom,
 } from "@/server/types/conferenceroom.types";
 import { logger } from "@/server/utils/logger";
 import { deleteRoom } from "../livekit/delete-room";
@@ -44,7 +44,7 @@ export async function createInstantWebinar(
   passcode: string,
   isRecording: boolean,
   isTranscription: boolean,
-): Promise<Partial<ConferenceRoom>> {
+): Promise<Partial<IConferenceRoom>> {
   await dbConnect();
   let hashedPasscode = null;
   const salt = await bcrypt.genSalt(10);
@@ -80,7 +80,7 @@ export async function createInstantWebinar(
 }
 
 export async function getWebinarDetails(roomId: string): Promise<PublicWebinarDetails> {
-  const webinar = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const webinar = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!webinar) {
     throw new ApiError("Webinar not found", 404);
   }
@@ -96,10 +96,10 @@ export async function getWebinarDetails(roomId: string): Promise<PublicWebinarDe
   };
 }
 
-export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConferenceRoomDocument> {
+export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConferenceRoom> {
   await dbConnect();
   // 1. Fetch conference room
-  const webinar = await ConferenceRoomDao.getConferenceRoomByRoomId(roomId);
+  const webinar = await ConferenceRoomDao.getConferenceRoom({ roomId });
   if (!webinar) {
     throw new ApiError("Meeting not found", 404);
   }

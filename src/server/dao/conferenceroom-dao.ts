@@ -1,9 +1,10 @@
+import { QueryFilter, SortOrder } from "mongoose";
 import { dbConnect } from "@/server/utils/db-connect";
 import ConferenceRoom from "@/server/models/conferenceroom-model";
 import {
   StatusType,
   ConferenceRoomType,
-  ConferenceRoom as IConferenceRoom,
+  IConferenceRoom,
   IConferenceRoomDocument,
 } from "@/server/types/conferenceroom.types";
 
@@ -57,12 +58,16 @@ export class ConferenceRoomDao {
     );
   }
 
-  /**
-   * Retrieves a conference room record by its room ID.
-   */
-  static async getConferenceRoomByRoomId(roomId: string): Promise<IConferenceRoomDocument | null> {
+  static async getConferenceRoom(
+    filter: QueryFilter<IConferenceRoom>,
+    select?: string | string[],
+  ): Promise<IConferenceRoom | null> {
     await dbConnect();
-    return await ConferenceRoom.findOne({ roomId });
+    let query = ConferenceRoom.findOne(filter).select("-createdAt -updatedAt");
+    if (select) {
+      query = query.select(select);
+    }
+    return await query.lean<IConferenceRoom>();
   }
 
   /**
