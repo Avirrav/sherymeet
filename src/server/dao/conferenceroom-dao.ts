@@ -16,6 +16,7 @@ export interface ICreateConferenceRoomInput {
   endedAt?: Date | null;
   passcode?: string | null;
   isRecording?: boolean;
+  isTranscription?: boolean;
 }
 
 export class ConferenceRoomDao {

@@ -30,6 +30,7 @@ function isDuplicateKeyError(err: unknown): boolean {
 export async function createInstantWebinar(
   passcode: string,
   isRecording: boolean,
+  isTranscription: boolean,
 ): Promise<Partial<ConferenceRoom>> {
   let hashedPasscode = null;
   const salt = await bcrypt.genSalt(10);
@@ -47,6 +48,7 @@ export async function createInstantWebinar(
         endedAt: null,
         passcode: hashedPasscode,
         isRecording: isRecording,
+        isTranscription: isTranscription,
       });
       if (webinar) {
         return webinar;
@@ -60,18 +62,9 @@ export async function createInstantWebinar(
       throw err;
     }
   }
-  // Unreachable in practice — the loop above always returns or throws — but
-  // TS can't prove that from a for-loop's control flow, so this satisfies
-  // both the compiler and defends against a future edit breaking that
-  // invariant silently.
   throw new ApiError("Failed to create webinar after multiple attempts", 500);
 }
 
-/**
- * Public shape of a webinar: excludes the bcrypt passcode hash and other
- * internal Mongo fields — same sanitization convention the old
- * toPublicMeetDetails used before the ConferenceRoom rename.
- */
 export interface PublicWebinarDetails {
   roomId: string;
   roomCode: string;

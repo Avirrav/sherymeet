@@ -17,11 +17,14 @@ import { config } from "@/server/utils/config";
 // POST /api/private/meet - Generates room and returns two tokens (Host and Participant)
 export async function createWebinarHandler(request: AuthenticatedRequest) {
   try {
-    const { passcode, isRecording } = request.validatedBody as z.infer<typeof createWebinarSchema>;
+    const { passcode, isRecording, isTranscription } = request.validatedBody as z.infer<
+      typeof createWebinarSchema
+    >;
     const host = request.client as IApiClient;
     const canRecord = !!(isRecording && request.client?.allowRecording);
+    const canTranscription = !!(isTranscription && request.client?.allowTranscription);
     // Call service to generate room code and save in MongoDB
-    const webinar = await createInstantWebinar(passcode, canRecord);
+    const webinar = await createInstantWebinar(passcode, canRecord, canTranscription);
     if (!webinar || !webinar.roomId) {
       throw new ApiError("Failed to create webinar", 500);
     }

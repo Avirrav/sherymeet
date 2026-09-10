@@ -15,6 +15,7 @@ const ApiClientSchema = new Schema<IApiClient>(
     previousSecretVersion: { type: Number },
     allowedDomains: { type: [String], default: [] },
     allowRecording: { type: Boolean, required: true, default: false },
+    allowTranscription: { type: Boolean, required: true, default: false },
     status: { type: String, enum: ["active", "suspended"], default: "active" },
     rateLimit: { type: Number, required: true, default: 100 }, // requests/minute
     burstLimit: { type: Number, required: true, default: 20 }, // requests/10 seconds

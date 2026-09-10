@@ -2,7 +2,7 @@ import { Document, Types } from "mongoose";
 
 export enum ConferenceRoomType {
   Webinar = "webinar",
-  Meeting = "meeting",
+  Meeting = "meet",
 }
 export enum StatusType {
   Scheduled = "scheduled",
@@ -19,12 +19,9 @@ export interface ConferenceRoom {
   endedAt: Date | null;
   passcode: string | null;
   isRecording: boolean;
+  isTranscription: boolean;
 }
 
-// IConferenceRoomDocument — the full Mongoose document returned by
-// reads/updates (ConferenceRoomDao.getConferenceRoomByRoomId/startConferenceRoom/
-// endConferenceRoom), as opposed to `ConferenceRoom` above which is the plain
-// create-payload/sanitized shape.
 export interface IConferenceRoomDocument extends Document {
   roomId: string;
   roomCode: string;
@@ -34,6 +31,7 @@ export interface IConferenceRoomDocument extends Document {
   endedAt: Date | null;
   passcode: string | null;
   isRecording: boolean;
+  isTranscription: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

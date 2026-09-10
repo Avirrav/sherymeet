@@ -9,7 +9,6 @@ import { ApiError } from "@/server/utils/api-helper";
 
 interface GenerateTokenOptions {
   roomId: string;
-  metadata?: string;
   participant: IParticipant;
 }
 
