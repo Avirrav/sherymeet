@@ -7,7 +7,7 @@ export const createWebinarSchema = z.object({
 });
 
 export const endWebinarSchema = z.object({
-  roomId: z.string().min(1, "Room ID is required"),
+  webinarId: z.string().min(1, "Room ID is required"),
 });
 
 export const createRegistrantSchema = z.object({

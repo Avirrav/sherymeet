@@ -13,8 +13,8 @@ import { validateBodyMiddleware } from "@/server/middleware/validate-body-middle
 
 export async function endWebinarHandler(request: AuthenticatedRequest) {
   try {
-    const { roomId } = request.validatedBody as z.infer<typeof endWebinarSchema>;
-    const meet = await endWebinar({ roomId: roomId });
+    const { webinarId } = request.validatedBody as z.infer<typeof endWebinarSchema>;
+    const meet = await endWebinar({ roomId: webinarId });
     return ApiResponse.success({ meet }, "Meeting ended successfully.");
   } catch (error) {
     return ApiResponse.fromError(error, "Failed to end meeting");
