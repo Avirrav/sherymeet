@@ -24,13 +24,6 @@ function isDuplicateKeyError(err: unknown): boolean {
   );
 }
 
-/**
- * Pulls `webinarId` out of the URL path directly instead of a route-context
- * `{ params }` argument: runMiddlewares() (run-middlewares.ts) only forwards
- * the request itself to middlewares/handler, not Next's second route-context
- * parameter, so `[webinarId]` never reaches the handler through the normal
- * dynamic-segment mechanism. Path shape: /api/v1/webinars/{webinarId}/registrants.
- */
 function getWebinarIdFromPath(request: AuthenticatedRequest): string | null {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean);
   const index = segments.indexOf("registrants");
@@ -52,7 +45,7 @@ export async function createRegistrantHandler(request: AuthenticatedRequest) {
     const { firstName, lastName, email } = request.validatedBody as z.infer<
       typeof createRegistrantSchema
     >;
-    const webinar = await ConferenceRoomDao.getConferenceRoomByRoomId(webinarId);
+    const webinar = await ConferenceRoomDao.getConferenceRoom({ roomId: webinarId }, "_id status");
     if (!webinar) {
       throw new ApiError("Webinar not found", 404);
     }
