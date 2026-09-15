@@ -29,6 +29,7 @@ export interface PublicMeetDetails {
   status: StatusType;
   type: string;
   isRecording: boolean;
+  isTranscription: boolean;
   hasPasscode: boolean;
   startedAt: Date | null;
   endedAt: Date | null;
@@ -41,6 +42,7 @@ export function toPublicMeetDetails(room: IConferenceRoom): PublicMeetDetails {
     status: room.status,
     type: room.type,
     isRecording: room.isRecording,
+    isTranscription: room.isTranscription,
     hasPasscode: Boolean(room.passcode),
     startedAt: room.startedAt,
     endedAt: room.endedAt,

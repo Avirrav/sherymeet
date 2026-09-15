@@ -7,6 +7,7 @@ export interface MeetDetails {
   status: "scheduled" | "active" | "ended";
   type: "webinar" | "meet";
   isRecording: boolean;
+  isTranscription: boolean;
   hasPasscode: boolean;
   startedAt: string | null;
   endedAt: string | null;

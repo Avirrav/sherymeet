@@ -57,8 +57,7 @@ function downsampleBuffer(
       accum += buffer[i];
       count++;
     }
-    result[offsetResult] =
-      Math.min(1, Math.max(-1, accum / (count || 1))) * 0x7fff;
+    result[offsetResult] = Math.min(1, Math.max(-1, accum / (count || 1))) * 0x7fff;
     offsetResult++;
     offsetBuffer = nextOffsetBuffer;
   }
@@ -130,8 +129,9 @@ function toArrayBufferView(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 export function useTranscribe(room: Room | null) {
-  const { captionsEnabled, setTranscription, transcriptions } =
+  const { captionsEnabled, meetDetails, setTranscription, transcriptions, toggleCaptions } =
     useMeetingStore();
+  const transcriptionAllowed = meetDetails?.isTranscription === true;
 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -202,12 +202,12 @@ export function useTranscribe(room: Room | null) {
   }, [room, setTranscription]);
 
   const startTranscription = useCallback(async () => {
-    if (!room || !captionsEnabled) return;
+    if (!room || !captionsEnabled || !transcriptionAllowed) return;
 
     // Fetch the local participant's audio track
-    const localAudioPub = Array.from(
-      room.localParticipant.audioTrackPublications.values(),
-    ).find((pub) => pub.track);
+    const localAudioPub = Array.from(room.localParticipant.audioTrackPublications.values()).find(
+      (pub) => pub.track,
+    );
     const audioTrack = localAudioPub?.track;
 
     if (!audioTrack) {
@@ -266,11 +266,7 @@ export function useTranscribe(room: Room | null) {
             if (wsRef.current?.readyState !== WebSocket.OPEN) return;
 
             const inputBuffer = e.inputBuffer.getChannelData(0);
-            const downsampled = downsampleBuffer(
-              inputBuffer,
-              audioCtx.sampleRate,
-              16000,
-            );
+            const downsampled = downsampleBuffer(inputBuffer, audioCtx.sampleRate, 16000);
 
             // Frame inside EventStream and send
             const pcmBytes = new Uint8Array(downsampled.buffer);
@@ -279,10 +275,7 @@ export function useTranscribe(room: Room | null) {
           };
         } catch (unknownErr) {
           const err = toAppError(unknownErr);
-          console.error(
-            "[useTranscribe] Audio processing setup failed:",
-            err.message,
-          );
+          console.error("[useTranscribe] Audio processing setup failed:", err.message);
           toast.error("Failed to configure audio context downsampling");
           stopTranscription();
         }
@@ -351,6 +344,7 @@ export function useTranscribe(room: Room | null) {
   }, [
     room,
     captionsEnabled,
+    transcriptionAllowed,
     setTranscription,
     broadcastTranscription,
     stopTranscription,
@@ -363,10 +357,13 @@ export function useTranscribe(room: Room | null) {
     // This prevents cascading renders and aligns with React 19 standards.
     Promise.resolve().then(() => {
       if (!active) return;
-      if (captionsEnabled) {
+      if (captionsEnabled && transcriptionAllowed) {
         startTranscription();
       } else {
         stopTranscription();
+        if (captionsEnabled && !transcriptionAllowed) {
+          toggleCaptions(false);
+        }
       }
     });
 
@@ -374,22 +371,25 @@ export function useTranscribe(room: Room | null) {
       active = false;
       stopTranscription();
     };
-  }, [captionsEnabled, startTranscription, stopTranscription]);
+  }, [
+    captionsEnabled,
+    transcriptionAllowed,
+    startTranscription,
+    stopTranscription,
+    toggleCaptions,
+  ]);
 
   // Synchronise remote transcription data channel packet updates
   useEffect(() => {
     if (!room) return;
 
-    const handleDataReceived = (
-      payload: Uint8Array,
-      participant?: Participant,
-    ) => {
+    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
       try {
         const textDecoder = new TextDecoder();
         const jsonStr = textDecoder.decode(payload);
         const data = JSON.parse(jsonStr);
 
-        if (data.type === "transcription") {
+        if (transcriptionAllowed && data.type === "transcription") {
           const senderIdentity = participant?.identity || data.senderIdentity;
           setTranscription(senderIdentity, data.payload.text);
         }
@@ -403,7 +403,7 @@ export function useTranscribe(room: Room | null) {
     return () => {
       room.off(RoomEvent.DataReceived, handleDataReceived);
     };
-  }, [room, setTranscription]);
+  }, [room, setTranscription, transcriptionAllowed]);
 
   return {
     isTranscribing,

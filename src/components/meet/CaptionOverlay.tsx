@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Room } from 'livekit-client';
-import { useMeetingStore } from '@/store/useMeetingStore';
+import React, { useEffect, useState } from "react";
+import { Room } from "livekit-client";
+import { useMeetingStore } from "@/store/useMeetingStore";
 
 interface CaptionOverlayProps {
   room: Room | null;
@@ -14,7 +14,8 @@ interface CaptionItem {
 }
 
 export default function CaptionOverlay({ room }: CaptionOverlayProps) {
-  const { captionsEnabled, transcriptions } = useMeetingStore();
+  const { captionsEnabled, meetDetails, transcriptions } = useMeetingStore();
+  const transcriptionAllowed = meetDetails?.isTranscription === true;
   const [activeCaptions, setActiveCaptions] = useState<Record<string, CaptionItem>>({});
 
   // Sync state when transcriptions in the store change
@@ -24,7 +25,7 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
     Promise.resolve().then(() => {
       if (!active) return;
 
-      if (!captionsEnabled) {
+      if (!captionsEnabled || !transcriptionAllowed) {
         setActiveCaptions({});
         return;
       }
@@ -32,7 +33,7 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
       const now = Date.now();
       setActiveCaptions((prev) => {
         const next = { ...prev };
-        
+
         Object.entries(transcriptions).forEach(([identity, text]) => {
           // If empty transcription, skip/delete
           if (!text.trim()) {
@@ -41,12 +42,12 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
           }
 
           const isLocal = identity === room?.localParticipant?.identity;
-          let name = 'Participant';
+          let name = "Participant";
           if (isLocal) {
-            name = 'You';
+            name = "You";
           } else {
             const remote = room?.remoteParticipants?.get(identity);
-            name = remote?.name || remote?.identity || 'Remote Participant';
+            name = remote?.name || remote?.identity || "Remote Participant";
           }
 
           // Only update if text has changed or is new, to avoid resetting duration timer
@@ -67,7 +68,7 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
     return () => {
       active = false;
     };
-  }, [transcriptions, room, captionsEnabled]);
+  }, [transcriptions, room, captionsEnabled, transcriptionAllowed]);
 
   // Periodically clean up stale captions (older than 4 seconds)
   useEffect(() => {
@@ -76,14 +77,14 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
       setActiveCaptions((prev) => {
         let changed = false;
         const next = { ...prev };
-        
+
         Object.entries(next).forEach(([identity, caption]) => {
           if (now - caption.timestamp > 4000) {
             delete next[identity];
             changed = true;
           }
         });
-        
+
         return changed ? next : prev;
       });
     }, 500);
@@ -91,7 +92,7 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
     return () => clearInterval(interval);
   }, []);
 
-  if (!captionsEnabled) return null;
+  if (!captionsEnabled || !transcriptionAllowed) return null;
 
   const captionList = Object.entries(activeCaptions);
   if (captionList.length === 0) return null;
@@ -102,7 +103,7 @@ export default function CaptionOverlay({ room }: CaptionOverlayProps) {
         <div
           key={identity}
           className="px-4 py-2.5 rounded-2xl flex flex-col gap-0.5 text-center animate-scale-in backdrop-blur-md"
-          style={{ border: '1px solid rgba(255, 255, 255, 0.08)' }}
+          style={{ border: "1px solid rgba(255, 255, 255, 0.08)" }}
         >
           <span className="text-[10px] uppercase tracking-wider font-extrabold text-md-primary">
             {caption.name}
