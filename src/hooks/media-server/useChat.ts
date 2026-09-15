@@ -1,10 +1,17 @@
-import { useCallback, useEffect } from "react";
-import { Room, RoomEvent, Participant } from "livekit-client";
+import { useCallback, useEffect, useRef } from "react";
+import { Room, RoomEvent, Participant, ConnectionState } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/types/error-types";
 
-export function useChat(room: Room | null) {
+import {
+  isReactionEmoji,
+  type MeetingReaction,
+  type ReactionEmoji,
+} from "@/components/meet/reactions";
+
+export function useChat(room: Room | null, onReaction?: (reaction: MeetingReaction) => void) {
+  const lastReactionAt = useRef(0);
   const {
     addChatMessage,
     addRaisedHand,
@@ -16,7 +23,7 @@ export function useChat(room: Room | null) {
 
   const sendData = useCallback(
     async (type: string, payload: unknown) => {
-      if (!room) return;
+      if (!room) return false;
       try {
         const encoder = new TextEncoder();
         const data = encoder.encode(
@@ -28,9 +35,11 @@ export function useChat(room: Room | null) {
           }),
         );
         await room.localParticipant.publishData(data, { reliable: true });
+        return true;
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
         console.error("Failed to send data:", err.message);
+        return false;
       }
     },
     [room],
@@ -68,15 +77,36 @@ export function useChat(room: Room | null) {
     [room, sendData, toggleHandRaise, addRaisedHand, removeRaisedHand],
   );
 
+  const sendReaction = useCallback(
+    async (emoji: ReactionEmoji) => {
+      if (
+        !room ||
+        room.state !== ConnectionState.Connected ||
+        room.localParticipant.permissions?.canPublishData === false ||
+        !isReactionEmoji(emoji) ||
+        Date.now() - lastReactionAt.current < 1000
+      )
+        return;
+      lastReactionAt.current = Date.now();
+      if (await sendData("reaction", { emoji })) {
+        onReaction?.({
+          emoji,
+          senderIdentity: room.localParticipant.identity,
+          senderName: room.localParticipant.name || "You",
+        });
+      } else {
+        toast.error("Could not send reaction. Please try again.");
+      }
+    },
+    [room, sendData, onReaction],
+  );
+
   useEffect(() => {
     if (!room) return;
 
     const decoder = new TextDecoder();
 
-    const handleDataReceived = (
-      payload: Uint8Array,
-      participant?: Participant,
-    ) => {
+    const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
       try {
         const dataStr = decoder.decode(payload);
         const data = JSON.parse(dataStr);
@@ -84,7 +114,16 @@ export function useChat(room: Room | null) {
         const senderIdentity = participant?.identity || data.senderIdentity;
         const senderName = participant?.name || data.senderName || "Anonymous";
 
-        if (data.type === "chat") {
+        if (data.type === "reaction") {
+          // Trust LiveKit's sender, not identity/name supplied in the packet.
+          if (participant && isReactionEmoji(data.payload?.emoji)) {
+            onReaction?.({
+              emoji: data.payload.emoji,
+              senderIdentity: participant.identity,
+              senderName: participant.name || "Anonymous",
+            });
+          }
+        } else if (data.type === "chat") {
           addChatMessage({
             senderName,
             senderIdentity,
@@ -109,10 +148,11 @@ export function useChat(room: Room | null) {
     return () => {
       room.off(RoomEvent.DataReceived, handleDataReceived);
     };
-  }, [room, addChatMessage, addRaisedHand, removeRaisedHand]);
+  }, [room, addChatMessage, addRaisedHand, removeRaisedHand, onReaction]);
 
   return {
     sendMessage,
+    sendReaction,
     messages: chatMessages,
     isHandRaised,
     raiseHand,

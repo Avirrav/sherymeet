@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Room } from "livekit-client";
+import { Room, ConnectionState } from "livekit-client";
 import { useParticipants } from "@/hooks/media-server/useParticipants";
 import { useScreenShare } from "@/hooks/media-server/useScreenShare";
 import { useChat } from "@/hooks/media-server/useChat";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import ChatPanel from "./ChatPanel";
+import ReactionControls from "./ReactionControls";
+import ReactionOverlay, { useReactionDisplay } from "./ReactionOverlay";
 import ParticipantsPanel from "./ParticipantsPanel";
 import SettingsPanel from "./SettingsPanel";
 import LeaveConfirmModal from "./LeaveConfirmModal";
@@ -72,7 +74,8 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   {
     /* Use Chat hook */
   }
-  const { raiseHand, isHandRaised } = useChat(room);
+  const { reactions, showReaction } = useReactionDisplay();
+  const { raiseHand, isHandRaised, sendReaction } = useChat(room, showReaction);
   {
     /* Initialize and run the auto-transcription / live captions hook */
   }
@@ -187,6 +190,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     return (
       <div className="h-screen w-screen bg-md-surface text-md-on-surface overflow-hidden relative font-sans">
         {audienceAudio}
+        <ReactionOverlay reactions={reactions} />
         <div className="w-full h-full flex overflow-hidden relative">
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <LayoutManager
@@ -206,6 +210,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   return (
     <div className="h-screen w-screen flex flex-col justify-between bg-md-surface text-md-on-surface overflow-hidden relative font-sans animate-screen-in">
       {audienceAudio}
+      <ReactionOverlay reactions={reactions} />
       <header className="px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-xs text-md-on-surface-variant font-mono">
@@ -308,6 +313,13 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
       {/* Controls Bar — M3 toolbar on a tonal surface container */}
       <footer className="mb-4 py-2 px-6 flex items-center justify-center z-10">
         <div className="flex items-center gap-2 px-3 py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
+          <ReactionControls
+            sendReaction={sendReaction}
+            disabled={
+              room.state !== ConnectionState.Connected ||
+              room.localParticipant.permissions?.canPublishData === false
+            }
+          />
           {/* Raise Hand */}
           <button
             onClick={() => raiseHand(!isHandRaised)}
