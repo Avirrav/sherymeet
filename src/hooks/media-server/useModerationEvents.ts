@@ -2,56 +2,87 @@ import { useEffect } from "react";
 import { Room, RoomEvent, Track, Participant, TrackPublication } from "livekit-client";
 import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
-import { canParticipantPublish, isCoHostOrAbove } from "@/components/meet/participant-permissions";
+import {
+  canParticipantUseMicrophone,
+  canParticipantUseCamera,
+  canParticipantShareScreen,
+} from "@/components/meet/participant-permissions";
+import { registerUnmuteRequests } from "@/components/meet/unmute-requests";
 
-export const REQUEST_UNMUTE = "sherymeet.request-unmute";
+// Permission signals and RPC requests can arrive in either order. Only wait
+// after the participant clicks Unmute; the RPC handler still replies immediately.
+function waitForMicrophonePermission(room: Room, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return Promise.resolve(false);
+  if (canParticipantUseMicrophone(room.localParticipant)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const finish = (allowed: boolean) => {
+      clearTimeout(timeout);
+      room.off(RoomEvent.ParticipantPermissionsChanged, checkPermission);
+      signal.removeEventListener("abort", abort);
+      resolve(allowed);
+    };
+    const checkPermission = () => {
+      if (canParticipantUseMicrophone(room.localParticipant)) finish(true);
+    };
+    const abort = () => finish(false);
+    const timeout = setTimeout(() => finish(false), 3000);
+    room.on(RoomEvent.ParticipantPermissionsChanged, checkPermission);
+    signal.addEventListener("abort", abort, { once: true });
+    checkPermission();
+  });
+}
 
 export function useModerationEvents(room: Room) {
   useEffect(() => {
-    let lastRequest = 0;
+    const controller = new AbortController();
     const requestToastId = `unmute:${room.name}`;
-    room.localParticipant.registerRpcMethod(REQUEST_UNMUTE, async ({ callerIdentity }) => {
-      const caller = room.remoteParticipants.get(callerIdentity);
-      if (!caller || !isCoHostOrAbove(caller)) throw new Error("Admin request required");
-      if (!canParticipantPublish(room.localParticipant))
-        throw new Error("Microphone permission required");
-      if (Date.now() - lastRequest < 10000) return "already_requested";
-      lastRequest = Date.now();
+    const unregisterUnmute = registerUnmuteRequests(room, (caller) => {
       toast.info(`${caller.name || "Host"} asks you to unmute`, {
         id: requestToastId,
         duration: 15000,
+        description: "Your microphone stays muted until you choose Unmute.",
         action: {
           label: "Unmute",
-          onClick: () => {
-            if (canParticipantPublish(room.localParticipant)) {
+          onClick: async () => {
+            const allowed = await waitForMicrophonePermission(room, controller.signal);
+            if (controller.signal.aborted) return;
+            if (allowed) {
               useMeetingStore.getState().setAudioEnabled(true);
+            } else {
+              toast.info("Microphone permission is not available yet. Ask the host to try again.");
             }
           },
         },
       });
-      return "requested";
     });
     const syncTrack = (publication: TrackPublication, participant?: Participant) => {
       if (participant && participant.identity !== room.localParticipant.identity) return;
       const state = useMeetingStore.getState();
       if (publication.source === Track.Source.Microphone)
-        state.setAudioEnabled(!publication.isMuted && !!publication.track);
+        state.setAudioEnabled(
+          canParticipantUseMicrophone(room.localParticipant) &&
+            !publication.isMuted &&
+            !!publication.track,
+        );
       if (publication.source === Track.Source.Camera)
-        state.setVideoEnabled(!publication.isMuted && !!publication.track);
+        state.setVideoEnabled(
+          canParticipantUseCamera(room.localParticipant) &&
+            !publication.isMuted &&
+            !!publication.track,
+        );
     };
     const syncPermissions = () => {
-      if (!canParticipantPublish(room.localParticipant)) {
-        const state = useMeetingStore.getState();
-        state.setAudioEnabled(false);
-        state.setVideoEnabled(false);
-        state.toggleScreenShare(false);
-      }
+      const state = useMeetingStore.getState();
+      if (!canParticipantUseMicrophone(room.localParticipant)) state.setAudioEnabled(false);
+      if (!canParticipantUseCamera(room.localParticipant)) state.setVideoEnabled(false);
+      if (!canParticipantShareScreen(room.localParticipant)) state.toggleScreenShare(false);
     };
     room.on(RoomEvent.TrackMuted, syncTrack);
     room.on(RoomEvent.TrackUnmuted, syncTrack);
     room.on(RoomEvent.ParticipantPermissionsChanged, syncPermissions);
     return () => {
-      room.localParticipant.unregisterRpcMethod(REQUEST_UNMUTE);
+      controller.abort();
+      unregisterUnmute();
       toast.dismiss(requestToastId);
       room.off(RoomEvent.TrackMuted, syncTrack);
       room.off(RoomEvent.TrackUnmuted, syncTrack);

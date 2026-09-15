@@ -3,7 +3,10 @@ import { Room, RoomEvent, ConnectionState, VideoPresets } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/types/error-types";
-import { canParticipantPublish } from "@/components/meet/participant-permissions";
+import {
+  canParticipantUseMicrophone,
+  canParticipantUseCamera,
+} from "@/components/meet/participant-permissions";
 
 interface UseRoomConnectionOptions {
   serverUrl: string;
@@ -82,19 +85,15 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         setRoom(r);
         connectingRef.current = false;
 
-        // The token is the source of truth for publish rights (webinar
-        // participants get canPublish: false). Don't attempt to publish —
-        // the server would reject it — and reflect the denial in the UI.
-        if (!canParticipantPublish(r.localParticipant)) {
-          if (videoEnabled || audioEnabled) {
-            toast.info(
-              "Microphone and camera are not allowed without host permission in this meeting.",
-            );
-          }
-          setAudioEnabled(false);
-          setVideoEnabled(false);
-          return;
+        // Microphone permission can be granted without camera/panel access.
+        const canUseMicrophone = canParticipantUseMicrophone(r.localParticipant);
+        const canUseCamera = canParticipantUseCamera(r.localParticipant);
+        if ((!canUseCamera && videoEnabled) || (!canUseMicrophone && audioEnabled)) {
+          toast.info("Some media controls need host permission in this meeting.");
         }
+        if (!canUseMicrophone) setAudioEnabled(false);
+        if (!canUseCamera) setVideoEnabled(false);
+        if (!canUseMicrophone && !canUseCamera) return;
 
         // Wait a short moment for any Pre-Join preview tracks to fully release their media handles
         await new Promise((resolve) => setTimeout(resolve, 400));
@@ -107,7 +106,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         }
 
         // Publish camera track if enabled
-        if (videoEnabled && isMediaSupported) {
+        if (videoEnabled && canUseCamera && isMediaSupported) {
           let success = false;
           try {
             console.log("Publishing camera track in HD quality...");
@@ -167,7 +166,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         }
 
         // Publish microphone track if enabled
-        if (audioEnabled && isMediaSupported) {
+        if (audioEnabled && canUseMicrophone && isMediaSupported) {
           let success = false;
           try {
             console.log("Publishing microphone track...");
@@ -266,7 +265,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
     // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
-    if (!canParticipantPublish(room.localParticipant)) return;
+    if (!canParticipantUseCamera(room.localParticipant)) return;
 
     let active = true;
 
@@ -334,7 +333,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
     // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
-    if (!canParticipantPublish(room.localParticipant)) return;
+    if (!canParticipantUseMicrophone(room.localParticipant)) return;
 
     let active = true;
 

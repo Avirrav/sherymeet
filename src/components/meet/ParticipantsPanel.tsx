@@ -18,7 +18,7 @@ import { Room, Participant } from "livekit-client";
 import { useParticipants } from "@/hooks/media-server/useParticipants";
 import { useConnectionQuality } from "@/hooks/media-server/useConnectionQuality";
 import { useMeetingStore } from "@/store/useMeetingStore";
-import { getParticipantRoleLabel } from "./participant-permissions";
+import { getParticipantRoleLabel, isCoHostOrAbove } from "./participant-permissions";
 
 interface ParticipantsPanelProps {
   room: Room;
@@ -29,6 +29,8 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   const { localParticipant, remoteParticipants } = useParticipants(room);
   const qualities = useConnectionQuality(room);
   const raisedHands = useMeetingStore((state) => state.raisedHands);
+
+  if (!isCoHostOrAbove(localParticipant)) return null;
 
   const allParticipants = [...(localParticipant ? [localParticipant] : []), ...remoteParticipants];
 

@@ -61,6 +61,6 @@ export async function refreshRoomToken(
       participant: { name: member.name, email: member.email, role: member.role },
     }),
   });
-  at.addGrant(participantGrants(roomId, member.role, webinar));
+  at.addGrant(participantGrants(roomId, member.role, webinar, member.microphoneAllowed));
   return at.toJwt();
 }

@@ -34,7 +34,7 @@ export function getParticipantRoleLabel(participant: Participant | null): string
   return ROLE_LABELS[getParticipantRole(participant)];
 }
 
-/** Hosts and co-hosts: the only roles that can publish in a webinar. */
+/** Hosts and co-hosts can moderate other participants. */
 export function isCoHostOrAbove(participant: Participant | null): boolean {
   return (
     ParticipantRoleHierarchy[getParticipantRole(participant)] >=
@@ -59,11 +59,32 @@ export function canParticipantPublish(participant: Participant | null): boolean 
   return participant?.permissions?.canPublish !== false;
 }
 
-export function canParticipantShareScreen(participant: Participant | null): boolean {
+function canParticipantPublishSource(
+  participant: Participant | null,
+  source: Track.Source,
+): boolean {
   const sources = participant?.permissions?.canPublishSources;
   return (
     canParticipantPublish(participant) &&
-    (!sources?.length ||
-      sources.some((source) => Track.sourceFromProto(source) === Track.Source.ScreenShare))
+    (!sources?.length || sources.some((allowed) => Track.sourceFromProto(allowed) === source))
+  );
+}
+
+export function canParticipantUseMicrophone(participant: Participant | null): boolean {
+  return canParticipantPublishSource(participant, Track.Source.Microphone);
+}
+
+export function canParticipantUseCamera(participant: Participant | null): boolean {
+  return canParticipantPublishSource(participant, Track.Source.Camera);
+}
+
+export function canParticipantShareScreen(participant: Participant | null): boolean {
+  return canParticipantPublishSource(participant, Track.Source.ScreenShare);
+}
+
+/** Speaking permission does not make an audience member a webinar panelist. */
+export function isPanelParticipant(participant: Participant | null): boolean {
+  return (
+    isCoHostOrAbove(participant) || getParticipantRole(participant) === ParticipantRole.PANELIST
   );
 }

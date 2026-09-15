@@ -16,11 +16,15 @@ import { useModerationEvents } from "@/hooks/media-server/useModerationEvents";
 import { useTranscribe } from "@/hooks/media-server/useTranscribe";
 import CaptionOverlay from "./CaptionOverlay";
 import MicVisualizer from "./MicVisualizer";
+import RemoteParticipantAudio from "./RemoteParticipantAudio";
 import { emitEmbedEvent, isEmbedded } from "./embed-bridge";
 import {
-  canParticipantPublish,
+  canParticipantUseMicrophone,
+  canParticipantUseCamera,
+  isPanelParticipant,
   canParticipantShareScreen,
   isHostRole,
+  isCoHostOrAbove,
 } from "./participant-permissions";
 
 import {
@@ -111,24 +115,31 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     /* Role comes from the token metadata, never from "is this me" */
   }
   const isHost = isHostRole(room.localParticipant);
+  const isAdmin = isCoHostOrAbove(room.localParticipant);
 
-  // Publish rights come from the LiveKit token (webinar attendees are issued
-  // canPublish: false). The server already rejects their publishes; disabling
-  // the controls here just stops users from trying.
-  const canPublish = canParticipantPublish(room.localParticipant);
+  // Each media source has its own grant. Speaking does not require panel membership.
+  const canUseMicrophone = canParticipantUseMicrophone(room.localParticipant);
+  const canUseCamera = canParticipantUseCamera(room.localParticipant);
+  const canShareScreen = canParticipantShareScreen(room.localParticipant);
   const isWebinar = meetDetails?.type === "webinar";
   const noPublishReason = isWebinar
     ? "Not allowed without host permission in this webinar"
     : "Not allowed without host permission";
 
-  // In a webinar publishers (including panelists) appear on stage. Viewers never get
-  // a tile (they appear in the participants panel instead), and their screen
-  // shares are not staged either.
+  // Only hosts, co-hosts, and panelists have webinar tiles. Audience members
+  // with microphone access are heard through separate audio-only elements.
   const stageParticipants = isWebinar
-    ? remoteParticipants.filter((p) => canParticipantPublish(p))
+    ? remoteParticipants.filter(isPanelParticipant)
     : remoteParticipants;
   const stageLocalParticipant =
-    isWebinar && !canParticipantPublish(localParticipant) ? null : localParticipant;
+    isWebinar && !isPanelParticipant(localParticipant) ? null : localParticipant;
+  const audienceAudio = isWebinar
+    ? remoteParticipants
+        .filter((participant) => !isPanelParticipant(participant))
+        .map((participant) => (
+          <RemoteParticipantAudio key={participant.identity} participant={participant} />
+        ))
+    : null;
   {
     /*Handle LeaveConfirm*/
   }
@@ -175,6 +186,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
   if (isRecorder) {
     return (
       <div className="h-screen w-screen bg-md-surface text-md-on-surface overflow-hidden relative font-sans">
+        {audienceAudio}
         <div className="w-full h-full flex overflow-hidden relative">
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <LayoutManager
@@ -193,6 +205,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
 
   return (
     <div className="h-screen w-screen flex flex-col justify-between bg-md-surface text-md-on-surface overflow-hidden relative font-sans animate-screen-in">
+      {audienceAudio}
       <header className="px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-xs text-md-on-surface-variant font-mono">
@@ -206,17 +219,19 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
         </div>
         <div className="flex items-center gap-2">
           {/* Participants Sidebar Toggle */}
-          <button
-            onClick={() => toggleSidebar("participants")}
-            className={`control-btn p-3.5 rounded-full border ${
-              activeSidebar === "participants"
-                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
-                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
-            }`}
-            title="Participants Panel"
-          >
-            <Users className="w-5 h-5" />
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => toggleSidebar("participants")}
+              className={`control-btn p-3.5 rounded-full border ${
+                activeSidebar === "participants"
+                  ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                  : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
+              }`}
+              title="Participants Panel"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Chat Sidebar Toggle */}
           <button
@@ -266,7 +281,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           <CaptionOverlay room={room} />
         </div>
         {/* Sidebar panel (stays mounted during the slide-out animation) */}
-        {renderedSidebar && (
+        {renderedSidebar && (renderedSidebar !== "participants" || isAdmin) && (
           <div
             key={renderedSidebar}
             className={`h-full ${isPanelClosing ? "panel-slide-out" : "panel-slide-in"}`}
@@ -274,7 +289,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
             {renderedSidebar === "chat" && (
               <ChatPanel room={room} onClose={() => toggleSidebar("chat")} />
             )}
-            {renderedSidebar === "participants" && (
+            {renderedSidebar === "participants" && isAdmin && (
               <ParticipantsPanel room={room} onClose={() => toggleSidebar("participants")} />
             )}
             {renderedSidebar === "settings" && (
@@ -309,13 +324,13 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Mute Mic */}
           <button
             onClick={toggleMicrophone}
-            disabled={!canPublish}
+            disabled={!canUseMicrophone}
             className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               audioEnabled
                 ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
                 : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
             }`}
-            title={canPublish ? (audioEnabled ? "Mute Mic" : "Unmute Mic") : noPublishReason}
+            title={canUseMicrophone ? (audioEnabled ? "Mute Mic" : "Unmute Mic") : noPublishReason}
           >
             {audioEnabled ? (
               <Mic className="w-5 h-5 animate-pop-in" />
@@ -328,13 +343,13 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Toggle Camera */}
           <button
             onClick={toggleCamera}
-            disabled={!canPublish}
+            disabled={!canUseCamera}
             className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               videoEnabled
                 ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
                 : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
             }`}
-            title={canPublish ? (videoEnabled ? "Stop Camera" : "Start Camera") : noPublishReason}
+            title={canUseCamera ? (videoEnabled ? "Stop Camera" : "Start Camera") : noPublishReason}
           >
             {videoEnabled ? (
               <VideoIcon className="w-5 h-5 animate-pop-in" />
@@ -345,16 +360,14 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Screen Share */}
           <button
             onClick={toggleScreenShare}
-            disabled={
-              !canParticipantShareScreen(localParticipant) || remoteParticipants.length === 0
-            }
+            disabled={!canShareScreen || remoteParticipants.length === 0}
             className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               isScreenSharing
                 ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
                 : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
             }`}
             title={
-              canPublish
+              canShareScreen
                 ? isScreenSharing
                   ? "Stop Screen Share"
                   : "Share Screen"
@@ -371,7 +384,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
       </footer>
 
       {/* Attendee notice: publishing is denied by the meeting token */}
-      {!canPublish && (
+      {!canUseMicrophone && !canUseCamera && !canShareScreen && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full border border-md-outline-variant/60 text-[11px] text-md-on-surface-variant flex items-center gap-2 animate-fade-in-up">
           <MicOff className="w-3.5 h-3.5 text-md-primary" />
           <span>

@@ -60,6 +60,13 @@ export async function generateToken({
     name: member.name,
     ttl: config.LIVEKIT_TOKEN_TTL,
   });
-  at.addGrant(participantGrants(roomId, member.role, room.type === ConferenceRoomType.Webinar));
+  at.addGrant(
+    participantGrants(
+      roomId,
+      member.role,
+      room.type === ConferenceRoomType.Webinar,
+      member.microphoneAllowed,
+    ),
+  );
   return at.toJwt();
 }

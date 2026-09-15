@@ -5,8 +5,12 @@ import { Room, Participant, Track } from "livekit-client";
 import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { ParticipantRole } from "@/types/roles";
-import { getParticipantRole, isCoHostOrAbove } from "./participant-permissions";
-import { REQUEST_UNMUTE } from "@/hooks/media-server/useModerationEvents";
+import {
+  getParticipantRole,
+  isCoHostOrAbove,
+  canParticipantUseMicrophone,
+} from "./participant-permissions";
+import { requestParticipantUnmute } from "./unmute-requests";
 
 export default function ParticipantModerationControls({
   room,
@@ -58,13 +62,33 @@ export default function ParticipantModerationControls({
   }
 
   async function requestUnmute() {
-    await room.localParticipant.performRpc({
-      destinationIdentity: participant.identity,
-      method: REQUEST_UNMUTE,
-      payload: "",
-      responseTimeout: 5,
-    });
-    toast.success("Unmute request sent");
+    // Grant only microphone access before requesting consent. The backend
+    // preserves the member's role and all role-specific media restrictions.
+    if (!canParticipantUseMicrophone(participant)) {
+      const response = await fetch(
+        `/api/server/${encodeURIComponent(room.name)}/participants/microphone`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ identity: participant.identity }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success)
+        throw new Error(result.message || "Could not allow microphone access");
+    }
+    const result = await requestParticipantUnmute(room, participant.identity);
+    if (result === "permission_required") {
+      toast.info("Unmute request sent. Microphone permission is updating.");
+    } else if (result === "already_unmuted") {
+      toast.info("This member is already unmuted");
+    } else {
+      toast.success(
+        result === "already_requested"
+          ? "An unmute request is already pending"
+          : "Unmute request sent",
+      );
+    }
   }
 
   async function changePanel() {
@@ -85,12 +109,22 @@ export default function ParticipantModerationControls({
     <div className="flex flex-wrap gap-2 mt-2">
       <button
         type="button"
-        disabled={pending || participant.permissions?.canPublish === false}
+        disabled={pending}
         className="text-xs px-2 py-1 rounded border border-md-outline-variant disabled:opacity-40"
-        onClick={() => void run(muted ? requestUnmute : mute)}
+        onClick={() => void run(requestUnmute)}
       >
-        {muted ? "Ask to unmute" : "Mute"}
+        Ask to unmute
       </button>
+      {!muted && (
+        <button
+          type="button"
+          disabled={pending}
+          className="text-xs px-2 py-1 rounded border border-md-outline-variant disabled:opacity-40"
+          onClick={() => void run(mute)}
+        >
+          Mute
+        </button>
+      )}
       {webinar && !isCoHostOrAbove(participant) && (
         <button
           type="button"
@@ -103,7 +137,7 @@ export default function ParticipantModerationControls({
       )}
       {pending && (
         <span role="status" className="text-xs">
-          Updating?
+          Updating...
         </span>
       )}
     </div>

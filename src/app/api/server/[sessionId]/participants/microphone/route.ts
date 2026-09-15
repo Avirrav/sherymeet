@@ -5,10 +5,10 @@ import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middlew
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { AuthenticatedRequest } from "@/server/types/auth.types";
 
-export async function panelHandler(request: AuthenticatedRequest) {
-  return updateParticipantAccess(request, "panel");
+export async function microphoneHandler(request: AuthenticatedRequest) {
+  return updateParticipantAccess(request, "microphone");
 }
 export const POST = runMiddlewares(
   [requestIdMiddleware, ipRateLimitMiddleware, serverApiMiddleware],
-  panelHandler,
+  microphoneHandler,
 );

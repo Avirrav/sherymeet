@@ -7,6 +7,7 @@ export interface RoomMemberRecord {
   name: string;
   email?: string;
   role: ParticipantRole;
+  microphoneAllowed?: boolean;
   lockUntil: Date;
 }
 const schema = new Schema<RoomMemberRecord>(
@@ -15,6 +16,7 @@ const schema = new Schema<RoomMemberRecord>(
     identity: { type: String, required: true },
     name: { type: String, required: true },
     email: String,
+    microphoneAllowed: { type: Boolean, default: false },
     role: { type: String, enum: Object.values(ParticipantRole), required: true },
     lockUntil: { type: Date, default: () => new Date(0) },
   },
@@ -22,6 +24,14 @@ const schema = new Schema<RoomMemberRecord>(
 );
 schema.index({ roomId: 1, identity: 1 }, { unique: true });
 schema.index({ roomId: 1, email: 1 });
+// Replace a development model compiled before the microphone permission existed.
+if (
+  process.env.NODE_ENV === "development" &&
+  mongoose.models.RoomMember &&
+  !mongoose.models.RoomMember.schema.path("microphoneAllowed")
+) {
+  delete mongoose.models.RoomMember;
+}
 export const RoomMember =
   (mongoose.models.RoomMember as mongoose.Model<RoomMemberRecord>) ||
   mongoose.model<RoomMemberRecord>("RoomMember", schema);

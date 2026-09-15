@@ -217,3 +217,125 @@ test("expired credentials cannot authorize the panel API", async () => {
   at.addGrant(participantGrants("room-a", Role.HOST, true));
   await assert.rejects(verifyRoomToken(await at.toJwt(), "room-a"));
 });
+
+test("audience microphone permission never grants panel, camera, screen share or admin rights", () => {
+  const grants = participantGrants("room-a", Role.PARTICIPANT, true, true);
+  assert.equal(grants.canPublish, true);
+  assert.equal(grants.roomAdmin, false);
+  assert.equal(grants.canUpdateOwnMetadata, false);
+  assert.deepEqual(grants.canPublishSources, [TrackSource.MICROPHONE]);
+});
+
+test("saved microphone access survives a rejoin without promoting the audience member", async () => {
+  const { refreshRoomToken } = await import("../src/server/services/livekit/refresh-room-token.ts");
+  const stub = mock.method(RoomMember, "findOne", async () => ({
+    name: "Viewer",
+    role: Role.PARTICIPANT,
+    microphoneAllowed: true,
+    lockUntil: new Date(0),
+  }));
+  try {
+    const original = await token(Role.PARTICIPANT, "room-a", "viewer");
+    const verified = await verifyRoomToken(original, "room-a");
+    const refreshed = await refreshRoomToken(original, verified, "room-a", true);
+    const claims = await new TokenVerifier("test-key", process.env.LIVEKIT_API_SECRET).verify(
+      refreshed,
+    );
+    assert.equal(claims.sub, "viewer");
+    assert.equal(JSON.parse(claims.metadata).participant.role, Role.PARTICIPANT);
+    assert.equal(claims.video.canPublish, true);
+    assert.equal(claims.video.roomAdmin, false);
+    assert.deepEqual(claims.video.canPublishSources, ["microphone"]);
+    assert.ok(claims.exp <= verified.claims.exp);
+  } finally {
+    stub.mock.restore();
+  }
+});
+
+test("microphone endpoint rejects audience and cross-room admin credentials", async () => {
+  const { microphoneHandler } =
+    await import("../src/app/api/server/[sessionId]/participants/microphone/route.ts");
+  for (const [credential, status] of [
+    [await token(Role.PARTICIPANT), 403],
+    [await token(Role.HOST, "room-b"), 401],
+  ]) {
+    const response = await microphoneHandler(
+      new NextRequest("https://app.example.test/api/server/room-a/participants/microphone", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${credential}` },
+        body: JSON.stringify({ identity: "viewer" }),
+      }),
+    );
+    assert.equal(response.status, status);
+  }
+});
+
+test("granting microphone and removing panel preserve independent audio-only audience access", async () => {
+  const { microphoneHandler } =
+    await import("../src/app/api/server/[sessionId]/participants/microphone/route.ts");
+  const { panelHandler } =
+    await import("../src/app/api/server/[sessionId]/participants/panel/route.ts");
+  const { ConferenceRoomDao } = await import("../src/server/dao/conferenceroom-dao.ts");
+  for (const kind of ["microphone", "panel"]) {
+    let storedUpdate;
+    let liveUpdate;
+    const before = {
+      name: "Viewer",
+      role: kind === "microphone" ? Role.PARTICIPANT : Role.PANELIST,
+      microphoneAllowed: kind === "panel",
+      lockUntil: new Date(0),
+    };
+    const stubs = [
+      mock.method(ConferenceRoomDao, "getConferenceRoom", async () => ({
+        type: "webinar",
+        status: "active",
+      })),
+      mock.method(RoomMember, "findOne", async (query) =>
+        query.identity === "host" ? { role: Role.HOST } : before,
+      ),
+      mock.method(RoomMember, "findOneAndUpdate", async (_query, update) => {
+        storedUpdate = update.$set;
+        return { ...before, ...update.$set };
+      }),
+      mock.method(RoomMember, "updateOne", async () => ({})),
+      mock.method(global, "fetch", async (url, options) => {
+        const body = JSON.parse(options.body);
+        if (String(url).endsWith("/UpdateParticipant")) liveUpdate = body;
+        return new Response(JSON.stringify({ identity: body.identity }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    ];
+    try {
+      const request = new NextRequest(
+        `https://app.example.test/api/server/room-a/participants/${kind}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await token()}` },
+          body: JSON.stringify(
+            kind === "microphone" ? { identity: "viewer" } : { identity: "viewer", onPanel: false },
+          ),
+        },
+      );
+      const response = await (kind === "microphone" ? microphoneHandler : panelHandler)(request);
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.data.role, Role.PARTICIPANT);
+      assert.equal(result.data.microphoneAllowed, true);
+      if (kind === "microphone") {
+        assert.equal(storedUpdate.microphoneAllowed, true);
+        assert.equal(storedUpdate.role, undefined);
+      } else {
+        assert.equal(storedUpdate.role, Role.PARTICIPANT);
+        assert.equal(storedUpdate.microphoneAllowed, undefined);
+      }
+      assert.equal(JSON.parse(liveUpdate.metadata).participant.role, Role.PARTICIPANT);
+      assert.equal(liveUpdate.permission.canPublish, true);
+      assert.deepEqual(liveUpdate.permission.canPublishSources, ["MICROPHONE"]);
+      assert.notEqual(liveUpdate.permission.canUpdateMetadata, true);
+    } finally {
+      stubs.forEach((stub) => stub.mock.restore());
+    }
+  }
+});
