@@ -3,24 +3,24 @@ import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/types/error-types";
-import { canParticipantPublish } from "@/components/meet/participant-permissions";
+import { canParticipantShareScreen } from "@/components/meet/participant-permissions";
 
 export function useScreenShare(room: Room | null) {
   const { isScreenSharing, toggleScreenShare } = useMeetingStore();
   const [screenSharePublication, setScreenSharePublication] =
     useState<LocalTrackPublication | null>(null);
   // Mirrors the token grant: webinar attendees cannot publish anything.
-  const canShare = !room || canParticipantPublish(room.localParticipant);
+  const canShare = !room || canParticipantShareScreen(room.localParticipant);
 
   const startScreenShare = useCallback(async () => {
     if (!room) return;
-    if (!canParticipantPublish(room.localParticipant)) {
+    if (!canParticipantShareScreen(room.localParticipant)) {
       toast.info("Screen sharing is not allowed without host permission in this meeting.");
       return;
     }
     try {
       const pub = await room.localParticipant.setScreenShareEnabled(true, {
-        audio: true, 
+        audio: true,
       });
       setScreenSharePublication(pub || null);
       toggleScreenShare(true);
@@ -29,10 +29,7 @@ export function useScreenShare(room: Room | null) {
       const err = toAppError(unknownErr);
       console.error("Failed to start screen share:", err);
       toggleScreenShare(false);
-      toast.error(
-        "Could not start screen sharing: " +
-          (err.message || "Permission denied"),
-      );
+      toast.error("Could not start screen sharing: " + (err.message || "Permission denied"));
     }
   }, [room, toggleScreenShare]);
 
@@ -62,29 +59,18 @@ export function useScreenShare(room: Room | null) {
   useEffect(() => {
     if (!room) return;
 
-    const handleLocalTrackUnpublished = (
-      publication: LocalTrackPublication,
-    ) => {
-      if (
-        publication.trackName === "screen_share" ||
-        publication.source === "screen_share"
-      ) {
+    const handleLocalTrackUnpublished = (publication: LocalTrackPublication) => {
+      if (publication.trackName === "screen_share" || publication.source === "screen_share") {
         setScreenSharePublication(null);
         toggleScreenShare(false);
         toast.info("Screen sharing stopped from browser");
       }
     };
 
-    room.localParticipant.on(
-      RoomEvent.LocalTrackUnpublished,
-      handleLocalTrackUnpublished,
-    );
+    room.localParticipant.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
 
     return () => {
-      room.localParticipant.off(
-        RoomEvent.LocalTrackUnpublished,
-        handleLocalTrackUnpublished,
-      );
+      room.localParticipant.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
     };
   }, [room, toggleScreenShare]);
 

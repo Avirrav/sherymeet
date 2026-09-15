@@ -129,6 +129,9 @@ export default function MeetingPageClient({
         setGateStatus("error");
         return;
       }
+      if (result.data?.token) {
+        setActiveToken(result.data.token);
+      }
       if (result.data?.meet) {
         setMeetDetails(result.data.meet);
       }
@@ -240,20 +243,38 @@ export default function MeetingPageClient({
 
   const handleJoin = useCallback(async () => {
     setConnectionStatus(true, false, null);
-    if (activeToken) {
-      const envUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-      if (!envUrl) {
-        throw new Error(
-          "NEXT_PUBLIC_LIVEKIT_URL environment variable is not defined on the client",
-        );
+    try {
+      if (activeToken) {
+        const envUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+        if (!envUrl) {
+          throw new Error(
+            "NEXT_PUBLIC_LIVEKIT_URL environment variable is not defined on the client",
+          );
+        }
+        const response = await fetch(`/api/server/${roomId}/verify-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId, token: verifyParamsRef.current.token }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success || result.data?.meetStatus !== "active") {
+          setConnectionStatus(false, false, null);
+          toast.error(result.message || "Meeting is not available");
+          return;
+        }
+        const joinToken = result.data.token || activeToken;
+        setActiveToken(joinToken);
+        setServerUrl(envUrl);
+        setMeetingInfo(roomId, joinToken);
+        setHasEntered(true);
+      } else {
+        toast.error("Token is not available, not access to join meeting.");
+        setHasEntered(false);
+        setConnectionStatus(false, false, null);
       }
-      setServerUrl(envUrl);
-      setMeetingInfo(roomId, activeToken);
-      setHasEntered(true);
-    } else {
-      toast.error("Token is not available, not access to join meeting.");
-      setHasEntered(false);
+    } catch {
       setConnectionStatus(false, false, null);
+      toast.error("Could not verify meeting access. Please try again.");
     }
   }, [activeToken, roomId, setConnectionStatus, setMeetingInfo]);
 

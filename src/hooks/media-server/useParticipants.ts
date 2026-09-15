@@ -1,12 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Room, RoomEvent, Participant, RemoteParticipant } from 'livekit-client';
-import { toast } from 'sonner';
+import { useEffect, useState, useCallback } from "react";
+import { Room, RoomEvent, Participant, RemoteParticipant } from "livekit-client";
+import { toast } from "sonner";
 
 export function useParticipants(room: Room | null) {
   const [localParticipant, setLocalParticipant] = useState(room?.localParticipant || null);
   const [remoteParticipants, setRemoteParticipants] = useState<RemoteParticipant[]>([]);
   const [activeSpeaker, setActiveSpeaker] = useState<Participant | null>(null);
-  
+
   // Forces a state refresh when track states or subscriptions change
   const [updateKey, setUpdateKey] = useState(0);
   const forceUpdate = useCallback(() => setUpdateKey((k) => k + 1), []);
@@ -73,6 +73,8 @@ export function useParticipants(room: Room | null) {
       forceUpdate();
     };
 
+    room.on(RoomEvent.ParticipantPermissionsChanged, forceUpdate);
+    room.on(RoomEvent.ParticipantMetadataChanged, forceUpdate);
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
@@ -84,6 +86,8 @@ export function useParticipants(room: Room | null) {
     room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
 
     return () => {
+      room.off(RoomEvent.ParticipantPermissionsChanged, forceUpdate);
+      room.off(RoomEvent.ParticipantMetadataChanged, forceUpdate);
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
       room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);

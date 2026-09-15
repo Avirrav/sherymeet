@@ -1,12 +1,24 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { X, Users, Mic, MicOff, Video, VideoOff, SignalHigh, SignalMedium, SignalLow, Hand } from 'lucide-react';
-import { Room, Participant } from 'livekit-client';
-import { useParticipants } from '@/hooks/media-server/useParticipants';
-import { useConnectionQuality } from '@/hooks/media-server/useConnectionQuality';
-import { useMeetingStore } from '@/store/useMeetingStore';
-import { getParticipantRoleLabel } from './participant-permissions';
+import React from "react";
+import ParticipantModerationControls from "./ParticipantModerationControls";
+import {
+  X,
+  Users,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  SignalHigh,
+  SignalMedium,
+  SignalLow,
+  Hand,
+} from "lucide-react";
+import { Room, Participant } from "livekit-client";
+import { useParticipants } from "@/hooks/media-server/useParticipants";
+import { useConnectionQuality } from "@/hooks/media-server/useConnectionQuality";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { getParticipantRoleLabel } from "./participant-permissions";
 
 interface ParticipantsPanelProps {
   room: Room;
@@ -18,18 +30,15 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   const qualities = useConnectionQuality(room);
   const raisedHands = useMeetingStore((state) => state.raisedHands);
 
-  const allParticipants = [
-    ...(localParticipant ? [localParticipant] : []),
-    ...remoteParticipants,
-  ];
+  const allParticipants = [...(localParticipant ? [localParticipant] : []), ...remoteParticipants];
 
   const renderQuality = (participant: Participant) => {
     const quality = qualities[participant.identity] || participant.connectionQuality;
-    const size = 'w-3.5 h-3.5';
-    if (quality === 'excellent' || quality === 'good') {
+    const size = "w-3.5 h-3.5";
+    if (quality === "excellent" || quality === "good") {
       return <SignalHigh className={`${size} text-green-500`} />;
     }
-    if (quality === 'poor') {
+    if (quality === "poor") {
       return <SignalLow className={`${size} text-md-error`} />;
     }
     return <SignalMedium className={`${size} text-yellow-500`} />;
@@ -37,7 +46,6 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
 
   return (
     <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/40 rounded-md-lg flex flex-col justify-between relative z-20">
-      
       {/* Header */}
       <div className="p-4 border-b border-md-outline-variant flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -70,7 +78,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
               <div className="flex items-center gap-2.5 overflow-hidden">
                 {/* Mini Avatar */}
                 <div className="w-8 h-8 rounded-full bg-md-primary/15 border border-md-primary/30 flex items-center justify-center text-md-primary font-bold text-xs flex-shrink-0">
-                  {(p.name || p.identity || 'P').charAt(0).toUpperCase()}
+                  {(p.name || p.identity || "P").charAt(0).toUpperCase()}
                 </div>
 
                 {/* Name */}
@@ -86,14 +94,13 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
                   <span className="text-[9px] text-md-on-surface-variant">
                     {getParticipantRoleLabel(p)}
                   </span>
+                  <ParticipantModerationControls room={room} participant={p} />
                 </div>
               </div>
 
               {/* Status Icons */}
               <div className="flex items-center gap-2">
-                {hasHandRaised && (
-                  <Hand className="w-3.5 h-3.5 text-md-primary animate-bounce" />
-                )}
+                {hasHandRaised && <Hand className="w-3.5 h-3.5 text-md-primary animate-bounce" />}
                 <div className="flex items-center gap-1.5 bg-md-surface border border-md-outline-variant px-2 py-1 rounded-lg">
                   {isMuted ? (
                     <MicOff className="w-3 h-3 text-md-error" />

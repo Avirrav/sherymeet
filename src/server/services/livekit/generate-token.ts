@@ -1,60 +1,65 @@
 import crypto from "crypto";
 import { AccessToken } from "livekit-server-sdk";
-import { IParticipant, ParticipantRole, ParticipantRoleHierarchy } from "@/types/roles";
-import { logger } from "@/server/utils/logger";
+import { IParticipant, ParticipantRole } from "@/types/roles";
 import { ConferenceRoomDao } from "@/server/dao/conferenceroom-dao";
 import { config } from "@/server/utils/config";
-import { ConferenceRoomType } from "@/server/types/conferenceroom.types";
+import { ConferenceRoomType, StatusType } from "@/server/types/conferenceroom.types";
 import { ApiError } from "@/server/utils/api-helper";
+import { RoomMember } from "@/server/models/room-member";
+import { dbConnect } from "@/server/utils/db-connect";
+import { participantGrants, isAdminRole } from "./participant-grants";
 
-interface GenerateTokenOptions {
+export async function generateToken({
+  roomId,
+  participant,
+}: {
   roomId: string;
   participant: IParticipant;
-}
-
-export async function generateToken(options: GenerateTokenOptions): Promise<string> {
-  const { roomId, participant } = options;
-  const conferenceRoom = await ConferenceRoomDao.getConferenceRoom({ roomId });
-  if (!conferenceRoom) {
-    throw new ApiError(`Meet not found for roomId: ${roomId}. Cannot generate token.`, 404);
+}): Promise<string> {
+  const room = await ConferenceRoomDao.getConferenceRoom({ roomId });
+  if (!room || room.status === StatusType.Ended) throw new ApiError("Meeting unavailable", 404);
+  await dbConnect();
+  const email = participant.email?.trim().toLowerCase();
+  // Only trusted server callers mint identities. Reissues for the same email
+  // retain the saved role instead of restoring obsolete audience permissions.
+  const roleFilter = isAdminRole(participant.role)
+    ? participant.role
+    : { $in: [ParticipantRole.PARTICIPANT, ParticipantRole.PANELIST] };
+  let member = email ? await RoomMember.findOne({ roomId, email, role: roleFilter }) : null;
+  if (!member) {
+    const scope = isAdminRole(participant.role) ? participant.role : "attendee";
+    const identity = email
+      ? crypto
+          .createHmac("sha256", config.LIVEKIT_API_SECRET)
+          .update(JSON.stringify([roomId, email, scope]))
+          .digest("hex")
+      : crypto.randomUUID();
+    member = await RoomMember.findOneAndUpdate(
+      { roomId, identity },
+      {
+        $setOnInsert: {
+          roomId,
+          identity,
+          name: participant.name,
+          email,
+          role: participant.role,
+        },
+      },
+      { upsert: true, new: true },
+    );
   }
-  // Generate the secure identity (crypto-random suffix avoids collisions and
-  // makes identities unguessable)
-  const identity = `${participant.name}_${crypto.randomBytes(4).toString("hex")}`;
-  // Create an AccessToken
+  if (!member) throw new ApiError("Could not create participant", 500);
+  if (member.lockUntil > new Date())
+    throw new ApiError("Permissions are changing; retry shortly", 409);
   const at = new AccessToken(config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET, {
-    identity,
+    identity: member.identity,
     metadata: JSON.stringify({
-      participant,
-      roomId: roomId,
+      participant: { name: member.name, email: member.email, role: member.role },
+      roomId,
     }),
-    name: participant.name,
+    name: member.name,
     ttl: config.LIVEKIT_TOKEN_TTL,
   });
-  const isCoHostorAbove =
-    ParticipantRoleHierarchy[participant.role] >= ParticipantRoleHierarchy[ParticipantRole.CO_HOST];
-  logger.debug(
-    `Generating token for ${participant.name} (role: ${participant.role}, isCoHostorAbove: ${isCoHostorAbove}, meetType: ${conferenceRoom.type})`,
-  );
-  // If webinar only, only co-hosts and above can publish audio/video tracks.
-  const canPublish = conferenceRoom.type === ConferenceRoomType.Webinar ? isCoHostorAbove : true;
-  if (isCoHostorAbove) {
-    at.addGrant({
-      roomJoin: true,
-      room: roomId,
-      roomAdmin: true,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
-  } else {
-    at.addGrant({
-      room: roomId,
-      roomJoin: true,
-      canPublish: canPublish,
-      canPublishData: true,
-      canSubscribe: true,
-    });
-  }
-  return await at.toJwt();
+  at.addGrant(participantGrants(roomId, member.role, room.type === ConferenceRoomType.Webinar));
+  return at.toJwt();
 }

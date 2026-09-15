@@ -1,4 +1,6 @@
 import bcrypt from "bcryptjs";
+import { refreshRoomToken } from "@/server/services/livekit/refresh-room-token";
+import { ConferenceRoomType, StatusType } from "@/server/types/conferenceroom.types";
 import { z } from "zod";
 import { ApiError, ApiResponse } from "@/server/utils/api-helper";
 import { verifyRoomToken } from "@/server/services/livekit/verify-room-token";
@@ -25,7 +27,8 @@ export async function verifyTokenHandler(request: AuthenticatedRequest) {
   try {
     const { roomId, token, password } = request.validatedBody as z.infer<typeof bodySchema>;
 
-    const { roomAdmin } = await verifyRoomToken(token, roomId);
+    const verified = await verifyRoomToken(token, roomId);
+    const { roomAdmin } = verified;
 
     const meet = await getSessionDetails({ roomId });
 
@@ -42,6 +45,15 @@ export async function verifyTokenHandler(request: AuthenticatedRequest) {
 
     return ApiResponse.success({
       valid: true,
+      token:
+        meet.status === StatusType.Ended
+          ? undefined
+          : await refreshRoomToken(
+              token,
+              verified,
+              roomId,
+              meet.type === ConferenceRoomType.Webinar,
+            ),
       roomAdmin,
       meetStatus: meet.status,
       // Full public details so the page doesn't need a second round-trip.

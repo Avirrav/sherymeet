@@ -13,6 +13,7 @@ export enum ParticipantRole {
   HOST = "host",
   CO_HOST = "co_host",
   PARTICIPANT = "participant",
+  PANELIST = "panelist",
 }
 
 export interface IParticipant {
@@ -23,6 +24,7 @@ export interface IParticipant {
 
 export const ParticipantRoleHierarchy = {
   [ParticipantRole.PARTICIPANT]: 0,
-  [ParticipantRole.CO_HOST]: 1,
-  [ParticipantRole.HOST]: 2,
+  [ParticipantRole.PANELIST]: 1,
+  [ParticipantRole.CO_HOST]: 2,
+  [ParticipantRole.HOST]: 3,
 } as const;

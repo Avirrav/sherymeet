@@ -12,11 +12,16 @@ import SettingsPanel from "./SettingsPanel";
 import LeaveConfirmModal from "./LeaveConfirmModal";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useModerationEvents } from "@/hooks/media-server/useModerationEvents";
 import { useTranscribe } from "@/hooks/media-server/useTranscribe";
 import CaptionOverlay from "./CaptionOverlay";
 import MicVisualizer from "./MicVisualizer";
 import { emitEmbedEvent, isEmbedded } from "./embed-bridge";
-import { canParticipantPublish, isCoHostOrAbove, isHostRole } from "./participant-permissions";
+import {
+  canParticipantPublish,
+  canParticipantShareScreen,
+  isHostRole,
+} from "./participant-permissions";
 
 import {
   Mic,
@@ -68,6 +73,7 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     /* Initialize and run the auto-transcription / live captions hook */
   }
   useTranscribe(room);
+  useModerationEvents(room);
   {
     /* States */
   }
@@ -115,14 +121,14 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
     ? "Not allowed without host permission in this webinar"
     : "Not allowed without host permission";
 
-  // In a webinar the stage belongs to hosts/co-hosts only: attendees never get
+  // In a webinar publishers (including panelists) appear on stage. Viewers never get
   // a tile (they appear in the participants panel instead), and their screen
   // shares are not staged either.
   const stageParticipants = isWebinar
-    ? remoteParticipants.filter((p) => isCoHostOrAbove(p))
+    ? remoteParticipants.filter((p) => canParticipantPublish(p))
     : remoteParticipants;
   const stageLocalParticipant =
-    isWebinar && !isCoHostOrAbove(localParticipant) ? null : localParticipant;
+    isWebinar && !canParticipantPublish(localParticipant) ? null : localParticipant;
   {
     /*Handle LeaveConfirm*/
   }
@@ -339,7 +345,9 @@ export default function ConferenceRoom({ room, isRecorder = false }: ConferenceR
           {/* Screen Share */}
           <button
             onClick={toggleScreenShare}
-            disabled={!canPublish || remoteParticipants.length === 0}
+            disabled={
+              !canParticipantShareScreen(localParticipant) || remoteParticipants.length === 0
+            }
             className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               isScreenSharing
                 ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
