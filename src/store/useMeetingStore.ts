@@ -13,11 +13,14 @@ export interface MeetDetails {
   endedAt: string | null;
 }
 
+export type ChatRecipient = "everyone" | "host";
+
 export interface ChatMessage {
   id: string;
   senderName: string;
   senderIdentity: string;
   text: string;
+  recipient: ChatRecipient;
   timestamp: number;
 }
 
@@ -44,6 +47,8 @@ interface MeetingState {
   activeSidebar: "chat" | "participants" | "settings" | null;
   unreadChatCount: number;
   captionsEnabled: boolean;
+  chatEnabled: boolean;
+  setChatEnabled: (enabled: boolean) => void;
 
   // Layout Options
   layoutMode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
@@ -105,6 +110,8 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   isHandRaised: false,
   activeSidebar: null,
   unreadChatCount: 0,
+  chatEnabled: true,
+  setChatEnabled: (enabled) => set({ chatEnabled: enabled }),
   captionsEnabled: false,
 
   // Layout Options defaults
@@ -227,6 +234,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       unreadChatCount: 0,
       chatMessages: [],
       raisedHands: [],
+      chatEnabled: true,
       captionsEnabled: false,
       transcriptions: {},
       layoutMode: "grid",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Room, RoomEvent, Participant, ConnectionState } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
+import type { ChatRecipient } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/types/error-types";
 
@@ -10,7 +11,14 @@ import {
   type ReactionEmoji,
 } from "@/components/meet/reactions";
 
-export function useChat(room: Room | null, onReaction?: (reaction: MeetingReaction) => void) {
+import { isHostRole } from "@/components/meet/participant-permissions";
+import { isChatEnabled, observeChatSetting } from "@/components/meet/chat-permissions";
+
+export function useChat(
+  room: Room | null,
+  onReaction?: (reaction: MeetingReaction) => void,
+  receiveEvents = true,
+) {
   const lastReactionAt = useRef(0);
   const {
     addChatMessage,
@@ -22,7 +30,7 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
   } = useMeetingStore();
 
   const sendData = useCallback(
-    async (type: string, payload: unknown) => {
+    async (type: string, payload: unknown, destinationIdentities?: string[]) => {
       if (!room) return false;
       try {
         const encoder = new TextEncoder();
@@ -34,7 +42,10 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
             senderIdentity: room.localParticipant.identity,
           }),
         );
-        await room.localParticipant.publishData(data, { reliable: true });
+        await room.localParticipant.publishData(data, {
+          reliable: true,
+          ...(destinationIdentities?.length ? { destinationIdentities } : {}),
+        });
         return true;
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
@@ -46,18 +57,32 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
   );
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!room || !text.trim()) return;
+    async (text: string, recipient: ChatRecipient = "everyone") => {
+      if (!room || room.state !== ConnectionState.Connected || !text.trim()) return false;
+      if (!isChatEnabled(room.metadata) && !isHostRole(room.localParticipant)) return false;
+
+      const destinationIdentities =
+        recipient === "host"
+          ? Array.from(room.remoteParticipants.values())
+              .filter(isHostRole)
+              .map((participant) => participant.identity)
+          : undefined;
+      if (recipient === "host" && !destinationIdentities?.length) {
+        toast.warning("No host is currently available");
+        return false;
+      }
 
       // 1. Send via data channel
-      await sendData("chat", { text });
+      if (!(await sendData("chat", { text, recipient }, destinationIdentities))) return false;
 
       // 2. Add locally in store
       addChatMessage({
         senderName: room.localParticipant.name || "You",
         senderIdentity: room.localParticipant.identity,
         text,
+        recipient,
       });
+      return true;
     },
     [room, sendData, addChatMessage],
   );
@@ -102,8 +127,9 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
   );
 
   useEffect(() => {
-    if (!room) return;
+    if (!room || !receiveEvents) return;
 
+    const stopObservingChat = observeChatSetting(room, useMeetingStore.getState().setChatEnabled);
     const decoder = new TextDecoder();
 
     const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {
@@ -124,10 +150,15 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
             });
           }
         } else if (data.type === "chat") {
+          if (!participant || typeof data.payload?.text !== "string") return;
+          if (!isChatEnabled(room.metadata) && !isHostRole(participant)) return;
+          const recipient: ChatRecipient = data.payload?.recipient === "host" ? "host" : "everyone";
+          if (recipient === "host" && !isHostRole(room.localParticipant)) return;
           addChatMessage({
             senderName,
             senderIdentity,
             text: data.payload.text,
+            recipient,
           });
         } else if (data.type === "hand-raise") {
           if (data.payload.raised) {
@@ -147,8 +178,9 @@ export function useChat(room: Room | null, onReaction?: (reaction: MeetingReacti
 
     return () => {
       room.off(RoomEvent.DataReceived, handleDataReceived);
+      stopObservingChat();
     };
-  }, [room, addChatMessage, addRaisedHand, removeRaisedHand, onReaction]);
+  }, [room, addChatMessage, addRaisedHand, removeRaisedHand, onReaction, receiveEvents]);
 
   return {
     sendMessage,
