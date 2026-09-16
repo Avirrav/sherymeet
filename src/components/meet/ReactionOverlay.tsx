@@ -41,7 +41,7 @@ export default function ReactionOverlay({ reactions }: { reactions: FloatingReac
         <div
           key={reaction.id}
           className={styles.reaction}
-          style={{ left: `${12 + (reaction.id % 6) * 14}%` }}
+          style={{ bottom: `${7 + (reaction.id % 3) * 1.25}rem` }}
           role="img"
           aria-label={`${reaction.senderName} reacted ${reaction.emoji}`}
         >

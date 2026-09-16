@@ -304,3 +304,30 @@ test("slow mode blocks repeated participant messages and exempts the host", asyn
     assert.equal(publishes, role === "host" ? 2 : 1);
   }
 });
+
+test("the same reaction can be sent repeatedly without a cooldown", async () => {
+  let chat;
+  let publishes = 0;
+  let localReactions = 0;
+  const room = {
+    state: ConnectionState.Connected,
+    localParticipant: {
+      identity: "viewer",
+      name: "Viewer",
+      permissions: { canPublishData: true },
+      publishData: async () => {
+        publishes++;
+      },
+    },
+  };
+  function Harness() {
+    chat = useChat(room, () => {
+      localReactions++;
+    });
+    return null;
+  }
+  renderToStaticMarkup(React.createElement(Harness));
+  await Promise.all([chat.sendReaction("👏"), chat.sendReaction("👏"), chat.sendReaction("👏")]);
+  assert.equal(publishes, 3);
+  assert.equal(localReactions, 3);
+});

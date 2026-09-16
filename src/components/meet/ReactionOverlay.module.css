@@ -1,28 +1,28 @@
 .reaction {
   position: absolute;
-  bottom: 7rem;
+  left: 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  animation: float-up 4s ease-out forwards;
+  animation: float-from-left 4s ease-out forwards;
 }
 
-@keyframes float-up {
+@keyframes float-from-left {
   0% {
     opacity: 0;
-    transform: translateY(0) scale(0.7);
+    transform: translateX(-6rem) translateY(0) scale(0.7);
   }
   12% {
     opacity: 1;
-    transform: translateY(-12px) scale(1);
+    transform: translateX(0) translateY(-12px) scale(1);
   }
   75% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(-180px) scale(1.1);
+    transform: translateX(2rem) translateY(-180px) scale(1.1);
   }
 }
 

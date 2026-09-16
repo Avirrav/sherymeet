@@ -12,7 +12,6 @@ export default function ReactionControls({
   disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [sending, setSending] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
 
@@ -61,18 +60,8 @@ export default function ReactionControls({
               type="button"
               aria-label={label}
               title={label}
-              disabled={sending}
-              onClick={async () => {
-                setSending(true);
-                setOpen(false);
-                trigger.current?.focus();
-                try {
-                  await sendReaction(emoji);
-                } finally {
-                  setSending(false);
-                }
-              }}
-              className="p-2 text-2xl rounded-xl hover:bg-md-surface-container-highest focus-visible:outline-2 focus-visible:outline-md-primary disabled:opacity-40"
+              onClick={() => void sendReaction(emoji)}
+              className="p-2 text-2xl rounded-xl hover:bg-md-surface-container-highest focus-visible:outline-2 focus-visible:outline-md-primary"
             >
               <span aria-hidden="true">{emoji}</span>
             </button>

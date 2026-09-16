@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { Room, RoomEvent, Participant, ConnectionState } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import type { ChatRecipient } from "@/store/useMeetingStore";
@@ -23,7 +23,6 @@ export function useChat(
   onReaction?: (reaction: MeetingReaction) => void,
   receiveEvents = true,
 ) {
-  const lastReactionAt = useRef(0);
   const {
     addChatMessage,
     addRaisedHand,
@@ -121,11 +120,9 @@ export function useChat(
         !room ||
         room.state !== ConnectionState.Connected ||
         room.localParticipant.permissions?.canPublishData === false ||
-        !isReactionEmoji(emoji) ||
-        Date.now() - lastReactionAt.current < 1000
+        !isReactionEmoji(emoji)
       )
         return;
-      lastReactionAt.current = Date.now();
       if (await sendData("reaction", { emoji })) {
         onReaction?.({
           emoji,
