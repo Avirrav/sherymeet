@@ -7,8 +7,13 @@ import mongoose from "mongoose";
 import { AccessToken } from "livekit-server-sdk";
 import { RoomEvent, ConnectionState } from "livekit-client";
 import { NextRequest } from "next/server.js";
-import { isChatEnabled, observeChatSetting } from "../src/components/meet/chat-permissions.ts";
+import {
+  getChatSlowModeSeconds,
+  isChatEnabled,
+  observeChatSetting,
+} from "../src/components/meet/chat-permissions.ts";
 import { useChat } from "../src/hooks/media-server/useChat.ts";
+import { useMeetingStore } from "../src/store/useMeetingStore.ts";
 
 Object.assign(process.env, {
   NODE_ENV: "test",
@@ -27,6 +32,8 @@ global.appStoreSingleton = {
   checkRateLimit: async () => ({ allowed: true }),
 };
 const { chatLockHandler } = await import("../src/app/api/server/[sessionId]/chat-lock/route.ts");
+const { chatSlowModeHandler } =
+  await import("../src/app/api/server/[sessionId]/chat-slow-mode/route.ts");
 const { RoomMember } = await import("../src/server/models/room-member.ts");
 const { ConferenceRoomDao } = await import("../src/server/dao/conferenceroom-dao.ts");
 
@@ -37,6 +44,13 @@ async function credential(room = "room-a", admin = true, secret = process.env.LI
 }
 function request(token, body = { chatEnabled: false }) {
   return new NextRequest("https://app.example.test/api/server/room-a/chat-lock", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+}
+function slowModeRequest(token, body = { seconds: 10 }) {
+  return new NextRequest("https://app.example.test/api/server/room-a/chat-slow-mode", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -62,6 +76,23 @@ test("even an admin grant requires current saved host membership", async () => {
     } finally {
       stub.mock.restore();
     }
+  }
+});
+
+test("slow mode rejects non-admin, non-host and out-of-range changes", async () => {
+  assert.equal(
+    (await chatSlowModeHandler(slowModeRequest(await credential("room-a", false)))).status,
+    403,
+  );
+  assert.equal(
+    (await chatSlowModeHandler(slowModeRequest(await credential(), { seconds: 301 }))).status,
+    400,
+  );
+  const stub = mock.method(RoomMember, "findOne", async () => ({ role: "co_host" }));
+  try {
+    assert.equal((await chatSlowModeHandler(slowModeRequest(await credential()))).status, 403);
+  } finally {
+    stub.mock.restore();
   }
 });
 
@@ -100,9 +131,19 @@ test("host toggles metadata without losing unrelated fields; malformed metadata 
       );
       assert.deepEqual(updates.at(-1), { room: "room-a", layout: "grid", chatEnabled: enabled });
     }
+    assert.equal(
+      (await chatSlowModeHandler(slowModeRequest(await credential(), { seconds: 30 }))).status,
+      200,
+    );
+    assert.deepEqual(updates.at(-1), {
+      room: "room-a",
+      layout: "grid",
+      chatEnabled: true,
+      chatSlowModeSeconds: 30,
+    });
     metadata = "invalid";
     assert.equal((await chatLockHandler(request(await credential()))).status, 409);
-    assert.equal(updates.length, 2);
+    assert.equal(updates.length, 3);
     const ended = mock.method(ConferenceRoomDao, "getConferenceRoom", async () => ({
       status: "ended",
     }));
@@ -115,21 +156,30 @@ test("host toggles metadata without losing unrelated fields; malformed metadata 
 
 test("late joins, metadata updates and reconnects synchronize chat and cleanup listeners", () => {
   const room = new EventEmitter();
-  room.metadata = '{"chatEnabled":false}';
+  room.metadata = '{"chatEnabled":false,"chatSlowModeSeconds":10}';
   const states = [];
-  const cleanup = observeChatSetting(room, (value) => states.push(value));
+  const delays = [];
+  const cleanup = observeChatSetting(
+    room,
+    (value) => states.push(value),
+    (value) => delays.push(value),
+  );
   assert.deepEqual(states, [false]);
-  room.metadata = '{"chatEnabled":true}';
+  assert.deepEqual(delays, [10]);
+  room.metadata = '{"chatEnabled":true,"chatSlowModeSeconds":30}';
   room.emit(RoomEvent.RoomMetadataChanged);
   room.metadata = '{"chatEnabled":false}';
   room.emit(RoomEvent.Reconnected);
   assert.deepEqual(states, [false, true, false]);
+  assert.deepEqual(delays, [10, 30, 0]);
   cleanup();
   assert.equal(room.eventNames().length, 0);
   assert.equal(isChatEnabled(""), true);
   assert.equal(isChatEnabled("{}"), true);
   for (const value of ["null", "[]", "bad", '{"chatEnabled":"false"}'])
     assert.equal(isChatEnabled(value), false);
+  assert.equal(getChatSlowModeSeconds('{"chatSlowModeSeconds":60}'), 60);
+  assert.equal(getChatSlowModeSeconds('{"chatSlowModeSeconds":301}'), 0);
 });
 
 test("sendMessage checks current room metadata even if the hook was created before the lock", async () => {
@@ -224,4 +274,33 @@ test("host-only message is not published when no host is connected", async () =>
   renderToStaticMarkup(React.createElement(Harness));
   assert.equal(await chat.sendMessage("private", "host"), false);
   assert.equal(publishes, 0);
+});
+
+test("slow mode blocks repeated participant messages and exempts the host", async () => {
+  for (const role of ["participant", "host"]) {
+    useMeetingStore.setState({ lastChatSentAt: 0 });
+    let chat;
+    let publishes = 0;
+    const room = {
+      state: ConnectionState.Connected,
+      metadata: '{"chatSlowModeSeconds":10}',
+      localParticipant: {
+        identity: role,
+        name: role,
+        metadata: JSON.stringify({ participant: { role } }),
+        publishData: async () => {
+          publishes++;
+        },
+      },
+      remoteParticipants: new Map(),
+    };
+    function Harness() {
+      chat = useChat(room);
+      return null;
+    }
+    renderToStaticMarkup(React.createElement(Harness));
+    assert.equal(await chat.sendMessage("first"), true);
+    assert.equal(await chat.sendMessage("second"), role === "host");
+    assert.equal(publishes, role === "host" ? 2 : 1);
+  }
 });

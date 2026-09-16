@@ -49,6 +49,10 @@ interface MeetingState {
   captionsEnabled: boolean;
   chatEnabled: boolean;
   setChatEnabled: (enabled: boolean) => void;
+  chatSlowModeSeconds: number;
+  setChatSlowModeSeconds: (seconds: number) => void;
+  lastChatSentAt: number;
+  setLastChatSentAt: (timestamp: number) => void;
 
   // Layout Options
   layoutMode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
@@ -112,6 +116,10 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   unreadChatCount: 0,
   chatEnabled: true,
   setChatEnabled: (enabled) => set({ chatEnabled: enabled }),
+  chatSlowModeSeconds: 0,
+  setChatSlowModeSeconds: (seconds) => set({ chatSlowModeSeconds: seconds }),
+  lastChatSentAt: 0,
+  setLastChatSentAt: (timestamp) => set({ lastChatSentAt: timestamp }),
   captionsEnabled: false,
 
   // Layout Options defaults
@@ -235,6 +243,8 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       chatMessages: [],
       raisedHands: [],
       chatEnabled: true,
+      chatSlowModeSeconds: 0,
+      lastChatSentAt: 0,
       captionsEnabled: false,
       transcriptions: {},
       layoutMode: "grid",

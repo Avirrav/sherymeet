@@ -12,7 +12,11 @@ import {
 } from "@/components/meet/reactions";
 
 import { isHostRole } from "@/components/meet/participant-permissions";
-import { isChatEnabled, observeChatSetting } from "@/components/meet/chat-permissions";
+import {
+  getChatSlowModeSeconds,
+  isChatEnabled,
+  observeChatSetting,
+} from "@/components/meet/chat-permissions";
 
 export function useChat(
   room: Room | null,
@@ -60,6 +64,14 @@ export function useChat(
     async (text: string, recipient: ChatRecipient = "everyone") => {
       if (!room || room.state !== ConnectionState.Connected || !text.trim()) return false;
       if (!isChatEnabled(room.metadata) && !isHostRole(room.localParticipant)) return false;
+      const isHost = isHostRole(room.localParticipant);
+      const slowModeSeconds = getChatSlowModeSeconds(room.metadata);
+      const lastSentAt = useMeetingStore.getState().lastChatSentAt;
+      const remainingMs = lastSentAt + slowModeSeconds * 1000 - Date.now();
+      if (!isHost && slowModeSeconds > 0 && remainingMs > 0) {
+        toast.info(`Slow mode: wait ${Math.ceil(remainingMs / 1000)} seconds`);
+        return false;
+      }
 
       const destinationIdentities =
         recipient === "host"
@@ -82,6 +94,7 @@ export function useChat(
         text,
         recipient,
       });
+      if (!isHost && slowModeSeconds > 0) useMeetingStore.getState().setLastChatSentAt(Date.now());
       return true;
     },
     [room, sendData, addChatMessage],
@@ -129,7 +142,11 @@ export function useChat(
   useEffect(() => {
     if (!room || !receiveEvents) return;
 
-    const stopObservingChat = observeChatSetting(room, useMeetingStore.getState().setChatEnabled);
+    const stopObservingChat = observeChatSetting(
+      room,
+      useMeetingStore.getState().setChatEnabled,
+      useMeetingStore.getState().setChatSlowModeSeconds,
+    );
     const decoder = new TextDecoder();
 
     const handleDataReceived = (payload: Uint8Array, participant?: Participant) => {

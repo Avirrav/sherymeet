@@ -17,12 +17,34 @@ interface ChatPanelProps {
 export default function ChatPanel({ room, onClose }: ChatPanelProps) {
   const { sendMessage, messages } = useChat(room, undefined, false);
   const chatEnabled = useMeetingStore((state) => state.chatEnabled);
+  const chatSlowModeSeconds = useMeetingStore((state) => state.chatSlowModeSeconds);
+  const lastChatSentAt = useMeetingStore((state) => state.lastChatSentAt);
   const isHost = isHostRole(room.localParticipant);
-  const canSend = (chatEnabled || isHost) && room.state === ConnectionState.Connected;
+  const canCompose = (chatEnabled || isHost) && room.state === ConnectionState.Connected;
   const [sending, setSending] = useState(false);
   const [inputText, setInputText] = useState("");
   const [recipient, setRecipient] = useState<ChatRecipient>("everyone");
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const canSend = canCompose && cooldownRemaining === 0;
+
+  useEffect(() => {
+    const update = () =>
+      setCooldownRemaining(
+        isHost
+          ? 0
+          : Math.max(
+              0,
+              Math.ceil((lastChatSentAt + chatSlowModeSeconds * 1000 - Date.now()) / 1000),
+            ),
+      );
+    const initialTimer = setTimeout(update, 0);
+    const interval = setInterval(update, 500);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [isHost, lastChatSentAt, chatSlowModeSeconds]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +142,7 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
           Send to
           <select
             value={recipient}
-            disabled={!canSend || sending}
+            disabled={!canCompose || sending}
             onChange={(event) => setRecipient(event.target.value as ChatRecipient)}
             className="rounded-lg border border-md-outline-variant bg-md-surface px-2 py-1.5 text-xs text-md-on-surface outline-none focus:border-md-primary/50 disabled:opacity-50"
           >
@@ -131,10 +153,14 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
         <div className="flex gap-2">
           <input
             type="text"
-            disabled={!canSend || sending}
+            disabled={!canCompose || sending}
             aria-label="Chat message"
             placeholder={
-              recipient === "host" ? "Message the host privately..." : "Send a message..."
+              cooldownRemaining > 0
+                ? `Slow mode: wait ${cooldownRemaining}s`
+                : recipient === "host"
+                  ? "Message the host privately..."
+                  : "Send a message..."
             }
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -143,7 +169,13 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
           <button
             type="submit"
             disabled={!canSend || sending || !inputText.trim()}
-            aria-label={recipient === "host" ? "Send privately to host" : "Send message"}
+            aria-label={
+              cooldownRemaining > 0
+                ? `Wait ${cooldownRemaining} seconds before sending`
+                : recipient === "host"
+                  ? "Send privately to host"
+                  : "Send message"
+            }
             className="p-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary rounded-xl transition-colors flex items-center justify-center disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
