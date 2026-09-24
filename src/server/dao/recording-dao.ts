@@ -6,6 +6,7 @@ import {
   IRecordingFileResult,
   IRecordingError,
 } from "@/server/types/conferenceroom.types";
+import { QueryFilter, QuerySelect, QuerySort } from "@/server/types/dao.types";
 
 export interface ICreateRecordingInput {
   conferenceRoomId: string;
@@ -41,31 +42,51 @@ export class RecordingDao {
   }
 
   /**
-   * Retrieves all recordings for a room that are currently active (recording).
+   * Retrieves a single recording matching the given filter.
    */
-  static async getActiveRecordingsByRoomId(roomId: string): Promise<IRecordingDocument[]> {
+  static async getRecording(
+    filter: QueryFilter<IRecordingDocument>,
+    select?: QuerySelect,
+  ): Promise<IRecordingDocument | null> {
     await dbConnect();
-    return await Recording.find({ roomId, recordingStatus: "recording" });
+    let query = Recording.findOne(filter);
+    if (select) {
+      query = query.select(select);
+    }
+    return await query;
   }
 
   /**
-   * Retrieves a recording record by its egress ID.
+   * Retrieves multiple recordings matching the given filter.
    */
-  static async getRecordingByEgressId(egressId: string): Promise<IRecordingDocument | null> {
+  static async getRecordings(
+    filter: QueryFilter<IRecordingDocument>,
+    options?: { select?: QuerySelect; sort?: QuerySort<IRecordingDocument>; limit?: number },
+  ): Promise<IRecordingDocument[]> {
     await dbConnect();
-    return await Recording.findOne({ egressId });
+    let query = Recording.find(filter);
+    if (options?.select) {
+      query = query.select(options.select);
+    }
+    if (options?.sort) {
+      query = query.sort(options.sort);
+    }
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    return await query;
   }
 
   /**
    * Updates recording properties in MongoDB.
    */
   static async updateRecording(
-    egressId: string,
+    filter: QueryFilter<IRecordingDocument>,
     updateData: IRecordingUpdate,
   ): Promise<IRecordingDocument | null> {
     await dbConnect();
     return await Recording.findOneAndUpdate(
-      { egressId },
+      filter,
       { $set: updateData },
       { returnDocument: "after" },
     );

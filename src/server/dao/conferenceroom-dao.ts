@@ -1,4 +1,3 @@
-import { QueryFilter, SortOrder } from "mongoose";
 import { dbConnect } from "@/server/utils/db-connect";
 import ConferenceRoom from "@/server/models/conferenceroom-model";
 import {
@@ -7,6 +6,7 @@ import {
   IConferenceRoom,
   IConferenceRoomDocument,
 } from "@/server/types/conferenceroom.types";
+import { QueryFilter, QuerySelect } from "@/server/types/dao.types";
 
 export interface ICreateConferenceRoomInput {
   roomId: string;
@@ -58,9 +58,12 @@ export class ConferenceRoomDao {
     );
   }
 
+  /**
+   * Retrieves a single conference room matching the given filter.
+   */
   static async getConferenceRoom(
     filter: QueryFilter<IConferenceRoom>,
-    select?: string | string[],
+    select?: QuerySelect,
   ): Promise<IConferenceRoom | null> {
     await dbConnect();
     let query = ConferenceRoom.findOne(filter).select("-createdAt -updatedAt");

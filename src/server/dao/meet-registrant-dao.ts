@@ -1,6 +1,7 @@
 import { dbConnect } from "@/server/utils/db-connect";
 import MeetRegistrant from "@/server/models/meet-registrant";
 import { IMeetRegistrantDocument } from "@/server/types/conferenceroom.types";
+import { QueryFilter, QuerySelect } from "@/server/types/dao.types";
 
 export interface ICreateRegistrantInput {
   roomId: string;
@@ -23,24 +24,17 @@ export class MeetRegistrantDao {
   }
 
   /**
-   * Retrieves a registrant by their join token — the lookup used when a
-   * registrant follows their emailed join link.
+   * Retrieves a single registrant matching the given filter.
    */
-  static async getRegistrantByToken(token: string): Promise<IMeetRegistrantDocument | null> {
-    await dbConnect();
-    return await MeetRegistrant.findOne({ token });
-  }
-
-  /**
-   * Retrieves a registrant by webinar + email — backed by the schema's
-   * unique { roomId, email } index (see meet-registrant.ts), so this is an
-   * indexed lookup, not a collection scan.
-   */
-  static async getRegistrantByEmail(
-    roomId: string,
-    email: string,
+  static async getRegistrant(
+    filter: QueryFilter<IMeetRegistrantDocument>,
+    select?: QuerySelect,
   ): Promise<IMeetRegistrantDocument | null> {
     await dbConnect();
-    return await MeetRegistrant.findOne({ roomId, email: email.trim().toLowerCase() });
+    let query = MeetRegistrant.findOne(filter);
+    if (select) {
+      query = query.select(select);
+    }
+    return await query;
   }
 }

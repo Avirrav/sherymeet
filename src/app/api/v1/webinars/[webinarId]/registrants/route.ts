@@ -119,7 +119,10 @@ export async function getRegistrantHandler(request: AuthenticatedRequest) {
     }
     const { email } = result.data;
 
-    const registrant = await MeetRegistrantDao.getRegistrantByEmail(webinarId, email);
+    const registrant = await MeetRegistrantDao.getRegistrant({
+      roomId: webinarId,
+      email: email.trim().toLowerCase(),
+    });
     if (!registrant) {
       throw new ApiError("Registrant not found", 404);
     }
