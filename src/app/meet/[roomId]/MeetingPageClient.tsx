@@ -19,7 +19,14 @@ interface MeetingPageClientProps {
   isRecorder?: boolean;
 }
 
-type GateStatus = "verifying" | "noAccess" | "start" | "waitingHost" | "ready" | "error";
+export enum GateStatus {
+  VERIFYING = "verifying",
+  NO_ACCESS = "noAccess",
+  START = "start",
+  WAITING_HOST = "waitingHost",
+  READY = "ready",
+  ERROR = "error",
+}
 
 /**
  * Full-bleed hero gate: an overhead spotlight, a glowing filled status disc,
@@ -102,12 +109,12 @@ export default function MeetingPageClient({
   const [serverUrl, setServerUrl] = useState("");
   const [hasEntered, setHasEntered] = useState(false);
   const [activeToken, setActiveToken] = useState("");
-  const [gateStatus, setGateStatus] = useState<GateStatus>("verifying");
+  const [gateStatus, setGateStatus] = useState<GateStatus>(GateStatus.VERIFYING);
   const [gateMessage, setGateMessage] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const verifyParamsRef = useRef({ token: "", password: "" });
   const roomRef = useRef<Room | null>(null);
-  const gateStatusRef = useRef<GateStatus>("verifying");
+  const gateStatusRef = useRef<GateStatus>(GateStatus.VERIFYING);
   const wasConnectedRef = useRef(false);
 
   // Confirms the token is genuine and routes by the native roomAdmin grant:
@@ -116,7 +123,7 @@ export default function MeetingPageClient({
   // is active, or wait for the host to start it.
   const verifyToken = useCallback(async () => {
     const { token: tokenToVerify, password } = verifyParamsRef.current;
-    setGateStatus("verifying");
+    setGateStatus(GateStatus.VERIFYING);
     try {
       const res = await fetch(`/api/server/${roomId}/verify-token`, {
         method: "POST",
@@ -126,7 +133,7 @@ export default function MeetingPageClient({
       const result = await res.json();
       if (!result.success) {
         setGateMessage(result.message || "This meeting link is no longer valid.");
-        setGateStatus("error");
+        setGateStatus(GateStatus.ERROR);
         return;
       }
       if (result.data?.token) {
@@ -137,26 +144,26 @@ export default function MeetingPageClient({
       }
       if (result.data?.meetStatus === "ended") {
         setGateMessage("This meeting has already ended.");
-        setGateStatus("error");
+        setGateStatus(GateStatus.ERROR);
         emitEmbedEvent("meeting-ended", { roomId });
         return;
       }
       const isActive = result.data?.meetStatus === "active";
       if (result.data?.roomAdmin) {
-        setGateStatus(isActive ? "ready" : "start");
+        setGateStatus(isActive ? GateStatus.READY : GateStatus.START);
       } else {
-        setGateStatus(isActive ? "ready" : "waitingHost");
+        setGateStatus(isActive ? GateStatus.READY : GateStatus.WAITING_HOST);
       }
     } catch (err) {
       console.error("Error verifying meeting token:", err);
       setGateMessage("Could not reach the server to verify this meeting link.");
-      setGateStatus("error");
+      setGateStatus(GateStatus.ERROR);
     }
   }, [roomId, setMeetDetails]);
 
   // While a participant waits for the host, poll until the meeting goes active.
   useEffect(() => {
-    if (gateStatus !== "waitingHost") return;
+    if (gateStatus !== GateStatus.WAITING_HOST) return;
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/server/${roomId}/details`, {
@@ -164,10 +171,10 @@ export default function MeetingPageClient({
         });
         const result = await res.json();
         if (result.success && result.data?.status === "active") {
-          setGateStatus("ready");
+          setGateStatus(GateStatus.READY);
         } else if (result.success && result.data?.status === "ended") {
           setGateMessage("This meeting has already ended.");
-          setGateStatus("error");
+          setGateStatus(GateStatus.ERROR);
           emitEmbedEvent("meeting-ended", { roomId });
         }
       } catch {
@@ -189,7 +196,7 @@ export default function MeetingPageClient({
       });
       const result = await res.json();
       if (result.success) {
-        setGateStatus("ready");
+        setGateStatus(GateStatus.READY);
       } else {
         toast.error(result.message || "Failed to start the meeting.");
       }
@@ -228,7 +235,7 @@ export default function MeetingPageClient({
       }
       if (!resolvedToken) {
         // No token means we can't prove roomAdmin at all.
-        setGateStatus("noAccess");
+        setGateStatus(GateStatus.NO_ACCESS);
         return;
       }
       setActiveToken(resolvedToken);
@@ -279,7 +286,7 @@ export default function MeetingPageClient({
   }, [activeToken, roomId, setConnectionStatus, setMeetingInfo]);
 
   useEffect(() => {
-    if (isRecorder && gateStatus === "ready" && activeToken && !hasEntered) {
+    if (isRecorder && gateStatus === GateStatus.READY && activeToken && !hasEntered) {
       const timer = setTimeout(() => {
         handleJoin();
       }, 0);
@@ -331,7 +338,7 @@ export default function MeetingPageClient({
   // Report gate transitions and join/leave to the embedding SDK.
   useEffect(() => {
     emitEmbedEvent("status", { gateStatus, roomId, message: gateMessage || undefined });
-    if (gateStatus === "error" && gateMessage) {
+    if (gateStatus === GateStatus.ERROR && gateMessage) {
       emitEmbedEvent("error", { message: gateMessage });
     }
   }, [gateStatus, gateMessage, roomId]);
@@ -346,7 +353,7 @@ export default function MeetingPageClient({
     }
   }, [isConnected, roomId]);
 
-  if (gateStatus === "verifying") {
+  if (gateStatus === GateStatus.VERIFYING) {
     return (
       <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in p-6">
         <div className="flex flex-col items-center">
@@ -362,7 +369,7 @@ export default function MeetingPageClient({
     );
   }
 
-  if (gateStatus === "noAccess") {
+  if (gateStatus === GateStatus.NO_ACCESS) {
     return (
       <GateScreen
         eyebrow="Invite only"
@@ -381,7 +388,7 @@ export default function MeetingPageClient({
     );
   }
 
-  if (gateStatus === "error") {
+  if (gateStatus === GateStatus.ERROR) {
     return (
       <GateScreen
         eyebrow="Something went wrong"
@@ -402,7 +409,7 @@ export default function MeetingPageClient({
     );
   }
 
-  if (gateStatus === "waitingHost") {
+  if (gateStatus === GateStatus.WAITING_HOST) {
     return (
       <GateScreen
         eyebrow="Almost there"
@@ -418,7 +425,7 @@ export default function MeetingPageClient({
     );
   }
 
-  if (gateStatus === "start") {
+  if (gateStatus === GateStatus.START) {
     return (
       <GateScreen
         eyebrow="The floor is yours"
