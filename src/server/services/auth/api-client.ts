@@ -32,7 +32,7 @@ export class ApiClientService {
       createdByName: creator?.name,
       createdByAvatarUrl: creator?.avatarUrl,
     });
-    console.log("\n\n\nClient created", clientDoc)
+    console.log("\n\n\nClient created", clientDoc);
     return {
       client: clientDoc,
       plaintextSecret,
@@ -43,7 +43,7 @@ export class ApiClientService {
    * Lists the API clients created by a given platform user (dashboard self-service).
    */
   static async listClientsForUser(userId: string): Promise<IApiClient[]> {
-    return await ApiClientDao.getApiClientsByCreatedBy(userId);
+    return await ApiClientDao.getApiClients({ createdBy: userId }, { sort: { createdAt: -1 } });
   }
   /**
    * Performs client secret rotation.
@@ -52,7 +52,7 @@ export class ApiClientService {
   static async rotateSecret(
     apiKey: string,
   ): Promise<{ client: IApiClient; newPlaintextSecret: string } | null> {
-    const client = await ApiClientDao.getApiClientByApiKey(apiKey);
+    const client = await ApiClientDao.getApiClient({ apiKey });
     if (!client || client.revoked) return null;
     const newPlaintextSecret = `sm_sec_${crypto.randomBytes(32).toString("base64url")}`;
     const newEncryptedSecret = await apiKeyEncryption.encrypt(newPlaintextSecret);
@@ -62,10 +62,7 @@ export class ApiClientService {
       currentSecret: newEncryptedSecret,
       currentSecretVersion: client.currentSecretVersion + 1,
     };
-    const updatedClient = await ApiClientDao.updateApiClient(
-      client._id.toString(),
-      updateData,
-    );
+    const updatedClient = await ApiClientDao.updateApiClient(client._id.toString(), updateData);
     if (!updatedClient) return null;
     return {
       client: updatedClient,
@@ -76,7 +73,7 @@ export class ApiClientService {
    * Retrieves an API client by their API key.
    */
   static async getClientByApiKey(apiKey: string): Promise<IApiClient | null> {
-    return await ApiClientDao.getApiClientByApiKey(apiKey);
+    return await ApiClientDao.getApiClient({ apiKey });
   }
 
   /**

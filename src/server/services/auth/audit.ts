@@ -6,9 +6,7 @@ export class AuditService {
   /**
    * Logs a security audit event and updates the usage statistics for the associated API key.
    */
-  static async logEvent(
-    logData: Partial<IAuditLog>,
-  ): Promise<IAuditLog | null> {
+  static async logEvent(logData: Partial<IAuditLog>): Promise<IAuditLog | null> {
     try {
       const log = await AuditDao.createAuditLog(logData);
 
@@ -33,10 +31,7 @@ export class AuditService {
   /**
    * Retrieves security audit logs for a given API key.
    */
-  static async getLogsForApiKey(
-    apiKey: string,
-    limit = 50,
-  ): Promise<IAuditLog[]> {
-    return await AuditDao.getAuditLogsByApiKey(apiKey, limit);
+  static async getLogsForApiKey(apiKey: string, limit = 50): Promise<IAuditLog[]> {
+    return await AuditDao.getAuditLogs({ apiKey }, { sort: { timestamp: -1 }, limit });
   }
 }

@@ -2,6 +2,7 @@ import { dbConnect } from "../utils/db-connect";
 import AuditLog from "../models/audit-log-model";
 import ApiKeyUsageLog from "../models/api-key-usage-log-model";
 import { IAuditLog } from "../types/auth.types";
+import { QueryFilter, QuerySelect, QuerySort } from "../types/dao.types";
 
 export class AuditDao {
   static async createAuditLog(data: Partial<IAuditLog>): Promise<IAuditLog> {
@@ -10,21 +11,31 @@ export class AuditDao {
     return await log.save();
   }
 
-  static async getAuditLogsByApiKey(
-    apiKey: string,
-    limit = 100,
+  /**
+   * Retrieves audit logs matching the given filter.
+   */
+  static async getAuditLogs(
+    filter: QueryFilter<IAuditLog>,
+    options?: { select?: QuerySelect; sort?: QuerySort<IAuditLog>; limit?: number },
   ): Promise<IAuditLog[]> {
     await dbConnect();
-    return await AuditLog.find({ apiKey }).sort({ timestamp: -1 }).limit(limit);
+    let query = AuditLog.find(filter);
+    if (options?.select) {
+      query = query.select(options.select);
+    }
+    if (options?.sort) {
+      query = query.sort(options.sort);
+    }
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    return await query;
   }
 
   /**
    * Increments the daily request and error counters for a given API key.
    */
-  static async incrementApiKeyUsage(
-    apiKey: string,
-    isError = false,
-  ): Promise<void> {
+  static async incrementApiKeyUsage(apiKey: string, isError = false): Promise<void> {
     await dbConnect();
     const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
 
@@ -38,10 +49,9 @@ export class AuditDao {
       },
     };
 
-    await ApiKeyUsageLog.findOneAndUpdate(
-      { apiKey, date: today },
-      updateQuery,
-      { upsert: true, returnDocument: "after" },
-    );
+    await ApiKeyUsageLog.findOneAndUpdate({ apiKey, date: today }, updateQuery, {
+      upsert: true,
+      returnDocument: "after",
+    });
   }
 }

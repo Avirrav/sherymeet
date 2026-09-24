@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         const egressId = egressInfo.egressId;
 
         // Find the recording document in MongoDB via RecordingDao
-        const recording = await RecordingDao.getRecordingByEgressId(egressId);
+        const recording = await RecordingDao.getRecording({ egressId });
         if (recording) {
           const statusVal = egressInfo.status;
           let recordingStatus: RecordingStatus = "recording";
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
             updateData.duration = Math.round(Number(egressInfo.duration) / 1_000_000_000);
           }
 
-          await RecordingDao.updateRecording(egressId, updateData);
+          await RecordingDao.updateRecording({ egressId }, updateData);
           logger.info(`Updated recording ${egressId} database status to: ${recordingStatus}`);
         }
       }
