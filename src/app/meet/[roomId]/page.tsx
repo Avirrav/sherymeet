@@ -3,15 +3,12 @@ import MeetingPageClient from "./MeetingPageClient";
 import { Metadata } from "next";
 
 interface Params {
-  token?: string;
   roomId: string;
 }
 
 interface SearchParams {
   token?: string;
   recorder?: boolean;
-  userName?: string;
-  email?: string;
 }
 
 export const metadata: Metadata = {
@@ -26,15 +23,8 @@ export default async function MeetingPage({
   params: Promise<Params>;
   searchParams: Promise<SearchParams>;
 }) {
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
-  return (
-    <MeetingPageClient
-      roomId={resolvedParams.roomId}
-      token={resolvedSearchParams.token || ""}
-      userName={resolvedSearchParams.userName || ""}
-      email={resolvedSearchParams.email || ""}
-      isRecorder={resolvedSearchParams.recorder}
-    />
-  );
+  const { roomId } = await params;
+  const { token, recorder } = await searchParams;
+
+  return <MeetingPageClient roomId={roomId} token={token || ""} isRecorder={recorder} />;
 }
