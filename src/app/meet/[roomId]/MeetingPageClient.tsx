@@ -10,12 +10,11 @@ import ConferenceRoom from "@/components/meet/ConferenceRoom";
 import { Loader2, Clock, RefreshCw, Lock, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { extractUserFromToken } from "@/lib/token-utils";
 
 interface MeetingPageClientProps {
   roomId: string;
   token: string;
-  userName?: string;
-  email?: string;
   isRecorder?: boolean;
 }
 
@@ -89,8 +88,6 @@ function GateScreen({
 export default function MeetingPageClient({
   roomId,
   token,
-  userName,
-  email,
   isRecorder = false,
 }: MeetingPageClientProps) {
   const {
@@ -208,45 +205,48 @@ export default function MeetingPageClient({
     }
   }, [roomId]);
 
-  // Reset the meeting store state, extract parameters from search or hash, and prefill username
+  // Reset the meeting store state, extract token from prop or hash, and extract user info from token
   useEffect(() => {
     resetMeetingStore();
-    let resolvedUserName = userName || "";
     let resolvedToken = token || "";
-    let resolvedEmail = email || "";
     let resolvedPassword = "";
+
     if (typeof window !== "undefined") {
-      // 1. Check hash fragment (prevents parameter logging in server-side logs)
+      // Check hash fragment (prevents parameter logging in server-side logs)
       const hash = window.location.hash.substring(1);
       if (hash) {
         const params = new URLSearchParams(hash);
         resolvedToken = params.get("token") || resolvedToken;
-        resolvedUserName = params.get("userName") || resolvedUserName;
-        resolvedEmail = params.get("email") || resolvedEmail;
         resolvedPassword = params.get("password") || "";
       }
     }
+
     const timer = setTimeout(() => {
-      if (resolvedUserName) {
-        setUsername(resolvedUserName);
-      }
-      if (resolvedEmail) {
-        setEmail(resolvedEmail);
-      }
       if (!resolvedToken) {
         // No token means we can't prove roomAdmin at all.
         setGateStatus(GateStatus.NO_ACCESS);
         return;
       }
+
+      // Extract user metadata from the JWT token
+      const userMeta = extractUserFromToken(resolvedToken);
+      if (userMeta?.name) {
+        setUsername(userMeta.name);
+      }
+      if (userMeta?.email) {
+        setEmail(userMeta.email);
+      }
+
       setActiveToken(resolvedToken);
       verifyParamsRef.current = { token: resolvedToken, password: resolvedPassword };
       verifyToken();
     }, 0);
+
     return () => {
       clearTimeout(timer);
       resetMeetingStore();
     };
-  }, [resetMeetingStore, userName, token, email, setUsername, setEmail, verifyToken]);
+  }, [resetMeetingStore, token, setUsername, setEmail, verifyToken]);
 
   const handleJoin = useCallback(async () => {
     setConnectionStatus(true, false, null);
