@@ -215,6 +215,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
                 onPinToggle={() => togglePinParticipant(participant.identity)}
                 tileWidth={item.width}
                 tileHeight={item.height}
+                updateKey={updateKey}
               />
             </LayoutAnimator>
           );

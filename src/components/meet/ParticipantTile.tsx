@@ -23,6 +23,7 @@ interface ParticipantTileProps {
   isVirtual?: boolean;
   pinned?: boolean;
   onPinToggle?: () => void;
+  updateKey?: number;
   tileWidth?: number;
   tileHeight?: number;
 }
@@ -37,6 +38,7 @@ export default function ParticipantTile({
   onPinToggle,
   tileWidth,
   tileHeight,
+  updateKey,
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -101,7 +103,7 @@ export default function ParticipantTile({
       participant.off(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
       participant.off(ParticipantEvent.IsSpeakingChanged, syncTracks);
     };
-  }, [participant]);
+  }, [participant, updateKey]);
 
   // True only while the <video> element is actually receiving frames. The
   // camera takes ~0.5-2s to warm up after unmute (LiveKit stops the physical

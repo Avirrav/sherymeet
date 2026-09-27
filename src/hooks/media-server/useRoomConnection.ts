@@ -284,10 +284,20 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       }
       try {
         if (videoEnabled) {
-          console.log("Active Room: enabling camera with HD quality for device:", videoDeviceId);
+          // If no device ID is set, enumerate devices first to get a valid ID
+          let deviceId = videoDeviceId;
+          if (!deviceId) {
+            const vDevices = await Room.getLocalDevices("videoinput");
+            if (vDevices.length > 0 && vDevices[0].deviceId) {
+              deviceId = vDevices[0].deviceId;
+              setVideoDeviceId(deviceId);
+              console.log("Active Room: discovered camera device:", deviceId);
+            }
+          }
+          console.log("Active Room: enabling camera with HD quality for device:", deviceId);
           await room.localParticipant.setCameraEnabled(true, {
-            deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-            resolution: VideoPresets.h720.resolution, // Publish in HD
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            resolution: VideoPresets.h720.resolution,
           });
           console.log("Active Room: camera enabled successfully.");
         } else {
@@ -352,9 +362,19 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       }
       try {
         if (audioEnabled) {
-          console.log("Active Room: enabling microphone for device:", audioDeviceId);
+          // If no device ID is set, enumerate devices first to get a valid ID
+          let deviceId = audioDeviceId;
+          if (!deviceId) {
+            const aDevices = await Room.getLocalDevices("audioinput");
+            if (aDevices.length > 0 && aDevices[0].deviceId) {
+              deviceId = aDevices[0].deviceId;
+              setAudioDeviceId(deviceId);
+              console.log("Active Room: discovered microphone device:", deviceId);
+            }
+          }
+          console.log("Active Room: enabling microphone for device:", deviceId);
           await room.localParticipant.setMicrophoneEnabled(true, {
-            deviceId: audioDeviceId || undefined,
+            deviceId: deviceId || undefined,
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
