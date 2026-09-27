@@ -9,6 +9,7 @@ const envSchema = z.object({
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
+  LIVEKIT_WEBHOOKS_URL: z.url().optional(),
   REDIS_URL: z.url(),
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
   LIVEKIT_TOKEN_TTL: z.string().default("2h"),
@@ -77,7 +78,7 @@ const requiredInProduction = z.object({
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
-  NEXT_PUBLIC_API_URL: z.string().url(),
+  NEXT_PUBLIC_API_URL: z.url(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
@@ -92,7 +93,6 @@ const requiredInProduction = z.object({
  */
 export function validateEnv(): void {
   const result = requiredInProduction.safeParse(config);
-
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
