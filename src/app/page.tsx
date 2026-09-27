@@ -1,4 +1,16 @@
 import { Video, Shield, Zap } from "lucide-react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Secure HD Video Meetings for Your Product",
+  description:
+    "SheryMeet provides secure, high-quality HD video conferencing with end-to-end encryption and low latency. Easily embed video meetings directly into your product via API.",
+  openGraph: {
+    title: "SheryMeet - Secure HD Video Meetings for Your Product",
+    description:
+      "Embed secure, high-quality video conferencing into your product. HD video, end-to-end encryption, and ultra-low latency.",
+  },
+};
 
 export default function LandingPage() {
   return (
