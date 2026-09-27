@@ -45,3 +45,7 @@ next-env.d.ts
 .agents
 .agent
 skills-lock.json
+
+# SDK package
+packages/*/node_modules
+packages/*/dist

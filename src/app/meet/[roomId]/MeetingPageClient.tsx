@@ -291,25 +291,73 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
   }, [gateStatus]);
 
   // Embed SDK bridge: when this page runs inside the Sherymeet embed SDK's
-  // iframe, report lifecycle events and honor leave/end commands.
+  // iframe, report lifecycle events and honor commands.
   useEffect(() => {
+    const store = useMeetingStore.getState();
     const cleanup = initEmbedBridge({
       getStatusSnapshot: () => ({ gateStatus: gateStatusRef.current, roomId }),
-      onCommand: async (command) => {
-        if (command === "leave") {
-          roomRef.current?.disconnect();
-          return;
+      onLeave: () => {
+        roomRef.current?.disconnect();
+      },
+      onEnd: async () => {
+        try {
+          await endMeeting(roomId, verifyParamsRef.current.token);
+          emitEmbedEvent("meeting-ended", { roomId });
+        } catch (err) {
+          console.error("Error ending meeting from embed command:", err);
+          emitEmbedEvent("error", { message: "Failed to end the meeting" });
         }
-        if (command === "end") {
-          try {
-            await endMeeting(roomId, verifyParamsRef.current.token);
-            emitEmbedEvent("meeting-ended", { roomId });
-          } catch (err) {
-            console.error("Error ending meeting from embed command:", err);
-            emitEmbedEvent("error", { message: "Failed to end the meeting" });
-          }
-          roomRef.current?.disconnect();
+        roomRef.current?.disconnect();
+      },
+      onToggleCamera: (enabled) => {
+        if (enabled !== undefined) {
+          store.setVideoEnabled(enabled);
+        } else {
+          store.toggleCamera();
         }
+      },
+      onToggleMic: (enabled) => {
+        if (enabled !== undefined) {
+          store.setAudioEnabled(enabled);
+        } else {
+          store.toggleMicrophone();
+        }
+      },
+      onToggleScreenShare: (enabled) => {
+        store.toggleScreenShare(enabled);
+      },
+      onRaiseHand: (raised) => {
+        store.toggleHandRaise(raised);
+      },
+      onSetLayout: (mode) => {
+        store.setLayoutMode(
+          mode as "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip",
+        );
+      },
+      onGetState: () => {
+        const s = useMeetingStore.getState();
+        const local = roomRef.current?.localParticipant;
+        emitEmbedEvent("state-changed", {
+          isConnected: s.isConnected,
+          roomId: s.roomId || null,
+          localParticipant: local
+            ? {
+                id: local.identity,
+                name: local.name || local.identity,
+                isLocal: true,
+                isCameraEnabled: local.isCameraEnabled,
+                isMicEnabled: local.isMicrophoneEnabled,
+                isScreenSharing: local.isScreenShareEnabled,
+                isHandRaised: s.raisedHands.includes(local.identity),
+              }
+            : null,
+          participants: [],
+          isCameraEnabled: s.videoEnabled,
+          isMicEnabled: s.audioEnabled,
+          isScreenSharing: s.isScreenSharing,
+          isHandRaised: s.isHandRaised,
+          layoutMode: s.layoutMode,
+        });
       },
     });
     return cleanup;
