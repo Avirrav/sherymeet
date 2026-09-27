@@ -14,6 +14,7 @@ import {
   XCircle,
   LogOut,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { Room } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
@@ -44,8 +45,15 @@ export default function SettingsPanel({
   handleEndMeeting,
   setShowLeaveModal,
 }: SettingsPanelProps) {
-  const { layoutMode, setLayoutMode, captionsEnabled, toggleCaptions, meetDetails } =
-    useMeetingStore();
+  const {
+    layoutMode,
+    setLayoutMode,
+    captionsEnabled,
+    toggleCaptions,
+    meetDetails,
+    videoEnhancement,
+    setVideoEnhancement,
+  } = useMeetingStore();
 
   const transcriptionAllowed = meetDetails?.isTranscription === true;
 
@@ -100,6 +108,49 @@ export default function SettingsPanel({
               );
             })}
           </div>
+        </div>
+
+        <div className="h-px mx-3 bg-md-outline-variant/30" />
+
+        {/* Video Enhancement Section */}
+        <div className="px-3 py-4">
+          <span className="px-1 text-[10px] font-semibold text-md-on-surface-variant uppercase tracking-wide">
+            Video
+          </span>
+          <button
+            onClick={() => {
+              setVideoEnhancement(!videoEnhancement);
+              toast.success(videoEnhancement ? "Video enhancement off" : "Video enhancement on");
+            }}
+            className={`mt-2 w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
+              videoEnhancement
+                ? "bg-md-primary/10 border border-md-primary/30"
+                : "bg-md-surface-container border border-md-outline-variant/30 hover:border-md-outline-variant/60"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  videoEnhancement ? "bg-md-primary/20" : "bg-md-surface-variant/50"
+                }`}
+              >
+                <Sparkles
+                  className={`w-4 h-4 ${videoEnhancement ? "text-md-primary" : "text-md-on-surface-variant"}`}
+                />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium text-md-on-surface">Enhance Video</p>
+                <p className="text-[10px] text-md-on-surface-variant">WebGL sharpening & clarity</p>
+              </div>
+            </div>
+            <div
+              className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                videoEnhancement ? "bg-md-primary" : "bg-md-surface-variant"
+              }`}
+            >
+              {videoEnhancement && <Check className="w-3 h-3 text-md-on-primary" />}
+            </div>
+          </button>
         </div>
 
         <div className="h-px mx-3 bg-md-outline-variant/30" />

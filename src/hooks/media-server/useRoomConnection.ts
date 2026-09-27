@@ -42,15 +42,15 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
     connectingRef.current = true;
     setConnectionStatus(true, false, null);
     const r = new Room({
-      adaptiveStream: true,
+      adaptiveStream: {
+        pixelDensity: "screen",
+      },
       dynacast: true,
+      videoCaptureDefaults: {
+        resolution: VideoPresets.h720.resolution,
+      },
       publishDefaults: {
-        videoSimulcastLayers: [
-          VideoPresets.h1080,
-          VideoPresets.h720,
-          VideoPresets.h540,
-          VideoPresets.h360,
-        ],
+        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h540],
       },
     });
 

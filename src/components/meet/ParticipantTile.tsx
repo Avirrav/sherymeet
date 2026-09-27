@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { getAvatarUrl } from "@/lib/avatar";
+import VideoEnhancer from "./VideoEnhancer";
 
 interface ParticipantTileProps {
   participant: Participant;
@@ -26,6 +27,7 @@ interface ParticipantTileProps {
   updateKey?: number;
   tileWidth?: number;
   tileHeight?: number;
+  enhanceVideo?: boolean;
 }
 
 export default function ParticipantTile({
@@ -39,6 +41,7 @@ export default function ParticipantTile({
   tileWidth,
   tileHeight,
   updateKey,
+  enhanceVideo = false,
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -177,16 +180,29 @@ export default function ParticipantTile({
         isSpeaker ? "border-md-primary" : "border-md-outline-variant"
       } ${className}`}
     >
-      {/* Video element */}
+      {/* Video element - always rendered for track attachment */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted={isLocal}
+        style={{ imageRendering: "auto" }}
         className={`w-full h-full object-cover rounded-2xl ${
           isLocal ? "transform -scale-x-100" : ""
-        } ${videoMuted || !videoTrack || !isVideoLive || isVirtual ? "hidden" : ""}`}
+        } ${videoMuted || !videoTrack || !isVideoLive || isVirtual || enhanceVideo ? "hidden" : ""}`}
       />
+
+      {/* WebGL enhanced video overlay */}
+      {enhanceVideo && videoTrack && !videoMuted && !isVirtual && (
+        <VideoEnhancer
+          videoTrack={videoTrack}
+          isLocal={isLocal}
+          enabled={isVideoLive}
+          sharpness={0.6}
+          clarity={0.35}
+          className="absolute inset-0 rounded-2xl"
+        />
+      )}
 
       {/* Avatar placeholder (camera off, or warming up before first frame) */}
       {(videoMuted || !videoTrack || !isVideoLive || isVirtual) && (

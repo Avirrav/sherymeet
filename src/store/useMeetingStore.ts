@@ -61,6 +61,7 @@ interface MeetingState {
   // Layout Options
   layoutMode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
   pinnedParticipantIds: string[];
+  videoEnhancement: boolean;
 
   // Sync state from LiveKit events
   chatMessages: ChatMessage[];
@@ -93,6 +94,7 @@ interface MeetingState {
   ) => void;
   togglePinParticipant: (identity: string) => void;
   clearPins: () => void;
+  setVideoEnhancement: (enabled: boolean) => void;
   resetMeetingStore: () => void;
 }
 
@@ -129,6 +131,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   // Layout Options defaults
   layoutMode: "grid",
   pinnedParticipantIds: [],
+  videoEnhancement: false,
 
   // Event sync states defaults
   chatMessages: [],
@@ -232,6 +235,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         : [...state.pinnedParticipantIds, identity],
     })),
   clearPins: () => set({ pinnedParticipantIds: [] }),
+  setVideoEnhancement: (enabled) => set({ videoEnhancement: enabled }),
   resetMeetingStore: () =>
     set({
       roomId: "",
@@ -253,5 +257,6 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       transcriptions: {},
       layoutMode: "grid",
       pinnedParticipantIds: [],
+      videoEnhancement: false,
     }),
 }));

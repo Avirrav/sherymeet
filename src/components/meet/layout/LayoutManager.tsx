@@ -27,7 +27,8 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   // Connect layout store variables
-  const { layoutMode, pinnedParticipantIds, togglePinParticipant } = useMeetingStore();
+  const { layoutMode, pinnedParticipantIds, togglePinParticipant, videoEnhancement } =
+    useMeetingStore();
   const pinnedSet = useMemo(() => new Set(pinnedParticipantIds), [pinnedParticipantIds]);
 
   // ResizeObserver to track container sizes in real-time
@@ -216,6 +217,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
                 tileWidth={item.width}
                 tileHeight={item.height}
                 updateKey={updateKey}
+                enhanceVideo={videoEnhancement}
               />
             </LayoutAnimator>
           );
