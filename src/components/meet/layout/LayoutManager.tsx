@@ -28,6 +28,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
 
   // Connect layout store variables
   const { layoutMode, pinnedParticipantIds, togglePinParticipant } = useMeetingStore();
+  const pinnedSet = useMemo(() => new Set(pinnedParticipantIds), [pinnedParticipantIds]);
 
   // ResizeObserver to track container sizes in real-time
   useEffect(() => {
@@ -70,7 +71,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
         isLocal: false,
         isVideoEnabled: p.isCameraEnabled,
         isAudioEnabled: p.isMicrophoneEnabled,
-        isHandRaised: useMeetingStore.getState().raisedHands.includes(p.identity),
+        isHandRaised: new Set(useMeetingStore.getState().raisedHands).has(p.identity),
         connectionQuality: p.connectionQuality,
       });
     });
@@ -210,7 +211,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
                 isLocal={isLocal}
                 isSpeaker={activeSpeaker?.identity === participant.identity}
                 isVirtual={item.isVirtual}
-                pinned={pinnedParticipantIds.includes(participant.identity)}
+                pinned={pinnedSet.has(participant.identity)}
                 onPinToggle={() => togglePinParticipant(participant.identity)}
                 tileWidth={item.width}
                 tileHeight={item.height}

@@ -70,7 +70,7 @@ export default function ChatLockControl({ room }: { room: Room }) {
           }`}
         >
           <span
-            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${
+            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-[left] ${
               chatEnabled ? "left-5" : "left-1"
             }`}
           />

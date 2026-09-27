@@ -156,7 +156,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
 
               {/* Camera loading overlay */}
               {videoEnabled && isVideoLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-md-surface-container-low/80 backdrop-blur-sm z-10 transition-all">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-md-surface-container-low/80 backdrop-blur-sm z-10 transition-opacity">
                   <Loader2 className="w-8 h-8 text-md-primary animate-spin mb-3" />
                   <span className="text-xs text-md-on-surface-variant font-medium">
                     Starting camera...

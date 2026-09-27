@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import ParticipantModerationControls from "./ParticipantModerationControls";
 import {
   X,
@@ -32,6 +32,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   const { localParticipant, remoteParticipants } = useParticipants(room);
   const qualities = useConnectionQuality(room);
   const raisedHands = useMeetingStore((state) => state.raisedHands);
+  const raisedHandsSet = useMemo(() => new Set(raisedHands), [raisedHands]);
 
   if (!isCoHostOrAbove(localParticipant)) return null;
 
@@ -88,13 +89,13 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
           const isLocal = p.identity === room.localParticipant.identity;
           const isMuted = !p.isMicrophoneEnabled;
           const isCamOff = !p.isCameraEnabled;
-          const hasHandRaised = raisedHands.includes(p.identity);
+          const hasHandRaised = raisedHandsSet.has(p.identity);
           const roleIcon = getRoleIcon(p);
 
           return (
             <div
               key={p.identity}
-              className={`p-2.5 rounded-xl transition-all ${
+              className={`p-2.5 rounded-xl transition-colors ${
                 hasHandRaised
                   ? "bg-md-primary/5 border border-md-primary/20"
                   : "bg-md-surface-container border border-md-outline-variant/30 hover:border-md-outline-variant/60"

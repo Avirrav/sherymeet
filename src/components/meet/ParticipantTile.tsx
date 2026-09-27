@@ -43,8 +43,7 @@ export default function ParticipantTile({
 
   const [videoTrack, setVideoTrack] = useState<Track | null>(null);
   const [audioTrack, setAudioTrack] = useState<Track | null>(null);
-  const [isAudioMuted, setIsAudioMuted] = useState(!participant.isMicrophoneEnabled);
-  const [isVideoMuted, setIsVideoMuted] = useState(!participant.isCameraEnabled);
+  const [, forceUpdate] = useState(0);
 
   // Determine tile size mode for responsive styling
   const isCompact = (tileWidth && tileWidth < 180) || (tileHeight && tileHeight < 140);
@@ -62,8 +61,8 @@ export default function ParticipantTile({
   // Remote tiles stay event-driven — their truth only comes from the server.
   const storeAudioEnabled = useMeetingStore((state) => state.audioEnabled);
   const storeVideoEnabled = useMeetingStore((state) => state.videoEnabled);
-  const audioMuted = isLocal ? !storeAudioEnabled : isAudioMuted;
-  const videoMuted = isLocal ? !storeVideoEnabled : isVideoMuted;
+  const audioMuted = isLocal ? !storeAudioEnabled : !participant.isMicrophoneEnabled;
+  const videoMuted = isLocal ? !storeVideoEnabled : !participant.isCameraEnabled;
 
   // Force re-renders when tracks change
   useEffect(() => {
@@ -74,8 +73,7 @@ export default function ParticipantTile({
 
       setVideoTrack(vPub?.track || null);
       setAudioTrack(aPub?.track || null);
-      setIsAudioMuted(!participant.isMicrophoneEnabled);
-      setIsVideoMuted(!participant.isCameraEnabled);
+      forceUpdate((n) => n + 1);
     };
 
     syncTracks();
@@ -173,7 +171,7 @@ export default function ParticipantTile({
   return (
     <div
       onDoubleClick={onPinToggle}
-      className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+      className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-colors duration-300 ${
         isSpeaker ? "border-md-primary" : "border-md-outline-variant"
       } ${className}`}
     >
@@ -237,7 +235,7 @@ export default function ParticipantTile({
           {pinned && (
             <button
               onClick={onPinToggle}
-              className={`bg-md-primary text-md-on-primary ${isCompact ? "p-0.5 rounded" : "p-1.5 rounded-lg"} flex items-center justify-center border border-md-primary-hover hover:bg-md-primary-hover transition-all cursor-pointer`}
+              className={`bg-md-primary text-md-on-primary ${isCompact ? "p-0.5 rounded" : "p-1.5 rounded-lg"} flex items-center justify-center border border-md-primary-hover hover:bg-md-primary-hover transition-colors cursor-pointer`}
               title="Unpin Participant"
             >
               <Pin className={`${isCompact ? "w-2 h-2" : "w-3.5 h-3.5"} transform rotate-45`} />
@@ -246,7 +244,7 @@ export default function ParticipantTile({
           {!pinned && onPinToggle && !isCompact && (
             <button
               onClick={onPinToggle}
-              className="bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center border border-white/5 transition-all cursor-pointer"
+              className="bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center border border-white/5 transition-[colors,opacity] cursor-pointer"
               title="Pin Participant"
             >
               <Pin className="w-3.5 h-3.5" />

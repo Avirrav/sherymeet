@@ -43,7 +43,11 @@ export function proxy(request: NextRequest) {
   const referer = request.headers.get("referer");
 
   // Check if request is from an allowed origin
-  const requestOrigin = origin || (referer ? new URL(referer).origin : null);
+  let refererOrigin: string | null = null;
+  if (referer && URL.canParse(referer)) {
+    refererOrigin = new URL(referer).origin;
+  }
+  const requestOrigin = origin || refererOrigin;
   const isAllowedOrigin = requestOrigin && allowedOrigins.includes(requestOrigin);
 
   // For cross-origin requests, only allow if from recording origin or  webhooks origin

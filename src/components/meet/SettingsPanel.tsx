@@ -88,7 +88,7 @@ export default function SettingsPanel({
                     setLayoutMode(option.mode);
                     toast.success(`${option.label} view`);
                   }}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors ${
                     isSelected
                       ? "bg-md-primary text-md-on-primary"
                       : "bg-md-surface-container border border-md-outline-variant/30 text-md-on-surface-variant hover:text-md-on-surface hover:border-md-outline-variant/60"
@@ -116,7 +116,7 @@ export default function SettingsPanel({
               toast.success(captionsEnabled ? "Captions off" : "Captions on");
             }}
             disabled={!transcriptionAllowed}
-            className={`mt-2 w-full flex items-center justify-between p-3 rounded-xl transition-all ${
+            className={`mt-2 w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
               !transcriptionAllowed
                 ? "opacity-50 cursor-not-allowed bg-md-surface-container border border-md-outline-variant/30"
                 : captionsEnabled
@@ -166,7 +166,7 @@ export default function SettingsPanel({
                 onClose();
                 setShowLeaveModal(true);
               }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-md-surface-container border border-md-outline-variant/30 hover:border-md-error/30 hover:bg-md-error/5 transition-all group"
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-md-surface-container border border-md-outline-variant/30 hover:border-md-error/30 hover:bg-md-error/5 transition-colors group"
             >
               <div className="w-8 h-8 rounded-lg bg-md-surface-variant/50 group-hover:bg-md-error/10 flex items-center justify-center transition-colors">
                 <LogOut className="w-4 h-4 text-md-on-surface-variant group-hover:text-md-error transition-colors" />
@@ -185,7 +185,7 @@ export default function SettingsPanel({
                   onClose();
                   handleEndMeeting();
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-md-error/10 border border-md-error/20 hover:bg-md-error/20 transition-all"
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-md-error/10 border border-md-error/20 hover:bg-md-error/20 transition-colors"
               >
                 <div className="w-8 h-8 rounded-lg bg-md-error/20 flex items-center justify-center">
                   <XCircle className="w-4 h-4 text-md-error" />

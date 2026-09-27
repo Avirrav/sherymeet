@@ -89,6 +89,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
   // Keeps the sidebar mounted briefly after close so it can slide out.
   const [renderedSidebar, setRenderedSidebar] = useState<typeof activeSidebar>(null);
   const isPanelClosing = !activeSidebar && !!renderedSidebar;
+
   useEffect(() => {
     if (activeSidebar) {
       // One-frame defer keeps the entrance animation reliable and avoids
@@ -109,6 +110,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
   // Auto-hide viewer notice after 5 seconds
   useEffect(() => {
     if (!showViewerNotice) return;

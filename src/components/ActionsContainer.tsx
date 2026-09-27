@@ -1,5 +1,5 @@
-import React from 'react';
-import { Video, ArrowRight, Loader2 } from 'lucide-react';
+import React from "react";
+import { Video, ArrowRight, Loader2 } from "lucide-react";
 
 interface ActionsContainerProps {
   isLoading: boolean;
@@ -54,7 +54,7 @@ export default function ActionsContainer({
         />
         <button
           type="submit"
-          className="bg-md-surface-container hover:bg-md-outline-variant border border-md-outline-variant hover:border-md-on-surface-variant/20 px-5 rounded-xl font-semibold transition-all duration-200 text-sm text-md-on-surface cursor-pointer"
+          className="bg-md-surface-container hover:bg-md-outline-variant border border-md-outline-variant hover:border-md-on-surface-variant/20 px-5 rounded-xl font-semibold transition-colors duration-200 text-sm text-md-on-surface cursor-pointer"
         >
           Join
         </button>

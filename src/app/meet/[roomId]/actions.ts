@@ -65,6 +65,10 @@ export async function verifyMeetingToken({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ roomId, token, password: password || undefined }),
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    return { success: false, message: error.message || `Request failed with status ${res.status}` };
+  }
   return res.json();
 }
 
@@ -75,6 +79,9 @@ export async function getMeetingDetails(
   const res = await fetch(`/api/server/${roomId}/details`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (!res.ok) {
+    return { success: false };
+  }
   return res.json();
 }
 
@@ -84,6 +91,10 @@ export async function startMeeting(roomId: string, token: string): Promise<Start
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ roomId, token }),
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    return { success: false, message: error.message || `Request failed with status ${res.status}` };
+  }
   return res.json();
 }
 
@@ -93,5 +104,9 @@ export async function endMeeting(roomId: string, token: string): Promise<EndMeet
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ roomId, token }),
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    return { success: false, message: error.message || `Request failed with status ${res.status}` };
+  }
   return res.json();
 }

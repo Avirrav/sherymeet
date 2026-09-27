@@ -128,8 +128,11 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
                   <span className="text-[10px] text-md-on-surface-variant font-medium">
                     {isMe ? "You" : msg.senderName}
                   </span>
-                  <span className="text-[9px] text-md-on-surface-variant/50">
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                  <span
+                    className="text-[9px] text-md-on-surface-variant/50"
+                    suppressHydrationWarning
+                  >
+                    {new Date(msg.timestamp).toLocaleTimeString(undefined, {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -200,7 +203,7 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
                   ? "Send to host"
                   : "Send message"
             }
-            className="flex-shrink-0 w-10 h-10 bg-md-primary hover:bg-md-primary-hover text-md-on-primary rounded-xl transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+            className="flex-shrink-0 w-10 h-10 bg-md-primary hover:bg-md-primary-hover text-md-on-primary rounded-xl transition-[colors,transform] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
           >
             <Send className="w-4 h-4" />
           </button>
