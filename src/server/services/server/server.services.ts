@@ -7,7 +7,11 @@ import { ApiError } from "../../utils/api-helper";
 import { dbConnect } from "../../utils/db-connect";
 import { logger } from "../../utils/logger";
 import { config } from "../../utils/config";
-import { StatusType, IConferenceRoom } from "@/server/types/conferenceroom.types";
+import {
+  StatusType,
+  IConferenceRoom,
+  ConferenceRoomType,
+} from "@/server/types/conferenceroom.types";
 
 export interface EndSessionOptions {
   roomId: string;
@@ -27,7 +31,7 @@ export interface PublicMeetDetails {
   roomId: string;
   roomCode: string;
   status: StatusType;
-  type: string;
+  type: ConferenceRoomType;
   isRecording: boolean;
   isTranscription: boolean;
   hasPasscode: boolean;

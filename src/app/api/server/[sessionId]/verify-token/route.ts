@@ -23,15 +23,12 @@ const bodySchema = verifyTokenSchema.extend({
  * rendering anything, and to report the native roomAdmin grant so the page
  * can decide between "no access", "show start meeting button", and "ready".
  */
-export async function verifyTokenHandler(request: AuthenticatedRequest) {
+export async function verifyTokenHandler(request: AuthenticatedRequest): Promise<ApiResponse> {
   try {
     const { roomId, token, password } = request.validatedBody as z.infer<typeof bodySchema>;
-
     const verified = await verifyRoomToken(token, roomId);
     const { roomAdmin } = verified;
-
     const meet = await getSessionDetails({ roomId });
-
     // The signed token is the actual credential here (the passcode was
     // already verified server-side when the token was issued). We only
     // re-check a passcode when one is explicitly supplied, and then it must
@@ -42,7 +39,6 @@ export async function verifyTokenHandler(request: AuthenticatedRequest) {
         throw new ApiError("Invalid passcode", 401);
       }
     }
-
     return ApiResponse.success({
       valid: true,
       token:

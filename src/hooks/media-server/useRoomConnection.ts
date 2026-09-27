@@ -45,7 +45,12 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       adaptiveStream: true,
       dynacast: true,
       publishDefaults: {
-        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h360],
+        videoSimulcastLayers: [
+          VideoPresets.h1080,
+          VideoPresets.h720,
+          VideoPresets.h540,
+          VideoPresets.h360,
+        ],
       },
     });
 

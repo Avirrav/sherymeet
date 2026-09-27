@@ -11,7 +11,13 @@ import { Loader2, Clock, RefreshCw, Lock, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { extractUserFromToken } from "@/lib/token-utils";
-
+import {
+  verifyMeetingToken,
+  getMeetingDetails,
+  startMeeting,
+  endMeeting,
+  StatusType,
+} from "./actions";
 interface MeetingPageClientProps {
   roomId: string;
   token: string;
@@ -85,6 +91,7 @@ function GateScreen({
 }
 
 export default function MeetingPageClient({ roomId, token }: MeetingPageClientProps) {
+  // Defining the meeting store and local state for managing the meeting page.
   const {
     username,
     isConnected,
@@ -113,20 +120,21 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
   // hosts either land straight in (meeting already active) or see the Start
   // Meeting screen; participants with a valid token land in when the meeting
   // is active, or wait for the host to start it.
+  // we need the token and password from the verifyParamsRef to authenticate the user.
   const verifyToken = useCallback(async () => {
-    const { token: tokenToVerify, password } = verifyParamsRef.current;
+    const { token, password } = verifyParamsRef.current;
     setGateStatus(GateStatus.VERIFYING);
     try {
-      const res = await fetch(`/api/server/${roomId}/verify-token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, token: tokenToVerify, password: password || undefined }),
-      });
-      console.log({ res, tokenToVerify, password, roomId });
-      const result = await res.json();
+      const result = await verifyMeetingToken({ roomId, token, password });
       if (!result.success) {
-        setGateMessage(result.message || "This meeting link is no longer valid.");
+        setGateMessage(result.message || "Could not verify this meeting token.");
         setGateStatus(GateStatus.ERROR);
+        return;
+      }
+      if (result.data?.meetStatus === StatusType.Ended) {
+        setGateMessage("This meeting has already ended.");
+        setGateStatus(GateStatus.ERROR);
+        emitEmbedEvent("meeting-ended", { roomId });
         return;
       }
       if (result.data?.token) {
@@ -135,13 +143,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       if (result.data?.meet) {
         setMeetDetails(result.data.meet);
       }
-      if (result.data?.meetStatus === "ended") {
-        setGateMessage("This meeting has already ended.");
-        setGateStatus(GateStatus.ERROR);
-        emitEmbedEvent("meeting-ended", { roomId });
-        return;
-      }
-      const isActive = result.data?.meetStatus === "active";
+      const isActive = result.data?.meetStatus === StatusType.Active;
       if (result.data?.roomAdmin) {
         setGateStatus(isActive ? GateStatus.READY : GateStatus.START);
       } else {
@@ -159,13 +161,10 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     if (gateStatus !== GateStatus.WAITING_HOST) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/server/${roomId}/details`, {
-          headers: { Authorization: `Bearer ${verifyParamsRef.current.token}` },
-        });
-        const result = await res.json();
-        if (result.success && result.data?.status === "active") {
+        const result = await getMeetingDetails(roomId, verifyParamsRef.current.token);
+        if (result.success && result.data?.status === StatusType.Active) {
           setGateStatus(GateStatus.READY);
-        } else if (result.success && result.data?.status === "ended") {
+        } else if (result.success && result.data?.status === StatusType.Ended) {
           setGateMessage("This meeting has already ended.");
           setGateStatus(GateStatus.ERROR);
           emitEmbedEvent("meeting-ended", { roomId });
@@ -179,15 +178,10 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
 
   // Host-triggered: creates the LiveKit room, activates the meeting, and
   // (only if the meet was created with recording enabled) starts Egress.
-  const startMeeting = useCallback(async () => {
+  const handleStartMeeting = useCallback(async () => {
     setIsStarting(true);
     try {
-      const res = await fetch(`/api/server/${roomId}/start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, token: verifyParamsRef.current.token }),
-      });
-      const result = await res.json();
+      const result = await startMeeting(roomId, verifyParamsRef.current.token);
       if (result.success) {
         setGateStatus(GateStatus.READY);
       } else {
@@ -204,10 +198,8 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
   // Reset the meeting store state, extract token from prop or hash, and extract user info from token
   useEffect(() => {
     resetMeetingStore();
-
     let resolvedToken = token || "";
     let resolvedPassword = "";
-
     if (typeof window !== "undefined") {
       // Check hash fragment (prevents parameter logging in server-side logs)
       const hash = window.location.hash.substring(1);
@@ -217,7 +209,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
         resolvedPassword = params.get("password") || "";
       }
     }
-
     const timer = setTimeout(() => {
       if (!resolvedToken) {
         // No token means we can't prove roomAdmin at all.
@@ -239,14 +230,15 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
 
       verifyToken();
     }, 0);
-
     return () => {
       clearTimeout(timer);
       resetMeetingStore();
     };
   }, [resetMeetingStore, token, setUsername, setEmail, verifyToken]);
 
+  // Handle the user clicking the "Join" button to enter the meeting.
   const handleJoin = useCallback(async () => {
+    // Set the connection status to indicate that we are attempting to join the meeting.
     setConnectionStatus(true, false, null);
     try {
       if (activeToken) {
@@ -256,15 +248,14 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
             "NEXT_PUBLIC_LIVEKIT_URL environment variable is not defined on the client",
           );
         }
-        const response = await fetch(`/api/server/${roomId}/verify-token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, token: verifyParamsRef.current.token }),
+        // Verify the meeting token before attempting to join.
+        const result = await verifyMeetingToken({
+          roomId,
+          token: verifyParamsRef.current.token,
         });
-        const result = await response.json();
-        if (!response.ok || !result.success || result.data?.meetStatus !== "active") {
+        if (!result.success || result.data?.meetStatus !== "active") {
           setConnectionStatus(false, false, null);
-          toast.error(result.message || "Meeting is not available");
+          toast.error(result.message || "Unable to join the meeting.");
           return;
         }
         const joinToken = result.data.token || activeToken;
@@ -283,14 +274,18 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     }
   }, [activeToken, roomId, setConnectionStatus, setMeetingInfo]);
 
+  // Establish the room connection using the server URL and the active token if the user has entered.
   const room = useRoomConnection({
     serverUrl,
     token: hasEntered ? activeToken : "",
   });
+
+  // Keep a reference to the room connection for use in other hooks and callbacks.
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
 
+  // Keep a reference to the current gate status for use in other hooks and callbacks.
   useEffect(() => {
     gateStatusRef.current = gateStatus;
   }, [gateStatus]);
@@ -307,11 +302,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
         }
         if (command === "end") {
           try {
-            await fetch(`/api/server/${roomId}/end`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ roomId, token: verifyParamsRef.current.token }),
-            });
+            await endMeeting(roomId, verifyParamsRef.current.token);
             emitEmbedEvent("meeting-ended", { roomId });
           } catch (err) {
             console.error("Error ending meeting from embed command:", err);
@@ -348,7 +339,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
         <div className="flex flex-col items-center">
           <Loader2 className="w-10 h-10 text-md-primary animate-spin mb-8" />
           <h1 className="font-display text-4xl font-bold tracking-tight text-md-on-surface mb-3">
-            Checking your invite
+            Checking your access...
           </h1>
           <p className="text-md-on-surface-variant text-base">
             Just a moment while we confirm access.
@@ -428,7 +419,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       >
         <button
           type="button"
-          onClick={startMeeting}
+          onClick={handleStartMeeting}
           disabled={isStarting}
           className="btn-press inline-flex w-full items-center justify-center gap-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 rounded-md-full text-lg font-medium cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
         >

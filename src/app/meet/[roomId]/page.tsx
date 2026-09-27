@@ -10,6 +10,7 @@ interface SearchParams {
   token?: string;
 }
 
+// Generates dynamic metadata for the meeting page based on the room ID.
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { roomId } = await params;
 
@@ -32,6 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   };
 }
 
+// Renders the meeting page component, fetching the room ID and token from the URL parameters and search parameters.
 export default async function MeetingPage({
   params,
   searchParams,
