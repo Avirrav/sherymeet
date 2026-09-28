@@ -1,21 +1,41 @@
 import crypto from "crypto";
 import { config, isProduction } from "../../utils/config";
+import { logger } from "../../utils/logger";
 
 const ALGORITHM = "aes-256-gcm";
 const LOCAL_PREFIX = "local:";
-// Development-only fallback. Production refuses to run without a real key
-// (also enforced at boot by validateEnv in instrumentation.ts).
-const DEV_MASTER_KEY_FALLBACK = "sherymeet_default_32byte_masterkey!";
+
+let devKeyWarningLogged = false;
 
 export class apiKeyEncryption {
   private static getMasterKey(): Buffer {
-    let keyStr = config.ENCRYPTION_MASTER_KEY;
-    if (!keyStr) {
+    const keyStr = config.ENCRYPTION_MASTER_KEY;
+
+    if (!keyStr || keyStr.length < 32) {
       if (isProduction()) {
-        throw new Error("ENCRYPTION_MASTER_KEY must be set in production");
+        throw new Error(
+          "ENCRYPTION_MASTER_KEY must be set and at least 32 characters in production. " +
+            "API key encryption is disabled without a valid master key.",
+        );
       }
-      keyStr = DEV_MASTER_KEY_FALLBACK;
+      // This should never happen as config validation requires the key,
+      // but if it somehow does in development, throw an error
+      throw new Error(
+        "ENCRYPTION_MASTER_KEY is required. Please set a 32+ character key in your .env file.",
+      );
     }
+
+    // Warn if key looks like a placeholder/default (only in development)
+    if (!isProduction() && !devKeyWarningLogged) {
+      if (keyStr.includes("default") || keyStr.includes("example") || keyStr.includes("your_")) {
+        logger.warn(
+          "⚠️  ENCRYPTION_MASTER_KEY appears to be a placeholder. " +
+            "Generate a secure key for production: openssl rand -base64 32",
+        );
+        devKeyWarningLogged = true;
+      }
+    }
+
     // Ensure the key is exactly 32 bytes (256 bits)
     return Buffer.from(keyStr.padEnd(32, "!").substring(0, 32), "utf8");
   }
@@ -55,11 +75,7 @@ export class apiKeyEncryption {
       const [ivHex, authTagHex, encryptedHex] = parts;
       const iv = Buffer.from(ivHex, "hex");
       const authTag = Buffer.from(authTagHex, "hex");
-      const decipher = crypto.createDecipheriv(
-        ALGORITHM,
-        this.getMasterKey(),
-        iv,
-      );
+      const decipher = crypto.createDecipheriv(ALGORITHM, this.getMasterKey(), iv);
 
       decipher.setAuthTag(authTag);
 

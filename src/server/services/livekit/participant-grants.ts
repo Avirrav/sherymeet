@@ -4,7 +4,6 @@ import { ParticipantRole } from "@/types/roles";
 export function isAdminRole(role: ParticipantRole): boolean {
   return role === ParticipantRole.HOST || role === ParticipantRole.CO_HOST;
 }
-
 export function participantGrants(
   roomId: string,
   role: ParticipantRole,

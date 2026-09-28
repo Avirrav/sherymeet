@@ -117,29 +117,30 @@ export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConfer
       roomId,
       recordingStatus: "recording",
     });
-    for (const rec of activeRecordings) {
-      logger.info(`Stopping egress recording for room: ${roomId}, egressId: ${rec.egressId}`);
-      try {
-        await stopEgress(rec.egressId);
-        await RecordingDao.updateRecording(
-          { egressId: rec.egressId },
-          {
-            recordingStatus: "completed", // Webhook will update this with final file results, but update locally first
-            endedAt: new Date(),
-          },
-        );
-      } catch (egrErr) {
-        logger.error(`Failed to stop egress ${rec.egressId}`, egrErr);
-        // If stopping fails (e.g. already stopped), set to failed/completed depending on context
-        await RecordingDao.updateRecording(
-          { egressId: rec.egressId },
-          {
-            recordingStatus: "failed",
-            endedAt: new Date(),
-          },
-        );
-      }
-    }
+    await Promise.all(
+      activeRecordings.map(async (rec) => {
+        logger.info(`Stopping egress recording for room: ${roomId}, egressId: ${rec.egressId}`);
+        try {
+          await stopEgress(rec.egressId);
+          await RecordingDao.updateRecording(
+            { egressId: rec.egressId },
+            {
+              recordingStatus: "completed",
+              endedAt: new Date(),
+            },
+          );
+        } catch (egrErr) {
+          logger.error(`Failed to stop egress ${rec.egressId}`, egrErr);
+          await RecordingDao.updateRecording(
+            { egressId: rec.egressId },
+            {
+              recordingStatus: "failed",
+              endedAt: new Date(),
+            },
+          );
+        }
+      }),
+    );
   } catch (recErr) {
     logger.error("Error stopping room recordings", recErr);
   }

@@ -4,15 +4,18 @@ import { logger } from "./logger";
 const envSchema = z.object({
   NEXT_PUBLIC_LIVEKIT_URL: z.url(),
   NEXT_PUBLIC_API_URL: z.url(),
+  WEBSITE_URL: z.url().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   MONGODB_URI: z.string().min(1),
   LIVEKIT_API_KEY: z.string().min(1),
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
+  LIVEKIT_WEBHOOKS_URL: z.url().optional(),
   REDIS_URL: z.url(),
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
   LIVEKIT_TOKEN_TTL: z.string().default("2h"),
   ROOM_EMPTY_TIMEOUT: z.coerce.number().int().positive().default(300),
+  MAX_PARTICIPANTS: z.coerce.number().int().positive().default(50),
   AUDIT_LOG_TTL_DAYS: z.coerce.number().int().positive().default(90),
   AWS_REGION: z.string().default("ap-south-1"),
   AWS_TRANSCRIBE_REGION: z.string().default("us-east-1"),
@@ -23,6 +26,8 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
   LOG_FORMAT: z.enum(["json", "pretty"]).optional(),
+  // URL the egress agent will use to load the recorder view (may differ from NEXT_PUBLIC_API_URL if egress runs in a different network)
+  RECORDING_BASE_URL: z.string().optional(),
 });
 
 function collectRawEnv() {
@@ -35,8 +40,10 @@ function collectRawEnv() {
     NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL,
     LIVEKIT_TOKEN_TTL: process.env.LIVEKIT_TOKEN_TTL,
     ROOM_EMPTY_TIMEOUT: process.env.ROOM_EMPTY_TIMEOUT,
+    MAX_PARTICIPANTS: process.env.MAX_PARTICIPANTS,
     ENCRYPTION_MASTER_KEY: process.env.ENCRYPTION_MASTER_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    WEBSITE_URL: process.env.WEBSITE_URL,
     REDIS_URL: process.env.REDIS_URL,
     LOG_LEVEL: process.env.LOG_LEVEL,
     LOG_FORMAT: process.env.LOG_FORMAT,
@@ -48,6 +55,7 @@ function collectRawEnv() {
     AWS_TRANSCRIBE_REGION: process.env.AWS_TRANSCRIBE_REGION,
     AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
     AWS_S3_REGION: process.env.AWS_S3_REGION,
+    RECORDING_BASE_URL: process.env.RECORDING_BASE_URL,
   };
 }
 
@@ -74,7 +82,7 @@ const requiredInProduction = z.object({
   LIVEKIT_API_SECRET: z.string().min(1),
   LIVEKIT_URL: z.string().min(1),
   ENCRYPTION_MASTER_KEY: z.string().min(32, "must be at least 32 characters"),
-  NEXT_PUBLIC_API_URL: z.string().url(),
+  NEXT_PUBLIC_API_URL: z.url(),
   NEXT_PUBLIC_LIVEKIT_URL: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
@@ -89,7 +97,6 @@ const requiredInProduction = z.object({
  */
 export function validateEnv(): void {
   const result = requiredInProduction.safeParse(config);
-
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)

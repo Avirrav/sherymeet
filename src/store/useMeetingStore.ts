@@ -1,20 +1,24 @@
 import { create } from "zustand";
 
 // Shape returned by GET /api/server/[sessionId]/details (dates arrive as ISO strings)
-export interface MeetDetails {
+export type ChatRecipient = "everyone" | "host";
+
+export enum StatusType {
+  Scheduled = "scheduled",
+  Active = "active",
+  Ended = "ended",
+}
+interface PublicMeetDetails {
   roomId: string;
   roomCode: string;
-  status: "scheduled" | "active" | "ended";
-  type: "webinar" | "meet";
+  status: StatusType;
+  type: string;
   isRecording: boolean;
   isTranscription: boolean;
   hasPasscode: boolean;
-  startedAt: string | null;
-  endedAt: string | null;
+  startedAt: Date | null;
+  endedAt: Date | null;
 }
-
-export type ChatRecipient = "everyone" | "host";
-
 export interface ChatMessage {
   id: string;
   senderName: string;
@@ -39,7 +43,7 @@ interface MeetingState {
   isConnecting: boolean;
   isConnected: boolean;
   error: string | null;
-  meetDetails: MeetDetails | null;
+  meetDetails: PublicMeetDetails | null;
 
   // Active UI Controls
   isScreenSharing: boolean;
@@ -57,6 +61,7 @@ interface MeetingState {
   // Layout Options
   layoutMode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
   pinnedParticipantIds: string[];
+  videoEnhancement: boolean;
 
   // Sync state from LiveKit events
   chatMessages: ChatMessage[];
@@ -72,7 +77,7 @@ interface MeetingState {
   setVideoDeviceId: (id: string) => void;
   setMeetingInfo: (roomId: string, token: string) => void;
   setConnectionStatus: (connecting: boolean, connected: boolean, error?: string | null) => void;
-  setMeetDetails: (details: MeetDetails | null) => void;
+  setMeetDetails: (details: PublicMeetDetails | null) => void;
   toggleScreenShare: (active?: boolean) => void;
   toggleHandRaise: (active?: boolean) => void;
   toggleSidebar: (panel: "chat" | "participants" | "settings" | null) => void;
@@ -89,6 +94,7 @@ interface MeetingState {
   ) => void;
   togglePinParticipant: (identity: string) => void;
   clearPins: () => void;
+  setVideoEnhancement: (enabled: boolean) => void;
   resetMeetingStore: () => void;
 }
 
@@ -125,6 +131,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
   // Layout Options defaults
   layoutMode: "grid",
   pinnedParticipantIds: [],
+  videoEnhancement: false,
 
   // Event sync states defaults
   chatMessages: [],
@@ -228,6 +235,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         : [...state.pinnedParticipantIds, identity],
     })),
   clearPins: () => set({ pinnedParticipantIds: [] }),
+  setVideoEnhancement: (enabled) => set({ videoEnhancement: enabled }),
   resetMeetingStore: () =>
     set({
       roomId: "",
@@ -249,5 +257,6 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       transcriptions: {},
       layoutMode: "grid",
       pinnedParticipantIds: [],
+      videoEnhancement: false,
     }),
 }));

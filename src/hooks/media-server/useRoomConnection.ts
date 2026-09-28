@@ -42,10 +42,32 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
     connectingRef.current = true;
     setConnectionStatus(true, false, null);
     const r = new Room({
-      adaptiveStream: true,
+      adaptiveStream: {
+        pixelDensity: "screen",
+        pauseVideoInBackground: true,
+      },
       dynacast: true,
+      videoCaptureDefaults: {
+        resolution: VideoPresets.h1080.resolution,
+        facingMode: "user",
+      },
       publishDefaults: {
-        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h360],
+        videoSimulcastLayers: [VideoPresets.h1080, VideoPresets.h720, VideoPresets.h360],
+        videoCodec: "vp9", // Better compression than VP8 for same quality
+        backupCodec: { codec: "vp8" }, // Fallback for older browsers
+        videoEncoding: {
+          maxBitrate: 2_500_000, // 2.5 Mbps for 1080p (VP9 is more efficient)
+          maxFramerate: 30,
+          priority: "high",
+        },
+        screenShareEncoding: {
+          maxBitrate: 3_000_000, // 3 Mbps for screen share
+          maxFramerate: 15, // 15fps for screen share (smoother for content)
+          priority: "high",
+        },
+        simulcast: true,
+        stopMicTrackOnMute: false, // Faster unmute
+        dtx: true, // Discontinuous transmission for audio (saves bandwidth)
       },
     });
 
@@ -79,9 +101,10 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       try {
         console.log("Calling r.connect(serverUrl, token)...", {
           serverUrl,
+          timestamp: Date.now(),
         });
         await r.connect(serverUrl, token);
-        console.log("r.connect completed successfully! Room status:", r.state);
+        console.log("r.connect completed successfully! Room status:", r.state, "at", Date.now());
         setRoom(r);
         connectingRef.current = false;
 
@@ -112,7 +135,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
             console.log("Publishing camera track in HD quality...");
             await r.localParticipant.setCameraEnabled(true, {
               deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-              resolution: VideoPresets.h720.resolution, // Publish in HD
+              resolution: VideoPresets.h1080.resolution, // Publish in Full HD
             });
             console.log("Camera track published successfully.");
             success = true;
@@ -134,7 +157,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 console.log("Publishing fallback camera device:", otherCameras[0].deviceId);
                 await r.localParticipant.setCameraEnabled(true, {
                   deviceId: { exact: otherCameras[0].deviceId },
-                  resolution: VideoPresets.h720.resolution,
+                  resolution: VideoPresets.h1080.resolution,
                 });
                 setVideoDeviceId(otherCameras[0].deviceId);
                 success = true;
@@ -152,7 +175,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               await new Promise((resolve) => setTimeout(resolve, 600));
               await r.localParticipant.setCameraEnabled(true, {
                 deviceId: videoDeviceId || undefined,
-                resolution: VideoPresets.h720.resolution,
+                resolution: VideoPresets.h1080.resolution,
               });
               console.log("Camera track published successfully on second attempt.");
             } catch (retryErr) {
@@ -278,10 +301,20 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       }
       try {
         if (videoEnabled) {
-          console.log("Active Room: enabling camera with HD quality for device:", videoDeviceId);
+          // If no device ID is set, enumerate devices first to get a valid ID
+          let deviceId = videoDeviceId;
+          if (!deviceId) {
+            const vDevices = await Room.getLocalDevices("videoinput");
+            if (vDevices.length > 0 && vDevices[0].deviceId) {
+              deviceId = vDevices[0].deviceId;
+              setVideoDeviceId(deviceId);
+              console.log("Active Room: discovered camera device:", deviceId);
+            }
+          }
+          console.log("Active Room: enabling camera with HD quality for device:", deviceId);
           await room.localParticipant.setCameraEnabled(true, {
-            deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-            resolution: VideoPresets.h720.resolution, // Publish in HD
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            resolution: VideoPresets.h1080.resolution,
           });
           console.log("Active Room: camera enabled successfully.");
         } else {
@@ -303,7 +336,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               console.log("Active Room: trying fallback camera device:", otherCameras[0].deviceId);
               await room.localParticipant.setCameraEnabled(true, {
                 deviceId: { exact: otherCameras[0].deviceId },
-                resolution: VideoPresets.h720.resolution,
+                resolution: VideoPresets.h1080.resolution,
               });
               if (active) {
                 setVideoDeviceId(otherCameras[0].deviceId);
@@ -346,9 +379,19 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       }
       try {
         if (audioEnabled) {
-          console.log("Active Room: enabling microphone for device:", audioDeviceId);
+          // If no device ID is set, enumerate devices first to get a valid ID
+          let deviceId = audioDeviceId;
+          if (!deviceId) {
+            const aDevices = await Room.getLocalDevices("audioinput");
+            if (aDevices.length > 0 && aDevices[0].deviceId) {
+              deviceId = aDevices[0].deviceId;
+              setAudioDeviceId(deviceId);
+              console.log("Active Room: discovered microphone device:", deviceId);
+            }
+          }
+          console.log("Active Room: enabling microphone for device:", deviceId);
           await room.localParticipant.setMicrophoneEnabled(true, {
-            deviceId: audioDeviceId || undefined,
+            deviceId: deviceId || undefined,
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,

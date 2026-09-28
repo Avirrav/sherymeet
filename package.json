@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:sdk && next build",
+    "build:next": "next build",
+    "build:sdk": "cd packages/shery-meet-sdk && npm run build && cp dist/index.global.js ../../public/sdk/shery-meet.js && cp dist/index.global.js.map ../../public/sdk/shery-meet.js.map",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -23,6 +25,7 @@
     "@tanstack/react-query": "^5.100.14",
     "aws4": "^1.13.2",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.4",
     "ioredis": "^5.11.1",
     "livekit-client": "^2.19.0",
     "livekit-server-sdk": "^2.19.0",

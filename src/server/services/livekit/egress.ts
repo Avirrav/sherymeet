@@ -11,13 +11,12 @@ import { logger } from "@/server/utils/logger";
 import { ApiError } from "@/server/utils/api-helper";
 
 export async function startRoomRecording(
-  roomName: string,
+  roomId: string,
   filepath: string,
 ): Promise<EgressInfo | null> {
-  // const customBaseUrl = config.NEXT_PUBLIC_API_URL;
   const host = config.LIVEKIT_URL.replace("wss://", "https://").replace("ws://", "http://");
   const client = new EgressClient(host, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
-  // const recordingUrl = `${customBaseUrl}/meet/${roomName}?recorder=true`;
+
   if (!config.AWS_ACCESS_KEY_ID || !config.AWS_SECRET_ACCESS_KEY) {
     if (config.NODE_ENV === "production") {
       throw new Error("AWS S3 configuration is missing. Recording cannot be started.");
@@ -25,9 +24,13 @@ export async function startRoomRecording(
     logger.error("AWS S3 configuration is missing. skipping the recording.");
     return null;
   }
-  // Starts recording the room using a web-composite template and uploads to S3
+
+  logger.info(`Starting room composite egress for room ${roomId} with default template`);
+
+  // Use RoomCompositeEgress with LiveKit's built-in default template
+  // Available layouts: "grid", "speaker", "single-speaker" (add "-light" suffix for white background)
   const egressInfo = await client.startRoomCompositeEgress(
-    roomName,
+    roomId,
     new EncodedFileOutput({
       filepath: filepath,
       output: {
@@ -41,7 +44,7 @@ export async function startRoomRecording(
       },
     }),
     {
-      layout: "speaker",
+      layout: "speaker", // Use speaker layout - shows active speaker prominently
       encodingOptions: new EncodingOptions({
         width: 1920,
         height: 1080,

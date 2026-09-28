@@ -3,10 +3,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+ENV_TMP=$(mktemp)
+tr -d '\r' < "$PROJECT_ROOT/.env.deploy" > "$ENV_TMP"
 set -a
-
-source <(tr -d '\r' < "$PROJECT_ROOT/.env.deploy")
+source "$ENV_TMP"
 set +a
+rm -f "$ENV_TMP"
 
 SHERYMEET_SECRET_NAME="$SHERYMEET_SECRET_MANAGER_NAME"
 

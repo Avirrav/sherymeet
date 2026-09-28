@@ -3,14 +3,17 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-set -a
 # Strip Windows CRLF line endings before sourcing: if .env.deploy was ever
 # saved with \r\n (e.g. edited on Windows), a plain `source` embeds a
 # trailing \r into every variable's value. AWS's EC2 API is XML-based and
 # rejects that raw control character with "InvalidCharacter" errors that
 # look nothing like their actual cause.
-source <(tr -d '\r' < "$PROJECT_ROOT/.env.deploy")
+ENV_TMP=$(mktemp)
+tr -d '\r' < "$PROJECT_ROOT/.env.deploy" > "$ENV_TMP"
+set -a
+source "$ENV_TMP"
 set +a
+rm -f "$ENV_TMP"
 
 # ── Color helpers (matches aws.ecr.sh / csg.sh / redisdeploy.sh) ─
 RED='\033[0;31m'
@@ -207,17 +210,9 @@ write_files:
           enable_loopback_candidate: false
 
       redis:
-          address: ${REDIS_PRIVATE_IP}:6379
-          username: ""
-          password: ${REDIS_PASSWORD}
-          db: 0
-          use_tls: false
-          sentinel_master_name: ""
-          sentinel_username: ""
-          sentinel_password: ""
-          sentinel_addresses: []
-          cluster_addresses: []
-          max_redirects: null
+        address: "${REDIS_PRIVATE_IP}:6379"
+        password: "${REDIS_PASSWORD}"
+        db: 0
 
       turn:
           enabled: true
@@ -236,7 +231,7 @@ write_files:
       webhook:
           api_key: ${LIVEKIT_API_KEY}
           urls:
-              - https://${LIVEKIT_WEBHOOK_DOMAIN}/webhook
+              - https://${LIVEKIT_WEBHOOK_DOMAIN}/api/webhooks/livekit
 
 
   - path: /opt/livekit/caddy.yaml
@@ -375,42 +370,29 @@ write_files:
 
   - path: /opt/livekit/egress.yaml
     content: |
-      redis:
-          address: ${REDIS_PRIVATE_IP}:6379
-          username: ""
-          password: ${REDIS_PASSWORD}
-          db: 0
-          use_tls: false
-          sentinel_master_name: ""
-          sentinel_username: ""
-          sentinel_password: ""
-          sentinel_addresses: []
-          cluster_addresses: []
-          max_redirects: null
+      log_level: info
 
-      api_key: ${LIVEKIT_API_KEY}
-      api_secret: ${LIVEKIT_API_SECRET}
-      ws_url: wss://${LIVEKIT_DOMAIN}
+      api_key: "${LIVEKIT_API_KEY}"
+      api_secret: "${LIVEKIT_API_SECRET}"
+      ws_url: "ws://localhost:7880"
+      insecure: true
+
+      redis:
+        address: "${REDIS_PRIVATE_IP}:6379"
+        password: "${REDIS_PASSWORD}"
+        db: 0
 
 
   - path: /opt/livekit/ingress.yaml
     content: |
-      redis:
-          address: ${REDIS_PRIVATE_IP}:6379
-          username: ""
-          password: ${REDIS_PASSWORD}
-          db: 0
-          use_tls: false
-          sentinel_master_name: ""
-          sentinel_username: ""
-          sentinel_password: ""
-          sentinel_addresses: []
-          cluster_addresses: []
-          max_redirects: null
+      api_key: "${LIVEKIT_API_KEY}"
+      api_secret: "${LIVEKIT_API_SECRET}"
+      ws_url: "wss://${LIVEKIT_DOMAIN}"
 
-      api_key: ${LIVEKIT_API_KEY}
-      api_secret: ${LIVEKIT_API_SECRET}
-      ws_url: wss://${LIVEKIT_DOMAIN}
+      redis:
+        address: "${REDIS_PRIVATE_IP}:6379"
+        password: "${REDIS_PASSWORD}"
+        db: 0
 
       rtmp_port: 1935
       whip_port: 8080

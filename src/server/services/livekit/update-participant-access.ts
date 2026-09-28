@@ -16,7 +16,13 @@ import { AuthenticatedRequest } from "@/server/types/auth.types";
 const identitySchema = z.string().min(1).max(256);
 const schema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("panel"), identity: identitySchema, onPanel: z.boolean() }).strict(),
-  z.object({ kind: z.literal("microphone"), identity: identitySchema }).strict(),
+  z
+    .object({
+      kind: z.literal("microphone"),
+      identity: identitySchema,
+      revoke: z.boolean().optional(),
+    })
+    .strict(),
 ]);
 
 export async function updateParticipantAccess(
@@ -79,10 +85,14 @@ export async function updateParticipantAccess(
           ? ParticipantRole.PANELIST
           : ParticipantRole.PARTICIPANT
         : member.role;
+    const microphoneUpdate =
+      parsed.data.kind === "microphone"
+        ? { microphoneAllowed: parsed.data.revoke !== true, lockUntil }
+        : undefined;
     const locked = await RoomMember.findOneAndUpdate(
       { roomId, identity, role: member.role, lockUntil: { $lte: new Date() } },
       {
-        $set: kind === "microphone" ? { microphoneAllowed: true, lockUntil } : { role, lockUntil },
+        $set: microphoneUpdate ?? { role, lockUntil },
       },
       { new: true },
     );

@@ -84,9 +84,12 @@ log_ok "AWS CLI, jq, and ${ENV_FILE} all found"
 if [ -n "$REGION_OVERRIDE" ]; then
   AWS_REGION="$REGION_OVERRIDE"
 elif [ -f "$PROJECT_ROOT/.env.deploy" ]; then
+  ENV_TMP=$(mktemp)
+  tr -d '\r' < "$PROJECT_ROOT/.env.deploy" > "$ENV_TMP"
   set -a
-  source <(tr -d '\r' < "$PROJECT_ROOT/.env.deploy")
+  source "$ENV_TMP"
   set +a
+  rm -f "$ENV_TMP"
 fi
 [ -z "$AWS_REGION" ] && log_err "No region set. Pass --region, or set AWS_REGION in .env.deploy."
 log_ok "Region: ${AWS_REGION}"

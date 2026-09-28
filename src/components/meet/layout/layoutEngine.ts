@@ -1,4 +1,4 @@
-import { LayoutItem, LayoutParticipant, LayoutEngineParams } from './types';
+import { LayoutItem, LayoutParticipant, LayoutEngineParams } from "./types";
 
 /**
  * Priority sorting for layout elements:
@@ -12,7 +12,7 @@ import { LayoutItem, LayoutParticipant, LayoutEngineParams } from './types';
 export function sortParticipants(
   participants: LayoutParticipant[],
   pinnedUsers: string[],
-  activeSpeakerId: string | null
+  activeSpeakerId: string | null,
 ): LayoutParticipant[] {
   return [...participants].sort((a, b) => {
     // 1. Pinned priority
@@ -45,7 +45,7 @@ export function optimizeGrid(
   count: number,
   containerW: number,
   containerH: number,
-  targetAspect: number
+  targetAspect: number,
 ): { cols: number; rows: number; tileW: number; tileH: number } {
   if (count <= 0) return { cols: 1, rows: 1, tileW: 0, tileH: 0 };
 
@@ -87,12 +87,12 @@ export function optimizeGrid(
  * Generates layout coordinates for a centered grid, centering the last row items horizontally.
  */
 function fitGrid(
-  ids: { id: string; type: 'video' | 'screen' }[],
+  ids: { id: string; type: "video" | "screen" }[],
   containerW: number,
   containerH: number,
   aspect: number,
   yOffsetStart: number = 0,
-  zIndex: number = 1
+  zIndex: number = 1,
 ): LayoutItem[] {
   const count = ids.length;
   if (count === 0) return [];
@@ -113,9 +113,9 @@ function fitGrid(
     // Check if we are on the last row and it is not full
     const isLastRow = r === rows - 1;
     const itemsInLastRow = count - r * cols;
-    
+
     let x = startX + c * tileW;
-    
+
     if (isLastRow && itemsInLastRow < cols) {
       // Center the remaining items of the last row horizontally
       const lastRowGridW = itemsInLastRow * tileW;
@@ -152,6 +152,9 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
 
   if (viewportWidth <= 0 || viewportHeight <= 0) return [];
 
+  // Convert pinnedUsers to Set for O(1) lookups
+  const pinnedSet = new Set(pinnedUsers);
+
   // Determine aspect ratio dynamically (portrait for portrait layout, landscape for landscape)
   const isPortraitViewport = viewportWidth < viewportHeight;
   const targetAspect = isPortraitViewport ? 3 / 4 : 16 / 9;
@@ -160,65 +163,66 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
   const sortedPart = sortParticipants(participants, pinnedUsers, activeSpeakerId);
 
   // 2. Identify active focus elements
-  const activePins = sortedPart.filter((p) => pinnedUsers.includes(p.id));
+  const activePins = sortedPart.filter((p) => pinnedSet.has(p.id));
   const activeSpeaker = sortedPart.find((p) => p.id === activeSpeakerId) || sortedPart[0];
 
   // 3. Fallback layout matching depending on screen sharing activity
   let activeMode = mode;
-  if (screenShares.length > 0 && activeMode === 'grid') {
-    activeMode = 'presenter'; // Auto-switch to presenter if screen shares are active
+  if (screenShares.length > 0 && activeMode === "grid") {
+    activeMode = "presenter"; // Auto-switch to presenter if screen shares are active
   }
 
   // --- Layout Implementations ---
 
   // SPOTLIGHT LAYOUT
-  if (activeMode === 'spotlight') {
-    const focusId = activePins.length > 0 
-      ? activePins[0].id 
-      : (activeSpeaker ? activeSpeaker.id : '');
+  if (activeMode === "spotlight") {
+    const focusId =
+      activePins.length > 0 ? activePins[0].id : activeSpeaker ? activeSpeaker.id : "";
 
     if (!focusId) return [];
 
-    return [{
-      id: focusId,
-      type: 'video',
-      x: 0,
-      y: 0,
-      width: viewportWidth,
-      height: viewportHeight,
-      zIndex: 1,
-    }];
+    return [
+      {
+        id: focusId,
+        type: "video",
+        x: 0,
+        y: 0,
+        width: viewportWidth,
+        height: viewportHeight,
+        zIndex: 1,
+      },
+    ];
   }
 
   // CONTENT-FIRST LAYOUT (Screen share only grid, ignore camera feeds)
-  if (activeMode === 'content-first') {
+  if (activeMode === "content-first") {
     if (screenShares.length === 0) {
       // Fallback to grid layout if no screen shares exist
       return fitGrid(
-        sortedPart.map((p) => ({ id: p.id, type: 'video' })),
+        sortedPart.map((p) => ({ id: p.id, type: "video" })),
         viewportWidth,
         viewportHeight,
-        targetAspect
+        targetAspect,
       );
     }
 
     return fitGrid(
-      screenShares.map((s) => ({ id: s.id, type: 'screen' })),
+      screenShares.map((s) => ({ id: s.id, type: "screen" })),
       viewportWidth,
       viewportHeight,
-      16 / 9 // Screens are always 16:9
+      16 / 9, // Screens are always 16:9
     );
   }
 
   // PRESENTER LAYOUT (Screen shares in grid, cameras in horizontal filmstrip)
-  if (activeMode === 'presenter') {
+  if (activeMode === "presenter") {
     if (screenShares.length === 0) {
       // Fallback to grid layout if no screen shares exist
       return fitGrid(
-        sortedPart.map((p) => ({ id: p.id, type: 'video' })),
+        sortedPart.map((p) => ({ id: p.id, type: "video" })),
         viewportWidth,
         viewportHeight,
-        targetAspect
+        targetAspect,
       );
     }
 
@@ -228,28 +232,26 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
 
     // Layout screens
     const screenItems = fitGrid(
-      screenShares.map((s) => ({ id: s.id, type: 'screen' })),
+      screenShares.map((s) => ({ id: s.id, type: "screen" })),
       viewportWidth,
       contentH,
       16 / 9,
       0,
-      2
+      2,
     );
 
     // Layout cameras in bottom horizontal filmstrip
-    const cameraIds = sortedPart.map((p) => ({ id: p.id, type: 'video' }));
+    const cameraIds = sortedPart.map((p) => ({ id: p.id, type: "video" }));
     const tileAspect = 16 / 9;
     const tileW = Math.round(filmstripH * tileAspect * 0.85); // slightly smaller than full height
     const tileH = Math.round(tileW / tileAspect);
 
     const totalFilmstripW = cameraIds.length * tileW;
-    const startX = totalFilmstripW < viewportWidth 
-      ? (viewportWidth - totalFilmstripW) / 2 
-      : 0;
+    const startX = totalFilmstripW < viewportWidth ? (viewportWidth - totalFilmstripW) / 2 : 0;
 
     const cameraItems: LayoutItem[] = cameraIds.map((item, idx) => ({
       id: item.id,
-      type: 'video',
+      type: "video",
       x: Math.round(startX + idx * tileW),
       y: Math.round(contentH + (filmstripH - tileH) / 2),
       width: tileW,
@@ -261,7 +263,7 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
   }
 
   // SIDEBAR LAYOUT (Focused tile on left, filmstrip on right)
-  if (activeMode === 'sidebar') {
+  if (activeMode === "sidebar") {
     if (sortedPart.length === 0) return [];
 
     const focusParticipant = activePins.length > 0 ? activePins[0] : activeSpeaker;
@@ -274,7 +276,7 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
     // Focus Tile
     const focusItem: LayoutItem = {
       id: focusParticipant.id,
-      type: 'video',
+      type: "video",
       x: 0,
       y: 0,
       width: mainW,
@@ -290,7 +292,7 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
 
     const sidebarItems: LayoutItem[] = sidebarPart.map((p, idx) => ({
       id: p.id,
-      type: 'video',
+      type: "video",
       x: Math.round(mainW + 8),
       y: Math.round(idx * (tileH + 8) + 8),
       width: tileW,
@@ -302,14 +304,14 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
   }
 
   // PICTURE-IN-PICTURE (PiP) LAYOUT (Primary takes background, secondary floats in corner)
-  if (activeMode === 'pip') {
+  if (activeMode === "pip") {
     if (sortedPart.length === 0) return [];
 
     // Main background user (e.g., remote participant)
     const backgroundUser = sortedPart.find((p) => !p.isLocal) || sortedPart[0];
     const backgroundItem: LayoutItem = {
       id: backgroundUser.id,
-      type: 'video',
+      type: "video",
       x: 0,
       y: 0,
       width: viewportWidth,
@@ -329,7 +331,7 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
 
     const floatingItem: LayoutItem = {
       id: floatingUser.id,
-      type: 'video',
+      type: "video",
       x: Math.round(viewportWidth - pipW - 16), // Bottom-right corner offset
       y: Math.round(viewportHeight - pipH - 16),
       width: pipW,
@@ -342,9 +344,9 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
 
   // GRID LAYOUT (Standard optimized grid)
   return fitGrid(
-    sortedPart.map((p) => ({ id: p.id, type: 'video' })),
+    sortedPart.map((p) => ({ id: p.id, type: "video" })),
     viewportWidth,
     viewportHeight,
-    targetAspect
+    targetAspect,
   );
 }

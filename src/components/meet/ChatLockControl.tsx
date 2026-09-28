@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Room, ConnectionState } from "livekit-client";
 import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
+import { Loader2 } from "lucide-react";
 
 export default function ChatLockControl({ room }: { room: Room }) {
   const { chatEnabled, chatSlowModeSeconds, token } = useMeetingStore();
   const [pending, setPending] = useState<"lock" | "slow" | null>(null);
+
   const update = async () => {
     if (pending) return;
     setPending("lock");
@@ -20,13 +22,13 @@ export default function ChatLockControl({ room }: { room: Room }) {
       const result = await response.json();
       if (!response.ok || !result.success)
         throw new Error(result.message || "Could not change chat");
-      // RoomMetadataChanged supplies the authoritative state to every client.
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not change chat");
     } finally {
       setPending(null);
     }
   };
+
   const updateSlowMode = async (seconds: number) => {
     if (pending) return;
     setPending("slow");
@@ -45,41 +47,55 @@ export default function ChatLockControl({ room }: { room: Room }) {
       setPending(null);
     }
   };
+
+  const isDisabled = Boolean(pending) || room.state !== ConnectionState.Connected;
+
   return (
-    <div className="mx-4 mb-3 space-y-2">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={chatEnabled}
-        aria-label="Allow participants to chat"
-        disabled={Boolean(pending) || room.state !== ConnectionState.Connected}
-        onClick={update}
-        className="w-full px-3 py-2 rounded-xl border border-md-outline-variant text-xs text-md-on-surface disabled:opacity-50"
-      >
-        {pending === "lock"
-          ? "Updating chat..."
-          : `Participant chat: ${chatEnabled ? "On" : "Off"}`}
-      </button>
-      <label className="flex items-center justify-between gap-3 text-[10px] font-semibold text-md-on-surface-variant">
-        Slow mode
+    <div className="flex-shrink-0 px-3 py-3 border-b border-md-outline-variant/30 space-y-3">
+      {/* Chat Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-md-on-surface">Participant chat</span>
+          {pending === "lock" && <Loader2 className="w-3 h-3 animate-spin text-md-primary" />}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={chatEnabled}
+          aria-label="Allow participants to chat"
+          disabled={isDisabled}
+          onClick={update}
+          className={`relative w-10 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            chatEnabled ? "bg-md-primary" : "bg-md-surface-variant"
+          }`}
+        >
+          <span
+            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-[left] ${
+              chatEnabled ? "left-5" : "left-1"
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Slow Mode */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-md-on-surface">Slow mode</span>
+          {pending === "slow" && <Loader2 className="w-3 h-3 animate-spin text-md-primary" />}
+        </div>
         <select
           value={chatSlowModeSeconds}
-          disabled={Boolean(pending) || room.state !== ConnectionState.Connected}
+          disabled={isDisabled}
           onChange={(event) => updateSlowMode(Number(event.target.value))}
-          className="rounded-lg border border-md-outline-variant bg-md-surface px-2 py-1.5 text-xs text-md-on-surface outline-none focus:border-md-primary/50 disabled:opacity-50"
+          className="rounded-lg border border-md-outline-variant/50 bg-md-surface px-2.5 py-1 text-xs text-md-on-surface outline-none focus:border-md-primary/50 disabled:opacity-50 cursor-pointer"
         >
           <option value={0}>Off</option>
-          <option value={5}>5 seconds</option>
-          <option value={10}>10 seconds</option>
-          <option value={30}>30 seconds</option>
-          <option value={60}>60 seconds</option>
+          <option value={5}>5s</option>
+          <option value={10}>10s</option>
+          <option value={30}>30s</option>
+          <option value={60}>60s</option>
         </select>
-      </label>
-      {pending === "slow" && (
-        <p role="status" className="text-[10px] text-md-on-surface-variant">
-          Updating slow mode...
-        </p>
-      )}
+      </div>
     </div>
   );
 }

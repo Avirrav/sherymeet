@@ -5,6 +5,7 @@ import { useLocalMedia } from "@/hooks/media-server/useLocalMedia";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { Video, VideoOff, Mic, MicOff, User, ArrowRight, ChevronDown, Loader2 } from "lucide-react";
+import { getAvatarUrl } from "@/lib/avatar";
 
 interface PreJoinScreenProps {
   roomId: string;
@@ -107,7 +108,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
     onJoin(inputName.trim());
   };
 
-  const initial = (inputName || userName || "You").trim().charAt(0).toUpperCase();
+  const avatarSeed = (inputName || userName || "You").trim();
 
   const selectClass =
     "w-full appearance-none rounded-md-md bg-md-surface-container border border-md-outline-variant " +
@@ -144,14 +145,18 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                   }`}
                 />
               ) : (
-                <div className="w-[128px] h-[128px] rounded-full bg-md-primary text-md-on-primary flex items-center justify-center">
-                  <span className="font-display text-5xl font-bold leading-none">{initial}</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src={getAvatarUrl(avatarSeed, undefined)}
+                    alt="Your avatar"
+                    className="w-[128px] h-[128px] rounded-full bg-md-surface-container"
+                  />
                 </div>
               )}
 
               {/* Camera loading overlay */}
               {videoEnabled && isVideoLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-md-surface-container-low/80 backdrop-blur-sm z-10 transition-all">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-md-surface-container-low/80 backdrop-blur-sm z-10 transition-opacity">
                   <Loader2 className="w-8 h-8 text-md-primary animate-spin mb-3" />
                   <span className="text-xs text-md-on-surface-variant font-medium">
                     Starting camera...

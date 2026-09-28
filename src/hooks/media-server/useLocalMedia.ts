@@ -33,8 +33,7 @@ export function useLocalMedia() {
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
 
-  const [isCameraPermissionDenied, setIsCameraPermissionDenied] =
-    useState(false);
+  const [isCameraPermissionDenied, setIsCameraPermissionDenied] = useState(false);
   const [isMicPermissionDenied, setIsMicPermissionDenied] = useState(false);
 
   const videoTrackRef = useRef<LocalVideoTrack | null>(null);
@@ -43,10 +42,12 @@ export function useLocalMedia() {
   const isStartingVideoRef = useRef(false);
   const isStartingAudioRef = useRef(false);
 
-  // Load available media input devices
+  // Load available media input devices and set the default selections if not already set.
   const loadDevices = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-      console.warn("Media devices API is not supported in this browser context (unsecure connection).");
+      console.warn(
+        "Media devices API is not supported in this browser context (unsecure connection).",
+      );
       return;
     }
     try {
@@ -99,7 +100,7 @@ export function useLocalMedia() {
         setVideoTrack(null);
         toast.warning(
           "Camera access is not supported. Please ensure you are using a secure connection (HTTPS or localhost).",
-          { id: "cam-perm-warning" }
+          { id: "cam-perm-warning" },
         );
         return;
       }
@@ -120,7 +121,7 @@ export function useLocalMedia() {
         );
         const track = await createLocalVideoTrack({
           deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-          resolution: VideoPresets.h720.resolution, // Capture in HD quality (1280x720)
+          resolution: VideoPresets.h1080.resolution, // Capture in HD quality (1920x1080)
         });
 
         if (!active) {
@@ -136,14 +137,9 @@ export function useLocalMedia() {
         let otherCameras: MediaDeviceInfo[] = [];
         try {
           const vDevices = await Room.getLocalDevices("videoinput");
-          otherCameras = vDevices.filter(
-            (d) => d.deviceId !== videoDeviceId && d.deviceId !== "",
-          );
+          otherCameras = vDevices.filter((d) => d.deviceId !== videoDeviceId && d.deviceId !== "");
         } catch (deviceErr) {
-          console.error(
-            "Failed to query video devices inside fallback:",
-            deviceErr,
-          );
+          console.error("Failed to query video devices inside fallback:", deviceErr);
         }
 
         if (otherCameras.length > 0) {
@@ -154,7 +150,7 @@ export function useLocalMedia() {
           try {
             const fallbackTrack = await createLocalVideoTrack({
               deviceId: { exact: otherCameras[0].deviceId },
-              resolution: VideoPresets.h720.resolution,
+              resolution: VideoPresets.h1080.resolution,
             });
             if (!active) {
               fallbackTrack.stop();
@@ -164,12 +160,9 @@ export function useLocalMedia() {
             videoTrackRef.current = fallbackTrack;
             setVideoTrack(fallbackTrack);
             setIsCameraPermissionDenied(false);
-            toast.info(
-              "Selected camera was busy/unavailable. Switched to another camera.",
-              {
-                id: "cam-fallback-info",
-              },
-            );
+            toast.info("Selected camera was busy/unavailable. Switched to another camera.", {
+              id: "cam-fallback-info",
+            });
             return;
           } catch (fallbackErr) {
             console.error("Fallback camera also failed:", fallbackErr);
@@ -221,7 +214,7 @@ export function useLocalMedia() {
         setAudioTrack(null);
         toast.warning(
           "Microphone access is not supported. Please ensure you are using a secure connection (HTTPS or localhost).",
-          { id: "mic-perm-warning" }
+          { id: "mic-perm-warning" },
         );
         return;
       }
@@ -256,14 +249,9 @@ export function useLocalMedia() {
         let otherMics: MediaDeviceInfo[] = [];
         try {
           const aDevices = await Room.getLocalDevices("audioinput");
-          otherMics = aDevices.filter(
-            (d) => d.deviceId !== audioDeviceId && d.deviceId !== "",
-          );
+          otherMics = aDevices.filter((d) => d.deviceId !== audioDeviceId && d.deviceId !== "");
         } catch (deviceErr) {
-          console.error(
-            "Failed to query audio devices inside fallback:",
-            deviceErr,
-          );
+          console.error("Failed to query audio devices inside fallback:", deviceErr);
         }
 
         if (otherMics.length > 0) {
@@ -286,12 +274,9 @@ export function useLocalMedia() {
             audioTrackRef.current = fallbackTrack;
             setAudioTrack(fallbackTrack);
             setIsMicPermissionDenied(false);
-            toast.info(
-              "Selected microphone was busy. Switched to another microphone.",
-              {
-                id: "mic-fallback-info",
-              },
-            );
+            toast.info("Selected microphone was busy. Switched to another microphone.", {
+              id: "mic-fallback-info",
+            });
             return;
           } catch (fallbackErr) {
             console.error("Fallback microphone also failed:", fallbackErr);
@@ -306,12 +291,9 @@ export function useLocalMedia() {
         setAudioTrack(null);
 
         // Use unique toast ID to prevent duplicate popups
-        toast.warning(
-          "Microphone permission denied or microphone unavailable",
-          {
-            id: "mic-perm-warning",
-          },
-        );
+        toast.warning("Microphone permission denied or microphone unavailable", {
+          id: "mic-perm-warning",
+        });
       } finally {
         isStartingAudioRef.current = false;
       }

@@ -12,58 +12,57 @@
    ============================================================ */
 
 @theme {
-  /* Generated from source color #0B57D0 (Material blue).
-     Tones follow the M3 dark-scheme assignments, so every "on-" role
-     already meets contrast against its pair — don't hand-tweak one
-     without moving its partner. */
+  /* Zoom-inspired dark theme palette.
+     Authentic Zoom colors for professional video conferencing.
+     Maintains M3 role structure for consistent component styling. */
 
-  /* --- Primary --- */
-  --color-md-primary: #AEC6FF;
-  /* Slightly dimmed primary for hover on filled components. */
-  --color-md-primary-hover: #97B3F5;
-  --color-md-on-primary: #002E69;
-  --color-md-primary-container: #004494;
-  --color-md-on-primary-container: #D8E2FF;
+  /* --- Primary (Zoom Blue #2D8CFF) --- */
+  --color-md-primary: #2d8cff;
+  /* Lighter for hover states */
+  --color-md-primary-hover: #4da3ff;
+  --color-md-on-primary: #ffffff;
+  --color-md-primary-container: #0d5fbf;
+  --color-md-on-primary-container: #d6e9ff;
 
-  /* --- Secondary --- */
-  --color-md-secondary: #BEC6DC;
-  --color-md-on-secondary: #283041;
-  --color-md-secondary-container: #3E4759;
-  --color-md-on-secondary-container: #DAE2F9;
+  /* --- Secondary (Zoom gray tones) --- */
+  --color-md-secondary: #8a8a8a;
+  --color-md-on-secondary: #1a1a1a;
+  --color-md-secondary-container: #3d3d3d;
+  --color-md-on-secondary-container: #e8e8e8;
 
-  /* --- Tertiary --- */
-  --color-md-tertiary: #DDBCE0;
-  --color-md-on-tertiary: #3F2844;
-  --color-md-tertiary-container: #573E5C;
-  --color-md-on-tertiary-container: #FAD8FD;
+  /* --- Tertiary (Zoom green for active/connected) --- */
+  --color-md-tertiary: #2cce55;
+  --color-md-on-tertiary: #003d12;
+  --color-md-tertiary-container: #1a7f35;
+  --color-md-on-tertiary-container: #b8f5c8;
 
-  /* --- Error --- */
-  --color-md-error: #FFB4AB;
-  --color-md-on-error: #690005;
-  --color-md-error-container: #93000A;
-  --color-md-on-error-container: #FFDAD6;
+  /* --- Error (Zoom red for end/mute) --- */
+  --color-md-error: #e02828;
+  --color-md-on-error: #ffffff;
+  --color-md-error-container: #5c1111;
+  --color-md-on-error-container: #ffcfcf;
 
-  /* --- Surfaces (neutral palette, subtly blue-tinted) --- */
-  --color-md-surface: #111318;
-  --color-md-on-surface: #E2E2E9;
-  --color-md-surface-variant: #44474F;
-  --color-md-on-surface-variant: #C4C6D0;
-  --color-md-surface-dim: #111318;
-  --color-md-surface-bright: #37393E;
+  /* --- Surfaces (Zoom's signature dark gray #242424) --- */
+  --color-md-surface: #1a1a1a;
+  --color-md-on-surface: #ffffff;
+  --color-md-surface-variant: #404040;
+  --color-md-on-surface-variant: #b3b3b3;
+  --color-md-surface-dim: #141414;
+  --color-md-surface-bright: #4a4a4a;
 
-  /* Surface containers express elevation through tone, not shadow. */
-  --color-md-surface-container-lowest: #0C0E13;
-  --color-md-surface-container-low: #191C20;
-  --color-md-surface-container: #1D2024;
-  --color-md-surface-container-high: #282A2F;
-  --color-md-surface-container-highest: #33353A;
+  /* Surface containers - Zoom's layered grays */
+  --color-md-surface-container-lowest: #121212;
+  --color-md-surface-container-low: #1e1e1e;
+  --color-md-surface-container: #242424;
+  --color-md-surface-container-high: #2d2d2d;
+  --color-md-surface-container-highest: #383838;
 
   /* --- Outlines & utility --- */
-  --color-md-outline: #8E9099;
-  --color-md-outline-variant: #44474F;
-  --color-md-inverse-surface: #E2E2E9;
-  --color-md-inverse-on-surface: #2E3036;
-  --color-md-inverse-primary: #005AC1;
+  --color-md-outline: #666666;
+  --color-md-outline-variant: #404040;
+  --color-md-inverse-surface: #f5f5f5;
+  --color-md-inverse-on-surface: #1a1a1a;
+  --color-md-inverse-primary: #2d8cff;
   --color-md-scrim: #000000;
 
   /* --- Type families --- */
@@ -108,47 +107,97 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes screenIn {
-  from { opacity: 0; transform: scale(0.985); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes popIn {
-  0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.12); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes messageIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes panelIn {
-  from { opacity: 0; transform: translateX(48px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes panelOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(48px); }
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(48px);
+  }
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -156,18 +205,33 @@ html, body {
   overflow: hidden;
   background-color: var(--color-md-surface);
   /* Roboto is the Material type family; loaded via next/font in layout.tsx. */
-  font-family: var(--font-roboto), Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    var(--font-roboto),
+    Roboto,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
 }
 
 /* ============================================================
    M3 elevation utilities
    ============================================================ */
-.md-elevation-1 { box-shadow: var(--md-elevation-1); }
-.md-elevation-2 { box-shadow: var(--md-elevation-2); }
-.md-elevation-3 { box-shadow: var(--md-elevation-3); }
-.md-elevation-4 { box-shadow: var(--md-elevation-4); }
-.md-elevation-5 { box-shadow: var(--md-elevation-5); }
-
+.md-elevation-1 {
+  box-shadow: var(--md-elevation-1);
+}
+.md-elevation-2 {
+  box-shadow: var(--md-elevation-2);
+}
+.md-elevation-3 {
+  box-shadow: var(--md-elevation-3);
+}
+.md-elevation-4 {
+  box-shadow: var(--md-elevation-4);
+}
+.md-elevation-5 {
+  box-shadow: var(--md-elevation-5);
+}
 
 /* ============================================================
    M3 state layers
@@ -181,7 +245,7 @@ html, body {
 }
 
 .md-state-layer::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -192,9 +256,15 @@ html, body {
   z-index: -1;
 }
 
-.md-state-layer:hover::after { opacity: 0.08; }
-.md-state-layer:focus-visible::after { opacity: 0.12; }
-.md-state-layer:active::after { opacity: 0.12; }
+.md-state-layer:hover::after {
+  opacity: 0.08;
+}
+.md-state-layer:focus-visible::after {
+  opacity: 0.12;
+}
+.md-state-layer:active::after {
+  opacity: 0.12;
+}
 
 /* Icon buttons in the meeting toolbar / app bars. */
 .control-btn {

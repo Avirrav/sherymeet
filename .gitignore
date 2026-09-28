@@ -42,4 +42,10 @@ yarn-error.log*
 next-env.d.ts
 
 *.archive
+.agents
 .agent
+skills-lock.json
+
+# SDK package
+packages/*/node_modules
+packages/*/dist

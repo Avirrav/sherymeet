@@ -3,7 +3,8 @@ import { config } from "../../utils/config";
 const apiKey = config.LIVEKIT_API_KEY;
 const apiSecret = config.LIVEKIT_API_SECRET;
 const livekitUrl = config.LIVEKIT_URL;
-const roomEmptyTimeout = config.ROOM_EMPTY_TIMEOUT; // 5 minutes
+const roomEmptyTimeout = config.ROOM_EMPTY_TIMEOUT;
+const defaultMaxParticipants = config.MAX_PARTICIPANTS;
 
 // Helper to generate a format like abc-defg-hij
 function generateRoomCode(): string {
@@ -14,7 +15,10 @@ function generateRoomCode(): string {
 }
 
 // Create Room Service
-export async function createRoom(roomName?: string, maxParticipants: number = 10): Promise<Room> {
+export async function createRoom(
+  roomName?: string,
+  maxParticipants: number = defaultMaxParticipants,
+): Promise<Room> {
   if (!apiKey || !apiSecret || !livekitUrl) {
     throw new Error("LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL must be set");
   }

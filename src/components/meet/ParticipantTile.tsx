@@ -1,9 +1,28 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Participant, Track, ParticipantEvent } from 'livekit-client';
-import { Mic, MicOff, VideoOff, Hand, SignalHigh, SignalMedium, SignalLow, Pin } from 'lucide-react';
-import { useMeetingStore } from '@/store/useMeetingStore';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Participant,
+  Track,
+  ParticipantEvent,
+  RemoteTrackPublication,
+  VideoQuality,
+} from "livekit-client";
+import {
+  Mic,
+  MicOff,
+  VideoOff,
+  Hand,
+  SignalHigh,
+  SignalMedium,
+  SignalLow,
+  Pin,
+  Maximize,
+  Minimize,
+} from "lucide-react";
+import { useMeetingStore } from "@/store/useMeetingStore";
+import { getAvatarUrl } from "@/lib/avatar";
+import VideoEnhancer from "./VideoEnhancer";
 
 interface ParticipantTileProps {
   participant: Participant;
@@ -13,25 +32,103 @@ interface ParticipantTileProps {
   isVirtual?: boolean;
   pinned?: boolean;
   onPinToggle?: () => void;
+  updateKey?: number;
+  tileWidth?: number;
+  tileHeight?: number;
+  enhanceVideo?: boolean;
 }
 
 export default function ParticipantTile({
   participant,
   isLocal,
-  className = '',
+  className = "",
   isSpeaker = false,
   isVirtual = false,
   pinned = false,
   onPinToggle,
+  tileWidth,
+  tileHeight,
+  updateKey,
+  enhanceVideo = false,
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const tileRef = useRef<HTMLDivElement | null>(null);
 
   const [videoTrack, setVideoTrack] = useState<Track | null>(null);
   const [audioTrack, setAudioTrack] = useState<Track | null>(null);
-  const [isAudioMuted, setIsAudioMuted] = useState(!participant.isMicrophoneEnabled);
-  const [isVideoMuted, setIsVideoMuted] = useState(!participant.isCameraEnabled);
-  
+  const [, forceUpdate] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen toggle handler
+  const toggleFullscreen = async () => {
+    if (!tileRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await tileRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error("Fullscreen error:", err);
+    }
+  };
+
+  // Listen for fullscreen changes (e.g., user presses Escape)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Fix adaptive streaming when VideoEnhancer hides the actual video element.
+  // Manually set video quality/dimensions so LiveKit sends appropriate quality.
+  useEffect(() => {
+    if (isLocal || !videoTrack) return;
+
+    // Find the video publication for this track
+    const pub = Array.from(participant.videoTrackPublications.values()).find(
+      (p) => p.track === videoTrack,
+    ) as RemoteTrackPublication | undefined;
+
+    if (!pub || !pub.setVideoDimensions) return;
+
+    // Determine target dimensions based on tile size and fullscreen state
+    let width = tileWidth || 640;
+    let height = tileHeight || 480;
+
+    if (isFullscreen) {
+      // Request full quality in fullscreen
+      width = window.screen.width;
+      height = window.screen.height;
+    } else if (pinned) {
+      // Pinned tiles are typically larger
+      width = Math.max(width, 1280);
+      height = Math.max(height, 720);
+    }
+
+    // When enhanceVideo is true, the video element is hidden so adaptive streaming
+    // can't detect the display size. We manually set dimensions.
+    if (enhanceVideo) {
+      pub.setVideoDimensions({ width, height });
+    }
+
+    // Also set quality hint for fullscreen
+    if (isFullscreen && pub.setVideoQuality) {
+      pub.setVideoQuality(VideoQuality.HIGH);
+    }
+  }, [videoTrack, participant, isLocal, tileWidth, tileHeight, isFullscreen, pinned, enhanceVideo]);
+
+  // Determine tile size mode for responsive styling
+  const isCompact = (tileWidth && tileWidth < 180) || (tileHeight && tileHeight < 140);
+  const isMedium =
+    !isCompact && ((tileWidth && tileWidth < 280) || (tileHeight && tileHeight < 200));
+
   const raisedHands = useMeetingStore((state) => state.raisedHands);
   const isHandRaised = raisedHands.includes(participant.identity);
 
@@ -43,8 +140,8 @@ export default function ParticipantTile({
   // Remote tiles stay event-driven — their truth only comes from the server.
   const storeAudioEnabled = useMeetingStore((state) => state.audioEnabled);
   const storeVideoEnabled = useMeetingStore((state) => state.videoEnabled);
-  const audioMuted = isLocal ? !storeAudioEnabled : isAudioMuted;
-  const videoMuted = isLocal ? !storeVideoEnabled : isVideoMuted;
+  const audioMuted = isLocal ? !storeAudioEnabled : !participant.isMicrophoneEnabled;
+  const videoMuted = isLocal ? !storeVideoEnabled : !participant.isCameraEnabled;
 
   // Force re-renders when tracks change
   useEffect(() => {
@@ -55,8 +152,7 @@ export default function ParticipantTile({
 
       setVideoTrack(vPub?.track || null);
       setAudioTrack(aPub?.track || null);
-      setIsAudioMuted(!participant.isMicrophoneEnabled);
-      setIsVideoMuted(!participant.isCameraEnabled);
+      forceUpdate((n) => n + 1);
     };
 
     syncTracks();
@@ -84,7 +180,7 @@ export default function ParticipantTile({
       participant.off(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
       participant.off(ParticipantEvent.IsSpeakingChanged, syncTracks);
     };
-  }, [participant]);
+  }, [participant, updateKey]);
 
   // True only while the <video> element is actually receiving frames. The
   // camera takes ~0.5-2s to warm up after unmute (LiveKit stops the physical
@@ -99,9 +195,9 @@ export default function ParticipantTile({
 
     const handleLive = () => setIsVideoLive(true);
     const handleDead = () => setIsVideoLive(false);
-    el.addEventListener('loadeddata', handleLive);
-    el.addEventListener('playing', handleLive);
-    el.addEventListener('emptied', handleDead);
+    el.addEventListener("loadeddata", handleLive);
+    el.addEventListener("playing", handleLive);
+    el.addEventListener("emptied", handleDead);
 
     videoTrack.attach(el);
     // If the element already has a decoded frame (e.g. re-mount of a live
@@ -112,9 +208,9 @@ export default function ParticipantTile({
 
     return () => {
       cancelAnimationFrame(raf);
-      el.removeEventListener('loadeddata', handleLive);
-      el.removeEventListener('playing', handleLive);
-      el.removeEventListener('emptied', handleDead);
+      el.removeEventListener("loadeddata", handleLive);
+      el.removeEventListener("playing", handleLive);
+      el.removeEventListener("emptied", handleDead);
       videoTrack.detach(el);
     };
   }, [videoTrack, isVirtual]);
@@ -141,11 +237,11 @@ export default function ParticipantTile({
   // Signal indicator helper
   const renderConnectionQuality = () => {
     const quality = participant.connectionQuality;
-    const size = 'w-4 h-4';
-    if (quality === 'excellent' || quality === 'good') {
+    const size = isCompact ? "w-2.5 h-2.5" : isMedium ? "w-3 h-3" : "w-4 h-4";
+    if (quality === "excellent" || quality === "good") {
       return <SignalHigh className={`${size} text-green-500`} />;
     }
-    if (quality === 'poor') {
+    if (quality === "poor") {
       return <SignalLow className={`${size} text-md-error`} />;
     }
     return <SignalMedium className={`${size} text-yellow-500`} />;
@@ -153,34 +249,50 @@ export default function ParticipantTile({
 
   return (
     <div
+      ref={tileRef}
       onDoubleClick={onPinToggle}
-      className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
-        isSpeaker ? 'border-md-primary' : 'border-md-outline-variant'
-      } ${className}`}
+      className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-colors duration-300 ${
+        isSpeaker ? "border-md-primary" : "border-md-outline-variant"
+      } ${isFullscreen ? "!rounded-none" : ""} ${className}`}
     >
-      {/* Video element */}
+      {/* Video element - always rendered for track attachment */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted={isLocal}
+        style={{ imageRendering: "auto" }}
         className={`w-full h-full object-cover rounded-2xl ${
-          isLocal ? 'transform -scale-x-100' : ''
-        } ${videoMuted || !videoTrack || !isVideoLive || isVirtual ? 'hidden' : ''}`}
+          isLocal ? "transform -scale-x-100" : ""
+        } ${videoMuted || !videoTrack || !isVideoLive || isVirtual || enhanceVideo ? "hidden" : ""}`}
       />
+
+      {/* WebGL enhanced video overlay */}
+      {enhanceVideo && videoTrack && !videoMuted && !isVirtual && (
+        <VideoEnhancer
+          videoTrack={videoTrack}
+          isLocal={isLocal}
+          enabled={isVideoLive}
+          sharpness={0.6}
+          clarity={0.35}
+          className="absolute inset-0 rounded-2xl"
+        />
+      )}
 
       {/* Avatar placeholder (camera off, or warming up before first frame) */}
       {(videoMuted || !videoTrack || !isVideoLive || isVirtual) && (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 absolute inset-0">
-          <div className="w-20 h-20 rounded-full bg-md-primary/15 border border-md-primary/30 flex items-center justify-center text-md-primary font-bold text-3xl">
-            {(participant.name || participant.identity || 'P').charAt(0).toUpperCase()}
-          </div>
-          {isVirtual && (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-md-surface-container/80 absolute inset-0">
+          <img
+            src={getAvatarUrl(participant.name, participant.identity)}
+            alt={participant.name || participant.identity || "Participant"}
+            className={`${isCompact ? "w-8 h-8" : isMedium ? "w-12 h-12" : "w-20 h-20"} rounded-full`}
+          />
+          {isVirtual && !isCompact && (
             <span className="text-[10px] text-md-on-surface-variant mt-2">
               (Stream virtualized)
             </span>
           )}
-          {!isVirtual && !videoMuted && isLocal && (
+          {!isVirtual && !videoMuted && isLocal && !isCompact && (
             <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-md-on-surface-variant animate-fade-in">
               <span className="w-3 h-3 rounded-full border-2 border-md-primary/60 border-t-transparent animate-spin" />
               Starting camera...
@@ -193,56 +305,96 @@ export default function ParticipantTile({
       <audio ref={audioRef} autoPlay className="hidden" />
 
       {/* Top Indicators Overlay */}
-      <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+      <div
+        className={`absolute ${isCompact ? "top-1.5 left-1.5 right-1.5" : isMedium ? "top-2 left-2 right-2" : "top-4 left-4 right-4"} flex justify-between items-start pointer-events-none`}
+      >
         {/* Name and identity */}
-        <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-2 pointer-events-auto">
-          <span className="text-xs font-semibold text-md-on-surface">
+        <div
+          className={`bg-black/60 backdrop-blur-md ${isCompact ? "px-1.5 py-0.5 rounded-md gap-1" : isMedium ? "px-2 py-1 rounded-lg gap-1.5" : "px-3 py-1.5 rounded-xl gap-2"} border border-white/5 flex items-center pointer-events-auto`}
+        >
+          <span
+            className={`${isCompact ? "text-[9px]" : isMedium ? "text-[10px]" : "text-xs"} font-semibold text-md-on-surface truncate ${isCompact ? "max-w-[60px]" : isMedium ? "max-w-[100px]" : ""}`}
+          >
             {participant.name || participant.identity}
-            {isLocal && <span className="text-md-primary ml-1 text-[10px] font-bold uppercase">(You)</span>}
+            {isLocal && !isCompact && (
+              <span className="text-md-primary ml-1 text-[10px] font-bold uppercase">(You)</span>
+            )}
           </span>
-          {renderConnectionQuality()}
+          {!isCompact && renderConnectionQuality()}
         </div>
 
-        {/* Hand Raised and Pin overlay */}
-        <div className="flex gap-2 items-center pointer-events-auto">
+        {/* Hand Raised, Pin, and Fullscreen overlay */}
+        <div className={`flex ${isCompact ? "gap-1" : "gap-2"} items-center pointer-events-auto`}>
+          {/* Fullscreen button */}
+          {!isCompact && (
+            <button
+              onClick={toggleFullscreen}
+              className={`bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg flex items-center justify-center border border-white/5 transition-[colors,opacity] cursor-pointer ${isFullscreen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
           {pinned && (
             <button
               onClick={onPinToggle}
-              className="bg-md-primary text-md-on-primary p-1.5 rounded-lg flex items-center justify-center border border-md-primary-hover hover:bg-md-primary-hover transition-all cursor-pointer"
+              className={`bg-md-primary text-md-on-primary ${isCompact ? "p-0.5 rounded" : "p-1.5 rounded-lg"} flex items-center justify-center border border-md-primary-hover hover:bg-md-primary-hover transition-colors cursor-pointer`}
               title="Unpin Participant"
             >
-              <Pin className="w-3.5 h-3.5 transform rotate-45" />
+              <Pin className={`${isCompact ? "w-2 h-2" : "w-3.5 h-3.5"} transform rotate-45`} />
             </button>
           )}
-          {!pinned && onPinToggle && (
+          {!pinned && onPinToggle && !isCompact && (
             <button
               onClick={onPinToggle}
-              className="bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center border border-white/5 transition-all cursor-pointer"
+              className="bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center border border-white/5 transition-[colors,opacity] cursor-pointer"
               title="Pin Participant"
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
           )}
           {isHandRaised && (
-            <div className="bg-md-primary text-md-on-primary p-1.5 rounded-lg flex items-center justify-center border border-md-primary-hover animate-scale-in">
-              <Hand className="w-3.5 h-3.5" />
+            <div
+              className={`bg-md-primary text-md-on-primary ${isCompact ? "p-0.5 rounded" : "p-1.5 rounded-lg"} flex items-center justify-center border border-md-primary-hover animate-scale-in`}
+            >
+              <Hand className={`${isCompact ? "w-2 h-2" : "w-3.5 h-3.5"}`} />
             </div>
           )}
         </div>
       </div>
 
       {/* Bottom status indicators */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-2">
-        <div className={`p-2 rounded-full backdrop-blur-md border transition-colors duration-150 ${
-          audioMuted
-            ? 'bg-md-error-container border-md-error/40 text-md-on-error-container'
-            : 'bg-black/60 border-white/5 text-md-on-surface'
-        }`}>
-          {audioMuted ? <MicOff className="w-3.5 h-3.5 animate-pop-in" /> : <Mic className="w-3.5 h-3.5 animate-pop-in" />}
+      <div
+        className={`absolute ${isCompact ? "bottom-1.5 right-1.5 gap-1" : isMedium ? "bottom-2 right-2 gap-1.5" : "bottom-4 right-4 gap-2"} flex items-center`}
+      >
+        <div
+          className={`${isCompact ? "p-1 rounded" : isMedium ? "p-1.5 rounded-md" : "p-2 rounded-full"} backdrop-blur-md border transition-colors duration-150 ${
+            audioMuted
+              ? "bg-md-error-container border-md-error/40 text-md-on-error-container"
+              : "bg-black/60 border-white/5 text-md-on-surface"
+          }`}
+        >
+          {audioMuted ? (
+            <MicOff
+              className={`${isCompact ? "w-2 h-2" : isMedium ? "w-2.5 h-2.5" : "w-3.5 h-3.5"} animate-pop-in`}
+            />
+          ) : (
+            <Mic
+              className={`${isCompact ? "w-2 h-2" : isMedium ? "w-2.5 h-2.5" : "w-3.5 h-3.5"} animate-pop-in`}
+            />
+          )}
         </div>
         {videoMuted && (
-          <div className="p-2 rounded-full backdrop-blur-md border bg-md-error-container border-md-error/40 text-md-on-error-container animate-pop-in">
-            <VideoOff className="w-3.5 h-3.5" />
+          <div
+            className={`${isCompact ? "p-1 rounded" : isMedium ? "p-1.5 rounded-md" : "p-2 rounded-full"} backdrop-blur-md border bg-md-error-container border-md-error/40 text-md-on-error-container animate-pop-in`}
+          >
+            <VideoOff
+              className={`${isCompact ? "w-2 h-2" : isMedium ? "w-2.5 h-2.5" : "w-3.5 h-3.5"}`}
+            />
           </div>
         )}
       </div>

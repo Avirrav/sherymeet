@@ -14,6 +14,7 @@
  * (server/services/auth/keyencryption.ts) and cannot be recovered, only
  * rotated (ApiClientService.rotateSecret, not yet wired to this script).
  */
+import "dotenv/config";
 import mongoose from "mongoose";
 import { dbConnect } from "../src/server/utils/db-connect";
 import { ApiClientService } from "../src/server/services/auth/api-client";

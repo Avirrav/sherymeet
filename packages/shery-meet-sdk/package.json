@@ -1,0 +1,52 @@
+{
+  "name": "sherymeet-sdk",
+  "version": "2.0.0",
+  "description": "Embed SheryMeet video conferences in any website",
+  "author": "SheryMeet",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/avirrav/sherymeet"
+  },
+  "keywords": [
+    "video",
+    "conference",
+    "meeting",
+    "embed",
+    "iframe",
+    "webrtc",
+    "livekit"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
