@@ -17,7 +17,7 @@ var SheryMeetSDK = (() => {
     };
   var E = (i) => y(m({}, "__esModule", { value: !0 }), i);
   var w = {};
-  p(w, { SheryMeet: () => a, default: () => c });
+  p(w, { SheryMeet: () => a, default: () => h });
   var b = "sherymeet-sdk",
     M = "sherymeet";
   var l = class l {
@@ -122,16 +122,16 @@ var SheryMeetSDK = (() => {
         this.createIframe(e, n),
         await this.readyPromise,
         new Promise((s, r) => {
-          let h = setTimeout(() => {
+          let c = setTimeout(() => {
               (this.off("joined", o),
                 this.off("error", d),
                 r(new Error("Join timeout - meeting may not be active")));
             }, 3e4),
             o = () => {
-              (clearTimeout(h), this.off("joined", o), this.off("error", d), s());
+              (clearTimeout(c), this.off("joined", o), this.off("error", d), s());
             },
             d = (u) => {
-              (clearTimeout(h),
+              (clearTimeout(c),
                 this.off("joined", o),
                 this.off("error", d),
                 r(new Error(u.message)));
@@ -176,6 +176,15 @@ var SheryMeetSDK = (() => {
     requestState() {
       this.sendCommand("get-state");
     }
+    fullscreen(e) {
+      this.sendCommand("fullscreen", e !== void 0 ? { enabled: e } : void 0);
+    }
+    enterFullscreen() {
+      this.fullscreen(!0);
+    }
+    exitFullscreen() {
+      this.fullscreen(!1);
+    }
     getState() {
       return this.state;
     }
@@ -201,7 +210,7 @@ var SheryMeetSDK = (() => {
   };
   l.VERSION = "1.0.0";
   var a = l,
-    c = a;
+    h = a;
   return E(w);
 })();
 window.SheryMeet = SheryMeetSDK.SheryMeet;

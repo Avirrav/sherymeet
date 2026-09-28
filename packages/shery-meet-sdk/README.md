@@ -81,11 +81,11 @@ meet.on("meeting-ended", () => {
 new SheryMeet(options: SheryMeetOptions)
 ```
 
-| Option      | Type                    | Required | Description                                       |
-| ----------- | ----------------------- | -------- | ------------------------------------------------- |
-| `container` | `string \| HTMLElement` | Yes      | CSS selector or element for the iframe            |
-| `baseUrl`   | `string`                | No       | SheryMeet server URL (defaults to current origin) |
-| `debug`     | `boolean`               | No       | Enable debug logging                              |
+| Option      | Type                    | Required | Description                            |
+| ----------- | ----------------------- | -------- | -------------------------------------- |
+| `container` | `string \| HTMLElement` | Yes      | CSS selector or element for the iframe |
+| `baseUrl`   | `string`                | Yes      | SheryMeet server URL                   |
+| `debug`     | `boolean`               | No       | Enable debug logging                   |
 
 ### Methods
 

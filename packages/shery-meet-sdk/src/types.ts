@@ -9,8 +9,8 @@
 export interface SheryMeetOptions {
   /** Container element or CSS selector */
   container: string | HTMLElement;
-  /** Base URL of the SheryMeet server (defaults to current origin) */
-  baseUrl?: string;
+  /** Base URL of the SheryMeet server (required) */
+  baseUrl: string;
   /** Enable debug logging */
   debug?: boolean;
 }

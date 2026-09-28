@@ -4,6 +4,7 @@ import { logger } from "./logger";
 const envSchema = z.object({
   NEXT_PUBLIC_LIVEKIT_URL: z.url(),
   NEXT_PUBLIC_API_URL: z.url(),
+  WEBSITE_URL: z.url().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   MONGODB_URI: z.string().min(1),
   LIVEKIT_API_KEY: z.string().min(1),
@@ -42,6 +43,7 @@ function collectRawEnv() {
     MAX_PARTICIPANTS: process.env.MAX_PARTICIPANTS,
     ENCRYPTION_MASTER_KEY: process.env.ENCRYPTION_MASTER_KEY,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    WEBSITE_URL: process.env.WEBSITE_URL,
     REDIS_URL: process.env.REDIS_URL,
     LOG_LEVEL: process.env.LOG_LEVEL,
     LOG_FORMAT: process.env.LOG_FORMAT,

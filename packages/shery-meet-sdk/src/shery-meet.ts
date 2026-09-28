@@ -47,7 +47,10 @@ export class SheryMeet {
       this.container = options.container;
     }
 
-    this.baseUrl = options.baseUrl || this.detectBaseUrl();
+    if (!options.baseUrl) {
+      throw new Error("[SheryMeet] baseUrl is required. Please provide the SheryMeet server URL.");
+    }
+    this.baseUrl = options.baseUrl;
     this.debug = options.debug || false;
 
     // Setup ready promise
@@ -60,25 +63,6 @@ export class SheryMeet {
     window.addEventListener("message", this.boundMessageHandler);
 
     this.log("SDK initialized", { baseUrl: this.baseUrl, version: SheryMeet.VERSION });
-  }
-
-  private detectBaseUrl(): string {
-    // Try to detect from script src
-    if (typeof document !== "undefined") {
-      const scripts = document.querySelectorAll('script[src*="shery-meet"]');
-      for (const script of scripts) {
-        const src = script.getAttribute("src");
-        if (src) {
-          try {
-            const url = new URL(src, window.location.href);
-            return url.origin;
-          } catch {
-            // Continue
-          }
-        }
-      }
-    }
-    return typeof window !== "undefined" ? window.location.origin : "https://sherymeet.pugly.in";
   }
 
   private log(...args: unknown[]): void {

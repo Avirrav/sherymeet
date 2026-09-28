@@ -185,8 +185,8 @@ sherymeet/                          # Project root
 <!-- jsdelivr -->
 <script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk@1.0.0/dist/index.global.js"></script>
 
-<!-- Your own server -->
-<script src="https://sherymeet.pugly.in/sdk/shery-meet.js"></script>
+<!-- Your own sherymeet domain -->
+<script src="https://yourdomain.com/sdk/shery-meet.js"></script>
 ```
 
 ---

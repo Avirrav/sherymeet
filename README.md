@@ -109,7 +109,7 @@ flowchart LR
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/gouravrajak985/sherymeet.git
+git clone https://github.com/avirrav/sherymeet.git
 cd sherymeet
 pnpm install
 ```
