@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Participant, Track, ParticipantEvent } from "livekit-client";
+import {
+  Participant,
+  Track,
+  ParticipantEvent,
+  RemoteTrackPublication,
+  VideoQuality,
+} from "livekit-client";
 import {
   Mic,
   MicOff,
@@ -11,6 +17,8 @@ import {
   SignalMedium,
   SignalLow,
   Pin,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { getAvatarUrl } from "@/lib/avatar";
@@ -45,10 +53,76 @@ export default function ParticipantTile({
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const tileRef = useRef<HTMLDivElement | null>(null);
 
   const [videoTrack, setVideoTrack] = useState<Track | null>(null);
   const [audioTrack, setAudioTrack] = useState<Track | null>(null);
   const [, forceUpdate] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen toggle handler
+  const toggleFullscreen = async () => {
+    if (!tileRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await tileRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error("Fullscreen error:", err);
+    }
+  };
+
+  // Listen for fullscreen changes (e.g., user presses Escape)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Fix adaptive streaming when VideoEnhancer hides the actual video element.
+  // Manually set video quality/dimensions so LiveKit sends appropriate quality.
+  useEffect(() => {
+    if (isLocal || !videoTrack) return;
+
+    // Find the video publication for this track
+    const pub = Array.from(participant.videoTrackPublications.values()).find(
+      (p) => p.track === videoTrack,
+    ) as RemoteTrackPublication | undefined;
+
+    if (!pub || !pub.setVideoDimensions) return;
+
+    // Determine target dimensions based on tile size and fullscreen state
+    let width = tileWidth || 640;
+    let height = tileHeight || 480;
+
+    if (isFullscreen) {
+      // Request full quality in fullscreen
+      width = window.screen.width;
+      height = window.screen.height;
+    } else if (pinned) {
+      // Pinned tiles are typically larger
+      width = Math.max(width, 1280);
+      height = Math.max(height, 720);
+    }
+
+    // When enhanceVideo is true, the video element is hidden so adaptive streaming
+    // can't detect the display size. We manually set dimensions.
+    if (enhanceVideo) {
+      pub.setVideoDimensions({ width, height });
+    }
+
+    // Also set quality hint for fullscreen
+    if (isFullscreen && pub.setVideoQuality) {
+      pub.setVideoQuality(VideoQuality.HIGH);
+    }
+  }, [videoTrack, participant, isLocal, tileWidth, tileHeight, isFullscreen, pinned, enhanceVideo]);
 
   // Determine tile size mode for responsive styling
   const isCompact = (tileWidth && tileWidth < 180) || (tileHeight && tileHeight < 140);
@@ -175,10 +249,11 @@ export default function ParticipantTile({
 
   return (
     <div
+      ref={tileRef}
       onDoubleClick={onPinToggle}
       className={`group relative w-full h-full bg-md-surface-container rounded-2xl overflow-hidden border-2 transition-colors duration-300 ${
         isSpeaker ? "border-md-primary" : "border-md-outline-variant"
-      } ${className}`}
+      } ${isFullscreen ? "!rounded-none" : ""} ${className}`}
     >
       {/* Video element - always rendered for track attachment */}
       <video
@@ -248,8 +323,22 @@ export default function ParticipantTile({
           {!isCompact && renderConnectionQuality()}
         </div>
 
-        {/* Hand Raised and Pin overlay */}
+        {/* Hand Raised, Pin, and Fullscreen overlay */}
         <div className={`flex ${isCompact ? "gap-1" : "gap-2"} items-center pointer-events-auto`}>
+          {/* Fullscreen button */}
+          {!isCompact && (
+            <button
+              onClick={toggleFullscreen}
+              className={`bg-black/60 hover:bg-black/80 text-md-on-surface/70 hover:text-md-on-surface p-1.5 rounded-lg flex items-center justify-center border border-white/5 transition-[colors,opacity] cursor-pointer ${isFullscreen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
           {pinned && (
             <button
               onClick={onPinToggle}

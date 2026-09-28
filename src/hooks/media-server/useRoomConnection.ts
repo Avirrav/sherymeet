@@ -44,13 +44,30 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
     const r = new Room({
       adaptiveStream: {
         pixelDensity: "screen",
+        pauseVideoInBackground: true,
       },
       dynacast: true,
       videoCaptureDefaults: {
-        resolution: VideoPresets.h720.resolution,
+        resolution: VideoPresets.h1080.resolution,
+        facingMode: "user",
       },
       publishDefaults: {
-        videoSimulcastLayers: [VideoPresets.h720, VideoPresets.h540],
+        videoSimulcastLayers: [VideoPresets.h1080, VideoPresets.h720, VideoPresets.h360],
+        videoCodec: "vp9", // Better compression than VP8 for same quality
+        backupCodec: { codec: "vp8" }, // Fallback for older browsers
+        videoEncoding: {
+          maxBitrate: 2_500_000, // 2.5 Mbps for 1080p (VP9 is more efficient)
+          maxFramerate: 30,
+          priority: "high",
+        },
+        screenShareEncoding: {
+          maxBitrate: 3_000_000, // 3 Mbps for screen share
+          maxFramerate: 15, // 15fps for screen share (smoother for content)
+          priority: "high",
+        },
+        simulcast: true,
+        stopMicTrackOnMute: false, // Faster unmute
+        dtx: true, // Discontinuous transmission for audio (saves bandwidth)
       },
     });
 
@@ -118,7 +135,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
             console.log("Publishing camera track in HD quality...");
             await r.localParticipant.setCameraEnabled(true, {
               deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-              resolution: VideoPresets.h720.resolution, // Publish in HD
+              resolution: VideoPresets.h1080.resolution, // Publish in Full HD
             });
             console.log("Camera track published successfully.");
             success = true;
@@ -140,7 +157,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 console.log("Publishing fallback camera device:", otherCameras[0].deviceId);
                 await r.localParticipant.setCameraEnabled(true, {
                   deviceId: { exact: otherCameras[0].deviceId },
-                  resolution: VideoPresets.h720.resolution,
+                  resolution: VideoPresets.h1080.resolution,
                 });
                 setVideoDeviceId(otherCameras[0].deviceId);
                 success = true;
@@ -158,7 +175,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               await new Promise((resolve) => setTimeout(resolve, 600));
               await r.localParticipant.setCameraEnabled(true, {
                 deviceId: videoDeviceId || undefined,
-                resolution: VideoPresets.h720.resolution,
+                resolution: VideoPresets.h1080.resolution,
               });
               console.log("Camera track published successfully on second attempt.");
             } catch (retryErr) {
@@ -297,7 +314,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
           console.log("Active Room: enabling camera with HD quality for device:", deviceId);
           await room.localParticipant.setCameraEnabled(true, {
             deviceId: deviceId ? { exact: deviceId } : undefined,
-            resolution: VideoPresets.h720.resolution,
+            resolution: VideoPresets.h1080.resolution,
           });
           console.log("Active Room: camera enabled successfully.");
         } else {
@@ -319,7 +336,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               console.log("Active Room: trying fallback camera device:", otherCameras[0].deviceId);
               await room.localParticipant.setCameraEnabled(true, {
                 deviceId: { exact: otherCameras[0].deviceId },
-                resolution: VideoPresets.h720.resolution,
+                resolution: VideoPresets.h1080.resolution,
               });
               if (active) {
                 setVideoDeviceId(otherCameras[0].deviceId);

@@ -359,6 +359,18 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
           layoutMode: s.layoutMode,
         });
       },
+      onFullscreen: async (enabled) => {
+        try {
+          if (enabled === true || (enabled === undefined && !document.fullscreenElement)) {
+            await document.documentElement.requestFullscreen();
+          } else if (enabled === false || (enabled === undefined && document.fullscreenElement)) {
+            await document.exitFullscreen();
+          }
+        } catch (err) {
+          console.error("Fullscreen error from embed command:", err);
+          emitEmbedEvent("error", { message: "Failed to toggle fullscreen" });
+        }
+      },
     });
     return cleanup;
   }, [roomId]);

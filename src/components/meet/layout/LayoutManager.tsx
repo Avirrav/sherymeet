@@ -190,11 +190,18 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
           const presenter = getParticipant(share?.participantId || "");
           if (!share || !share.track || !presenter) return null;
 
+          // Get presenter's camera video track for PiP overlay
+          const presenterVideoPub = Array.from(presenter.videoTrackPublications.values()).find(
+            (pub) => pub.source === "camera" && pub.track,
+          );
+          const presenterVideoTrack = presenterVideoPub?.track || null;
+
           return (
             <LayoutAnimator key={item.id} layout={item}>
               <ScreenShareTile
                 track={share.track}
                 presenterName={presenter.name || presenter.identity}
+                presenterVideoTrack={presenterVideoTrack}
               />
             </LayoutAnimator>
           );

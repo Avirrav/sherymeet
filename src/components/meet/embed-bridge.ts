@@ -50,7 +50,8 @@ export type EmbedCommand =
   | "send-chat"
   | "raise-hand"
   | "set-layout"
-  | "get-state";
+  | "get-state"
+  | "fullscreen";
 
 export interface EmbedCommandPayload {
   "toggle-camera"?: { enabled?: boolean };
@@ -59,6 +60,7 @@ export interface EmbedCommandPayload {
   "send-chat"?: { message: string; recipient?: "everyone" | "host" };
   "raise-hand"?: { raised?: boolean };
   "set-layout"?: { mode: "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip" };
+  fullscreen?: { enabled?: boolean };
 }
 
 // ============================================
@@ -175,6 +177,7 @@ export interface EmbedBridgeHandlers {
   onGetState?: () => void;
   onLeave?: () => void;
   onEnd?: () => void;
+  onFullscreen?: (enabled?: boolean) => void;
 }
 
 // ============================================
@@ -259,6 +262,11 @@ export function initEmbedBridge(handlers: EmbedBridgeHandlers): () => void {
         case "get-state":
           handlers.onGetState?.();
           break;
+        case "fullscreen": {
+          const p = payload as EmbedCommandPayload["fullscreen"];
+          handlers.onFullscreen?.(p?.enabled);
+          break;
+        }
       }
     }
   };

@@ -332,6 +332,28 @@ export class SheryMeet {
     this.sendCommand("get-state");
   }
 
+  /**
+   * Toggle fullscreen mode for the meeting
+   * @param enabled - Optional: set to specific state
+   */
+  fullscreen(enabled?: boolean): void {
+    this.sendCommand("fullscreen", enabled !== undefined ? { enabled } : undefined);
+  }
+
+  /**
+   * Enter fullscreen mode
+   */
+  enterFullscreen(): void {
+    this.fullscreen(true);
+  }
+
+  /**
+   * Exit fullscreen mode
+   */
+  exitFullscreen(): void {
+    this.fullscreen(false);
+  }
+
   // ============================================
   // Public API - Getters
   // ============================================
