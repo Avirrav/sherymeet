@@ -19,8 +19,10 @@ COPY package.json pnpm-lock.yaml ./
 # --frozen-lockfile ensures CI-safe, reproducible installs.
 # devDependencies are needed at build time (TypeScript, PostCSS, etc.)
 # HUSKY=0 skips git-hook installation — there is no .git inside the image.
+# pnpm 10+ requires explicit approval for build scripts (esbuild, sharp, etc.)
 ENV HUSKY=0
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set onlyBuiltDependencies "esbuild,sharp,unrs-resolver" && \
+    pnpm install --frozen-lockfile
 
 
 # ============================================================
