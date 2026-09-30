@@ -1,0 +1,170 @@
+# ============================================================
+# MONITORING & OBSERVABILITY
+# ============================================================
+# LiveKit exposes Prometheus metrics for monitoring:
+# - Room count, participant count
+# - Media quality (packet loss, jitter, bitrate)
+# - CPU/memory usage per room
+# - WebRTC connection states
+#
+# This file contains:
+# 1. ServiceMonitor for Prometheus Operator
+# 2. PrometheusRules for alerting
+# 3. Grafana dashboard ConfigMap (optional)
+# ============================================================
+
+# ============================================================
+# SERVICE MONITOR
+# ============================================================
+# Tells Prometheus to scrape LiveKit metrics.
+# Requires Prometheus Operator to be installed.
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: livekit-metrics
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    release: prometheus  # Match your Prometheus installation
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: livekit
+      app.kubernetes.io/component: server
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+  namespaceSelector:
+    matchNames:
+      - livekit
+---
+# ============================================================
+# PROMETHEUS ALERTING RULES
+# ============================================================
+# Alerts for critical LiveKit conditions.
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: livekit-alerts
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    release: prometheus
+spec:
+  groups:
+    - name: livekit.rules
+      rules:
+        # Alert: No LiveKit pods running
+        - alert: LiveKitDown
+          expr: sum(up{job="livekit-server"}) == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "LiveKit server is down"
+            description: "No LiveKit server pods are running"
+
+        # Alert: High packet loss
+        - alert: LiveKitHighPacketLoss
+          expr: |
+            avg(livekit_room_packet_loss_ratio) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High packet loss in LiveKit rooms"
+            description: "Average packet loss exceeds 5%"
+
+        # Alert: High participant count
+        - alert: LiveKitHighParticipants
+          expr: |
+            sum(livekit_room_participant_count) > 500
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High participant count"
+            description: "Total participants across all rooms exceeds 500"
+
+        # Alert: Node capacity low
+        - alert: LiveKitNodeCapacityLow
+          expr: |
+            (
+              sum(livekit_node_room_count) /
+              count(up{job="livekit-server"})
+            ) > 50
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LiveKit node capacity getting low"
+            description: "Average rooms per node exceeds 50"
+
+        # Alert: Egress failures
+        - alert: LiveKitEgressFailures
+          expr: |
+            increase(livekit_egress_failed_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LiveKit egress failures"
+            description: "Egress jobs are failing"
+
+        # Alert: Redis connection issues
+        - alert: LiveKitRedisDisconnected
+          expr: |
+            livekit_redis_connected == 0
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: "LiveKit lost Redis connection"
+            description: "LiveKit cannot connect to Redis - clustering broken"
+---
+# ============================================================
+# GRAFANA DASHBOARD (ConfigMap)
+# ============================================================
+# Import this dashboard into Grafana for LiveKit monitoring.
+# Visualizes: rooms, participants, quality, resources.
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: livekit-grafana-dashboard
+  namespace: livekit
+  labels:
+    grafana_dashboard: "1"  # Auto-import if using sidecar
+data:
+  livekit-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "LiveKit Overview",
+        "uid": "livekit-overview",
+        "panels": [
+          {
+            "title": "Active Rooms",
+            "type": "stat",
+            "targets": [{"expr": "sum(livekit_room_count)"}]
+          },
+          {
+            "title": "Total Participants",
+            "type": "stat",
+            "targets": [{"expr": "sum(livekit_room_participant_count)"}]
+          },
+          {
+            "title": "Packet Loss",
+            "type": "gauge",
+            "targets": [{"expr": "avg(livekit_room_packet_loss_ratio) * 100"}]
+          },
+          {
+            "title": "Rooms per Node",
+            "type": "timeseries",
+            "targets": [{"expr": "livekit_node_room_count", "legendFormat": "{{instance}}"}]
+          }
+        ]
+      }
+    }

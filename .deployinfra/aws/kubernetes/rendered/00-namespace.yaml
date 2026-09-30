@@ -1,0 +1,15 @@
+# ============================================================
+# NAMESPACE
+# ============================================================
+# Creates an isolated namespace for all LiveKit resources.
+# Kubernetes namespaces provide logical separation between
+# workloads, allowing for resource quotas, network policies,
+# and RBAC scoping.
+# ============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: namespace

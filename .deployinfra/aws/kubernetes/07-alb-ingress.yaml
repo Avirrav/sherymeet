@@ -1,0 +1,147 @@
+# ============================================================
+# AWS ALB INGRESS
+# ============================================================
+# AWS Application Load Balancer for routing traffic to LiveKit.
+#
+# IMPORTANT: LiveKit primarily uses WebSocket (Layer 7) for
+# signaling, but media goes directly to nodes via UDP (Layer 3/4).
+# The ALB only handles the initial WebSocket connection.
+#
+# Requirements:
+# - AWS Load Balancer Controller installed in cluster
+# - IAM permissions for ALB management
+# - ACM certificate for TLS termination
+#
+# Traffic flow:
+# 1. Client connects to ALB on port 443
+# 2. ALB terminates TLS, forwards to LiveKit nodes
+# 3. LiveKit returns ICE candidates with node public IPs
+# 4. Client connects directly to node for UDP media
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: livekit-alb
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Use AWS ALB Ingress Controller
+    kubernetes.io/ingress.class: alb
+
+    # Create internet-facing ALB
+    alb.ingress.kubernetes.io/scheme: internet-facing
+
+    # Target type: instance (routes to NodePort)
+    # For hostNetwork pods, use 'instance' mode
+    alb.ingress.kubernetes.io/target-type: instance
+
+    # Health check configuration
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: "7880"
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+
+    # TLS configuration - use ACM certificate
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: ${ACM_CERTIFICATE_ARN}
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+
+    # Enable sticky sessions for WebSocket connections
+    # Ensures client reconnects go to same backend
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=86400
+
+    # Idle timeout - WebSocket connections are long-lived
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=3600
+
+    # Security groups (optional - auto-created if not specified)
+    # alb.ingress.kubernetes.io/security-groups: sg-xxxx
+
+    # Tags for cost allocation
+    alb.ingress.kubernetes.io/tags: Environment=production,Application=livekit
+spec:
+  rules:
+    # Main LiveKit domain
+    - host: "${LIVEKIT_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: livekit-server
+                port:
+                  number: 7880
+
+    # WHIP endpoint
+    - host: "${LIVEKIT_WHIP_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: livekit-server
+                port:
+                  number: 8080
+---
+# ============================================================
+# NETWORK LOAD BALANCER FOR UDP/TURN
+# ============================================================
+# NLB for Layer 4 traffic that ALB can't handle:
+# - TURN UDP (port 3478)
+# - TURN TLS (port 5349)
+# - RTMP (port 1935)
+#
+# NLB preserves source IP and handles UDP traffic.
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-nlb
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: nlb
+  annotations:
+    # Create AWS NLB
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+
+    # Preserve client IP
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+
+    # Cross-zone load balancing
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+    # Health check
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: TCP
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "7880"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: server
+  ports:
+    # TURN UDP
+    - name: turn-udp
+      port: 3478
+      targetPort: 3478
+      protocol: UDP
+
+    # TURN TLS
+    - name: turn-tls
+      port: 5349
+      targetPort: 5349
+      protocol: TCP
+
+    # RTMP for ingress
+    - name: rtmp
+      port: 1935
+      targetPort: 1935
+      protocol: TCP
