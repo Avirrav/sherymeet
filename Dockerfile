@@ -8,20 +8,24 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Install pnpm globally (pinned version for deterministic builds)
+RUN npm install -g pnpm@12.6.0
 
 # Copy ONLY the manifest files first.
 # Docker caches this layer — node_modules are NOT re-installed
 # unless package.json or pnpm-lock.yaml actually change.
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # --frozen-lockfile ensures CI-safe, reproducible installs.
 # devDependencies are needed at build time (TypeScript, PostCSS, etc.)
 # HUSKY=0 skips git-hook installation — there is no .git inside the image.
-# pnpm 10+ requires explicit approval for build scripts (esbuild, sharp, etc.)
+# pnpm.onlyBuiltDependencies in package.json allows native package builds
 ENV HUSKY=0
-RUN pnpm config set onlyBuiltDependencies "esbuild,sharp,unrs-resolver" && \
+RUN pnpm --version && \
+    echo "===== pnpm-workspace.yaml =====" && \
+    cat pnpm-workspace.yaml && \
+    echo "===== pnpm config =====" && \
+    pnpm config get onlyBuiltDependencies && \
     pnpm install --frozen-lockfile
 
 
@@ -37,7 +41,7 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@12.6.0
 
 # Reuse node_modules from the deps stage (cache hit on rebuilds)
 COPY --from=deps /app/node_modules ./node_modules
@@ -58,12 +62,28 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_LIVEKIT_URL=$NEXT_PUBLIC_LIVEKIT_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# ── Server-side env vars (BUILD TIME ONLY) ────────────────────────────────────
+# These placeholders let Next.js collect page data during build.
+# Real values are injected at runtime via docker-compose/ECS environment.
+# The app validates them again at startup — missing vars crash immediately.
+ENV MONGODB_URI="mongodb://placeholder:27017/placeholder"
+ENV LIVEKIT_API_KEY="build-placeholder-key"
+ENV LIVEKIT_API_SECRET="build-placeholder-secret"
+ENV LIVEKIT_URL="wss://placeholder.livekit.cloud"
+ENV REDIS_URL="redis://placeholder:6379"
+ENV ENCRYPTION_MASTER_KEY="placeholder-32-char-key-for-build!"
+
+# Install SDK dependencies (separate package with its own node_modules)
+RUN cd packages/shery-meet-sdk && npm install
+
 # Build the production app.
 # next build reads next.config.ts and produces:
 #   .next/standalone/  ← self-contained server
 #   .next/static/      ← hashed static CSS/JS chunks
 #   public/            ← raw static files (images, fonts etc.)
-RUN pnpm build
+# --no-turbo: Use webpack instead of Turbopack — Turbopack has a known bug
+# with next/font/google in Docker builds (font resolution fails).
+RUN pnpm build:sdk && pnpm build:next
 
 
 # ============================================================

@@ -6,7 +6,6 @@ import { ApiError, ApiResponse } from "@/server/utils/api-helper";
 import { verifyRoomToken } from "@/server/services/livekit/verify-room-token";
 import { getSessionDetails, toPublicMeetDetails } from "@/server/services/server/server.services";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
-import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
 import { validateBodyMiddleware } from "@/server/middleware/validate-body-middleware";
@@ -61,11 +60,6 @@ export async function verifyTokenHandler(request: AuthenticatedRequest): Promise
 }
 
 export const POST = runMiddlewares(
-  [
-    requestIdMiddleware,
-    ipRateLimitMiddleware,
-    serverApiMiddleware,
-    validateBodyMiddleware(bodySchema),
-  ],
+  [requestIdMiddleware, ipRateLimitMiddleware, validateBodyMiddleware(bodySchema)],
   verifyTokenHandler,
 );

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { ApiError, ApiResponse } from "@/server/utils/api-helper";
 import { verifyRoomToken } from "@/server/services/livekit/verify-room-token";
-import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
@@ -25,11 +24,6 @@ export async function endMeetHandler(request: AuthenticatedRequest) {
 }
 
 export const POST = runMiddlewares(
-  [
-    requestIdMiddleware,
-    ipRateLimitMiddleware,
-    serverApiMiddleware,
-    validateBodyMiddleware(endSessionSchema),
-  ],
+  [requestIdMiddleware, ipRateLimitMiddleware, validateBodyMiddleware(endSessionSchema)],
   endMeetHandler,
 );

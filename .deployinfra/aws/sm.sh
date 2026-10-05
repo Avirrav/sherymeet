@@ -12,6 +12,28 @@ rm -f "$ENV_TMP"
 
 SHERYMEET_SECRET_NAME="$SHERYMEET_SECRET_MANAGER_NAME"
 
+# ── Parse command-line flags ───────────────────────────────────────────────
+ACTION="deploy"  # default action
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --delete|--destroy) ACTION="delete"; shift ;;
+    --update)           ACTION="update"; shift ;;
+    --redeploy)         ACTION="redeploy"; shift ;;
+    --help|-h)
+      echo "Usage: bash sm.sh [--delete|--update|--redeploy]"
+      echo ""
+      echo "Actions:"
+      echo "  (default)   Deploy a new SheryMeet EC2 instance"
+      echo "  --redeploy  Pull latest image and restart container (no downtime, keeps IP)"
+      echo "  --update    Terminate existing instance and deploy fresh (new IP)"
+      echo "  --delete    Terminate all SheryMeet EC2 instances"
+      echo ""
+      exit 0
+      ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
 # ── Color helpers (matches aws.ecr.sh / csg.sh / redisdeploy.sh / lk.sh) ─
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -64,6 +86,173 @@ run() {
 echo -e "${BOLD}================================================${NC}"
 echo -e "${BOLD}   SheryMeet → AWS App Deployment               ${NC}"
 echo -e "${BOLD}================================================${NC}"
+
+# ============================================================
+# HANDLE --delete ACTION
+# ============================================================
+if [ "$ACTION" = "delete" ]; then
+  log_step 1 "Finding SheryMeet instances to terminate"
+
+  INSTANCE_IDS=$(aws ec2 describe-instances \
+    --region "$AWS_REGION" \
+    --filters "Name=tag:Name,Values=$SHERYMEET_INSTANCE_NAME" "Name=instance-state-name,Values=running,pending,stopped" \
+    --query "Reservations[].Instances[].InstanceId" \
+    --output text)
+
+  if [ -z "$INSTANCE_IDS" ] || [ "$INSTANCE_IDS" = "None" ]; then
+    log_warn "No SheryMeet instances found with name '$SHERYMEET_INSTANCE_NAME'"
+    exit 0
+  fi
+
+  echo -e "  Found instances: ${CYAN}${INSTANCE_IDS}${NC}"
+  echo ""
+  read -p "  Are you sure you want to terminate these instances? [y/N] " -n 1 -r
+  echo ""
+
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "  ${YELLOW}Aborted.${NC}"
+    exit 0
+  fi
+
+  log_step 2 "Terminating instances"
+  for INSTANCE_ID in $INSTANCE_IDS; do
+    run "Terminating $INSTANCE_ID" \
+      aws ec2 terminate-instances \
+        --region "$AWS_REGION" \
+        --instance-ids "$INSTANCE_ID" >/dev/null
+  done
+
+  echo ""
+  echo -e "${GREEN}${BOLD}================================================${NC}"
+  echo -e "${GREEN}${BOLD}   ✅ SheryMeet instances terminated!           ${NC}"
+  echo -e "${GREEN}${BOLD}================================================${NC}"
+  echo ""
+  exit 0
+fi
+
+# ============================================================
+# HANDLE --redeploy ACTION (pull latest image, restart container)
+# ============================================================
+if [ "$ACTION" = "redeploy" ]; then
+  log_step 1 "Finding running SheryMeet instance"
+
+  INSTANCE_ID=$(aws ec2 describe-instances \
+    --region "$AWS_REGION" \
+    --filters "Name=tag:Name,Values=$SHERYMEET_INSTANCE_NAME" "Name=instance-state-name,Values=running" \
+    --query "Reservations[0].Instances[0].InstanceId" \
+    --output text)
+
+  if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+    log_err "No running SheryMeet instance found with name '$SHERYMEET_INSTANCE_NAME'"
+  fi
+  log_ok "Found instance: $INSTANCE_ID"
+
+  # Extract ECR region from image URI
+  ECR_REGION=$(echo "$AWS_ECR_IMAGE" | sed 's/.*\.ecr\.\([^.]*\)\.amazonaws\.com.*/\1/')
+
+  log_step 2 "Redeploying via SSM (pull image + restart container)"
+
+  # Send commands via SSM to:
+  # 1. Re-fetch secrets from Secrets Manager (picks up any env changes)
+  # 2. Pull latest Docker image
+  # 3. Restart container with fresh config
+  COMMAND_ID=$(aws ssm send-command \
+    --region "$AWS_REGION" \
+    --instance-ids "$INSTANCE_ID" \
+    --document-name "AWS-RunShellScript" \
+    --parameters "commands=[
+      'echo \"Fetching latest secrets from Secrets Manager...\"',
+      'aws secretsmanager get-secret-value --region $AWS_REGION --secret-id $SHERYMEET_SECRET_MANAGER_NAME --query SecretString --output text | jq -r \"to_entries[] | \\\"\\(.key)=\\(.value)\\\"\" > /opt/sherymeet/app.env && chmod 600 /opt/sherymeet/app.env',
+      'echo \"Logging into ECR...\"',
+      'ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)',
+      'aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin \${ACCOUNT_ID}.dkr.ecr.$ECR_REGION.amazonaws.com',
+      'echo \"Pulling latest image...\"',
+      'docker pull $AWS_ECR_IMAGE',
+      'echo \"Restarting container...\"',
+      'docker stop sherymeet || true',
+      'docker rm sherymeet || true',
+      'docker run -d --name sherymeet --restart unless-stopped --network sherymeet-network -p 3000:3000 -e NODE_ENV=production --env-file /opt/sherymeet/app.env $AWS_ECR_IMAGE',
+      'echo \"Done!\"'
+    ]" \
+    --query "Command.CommandId" \
+    --output text)
+
+  log_ok "SSM command sent: $COMMAND_ID"
+
+  log_step 3 "Waiting for redeploy to complete"
+
+  # Wait for command to complete (max 120 seconds)
+  for i in {1..24}; do
+    STATUS=$(aws ssm get-command-invocation \
+      --region "$AWS_REGION" \
+      --command-id "$COMMAND_ID" \
+      --instance-id "$INSTANCE_ID" \
+      --query "Status" \
+      --output text 2>/dev/null || echo "Pending")
+
+    if [ "$STATUS" = "Success" ]; then
+      break
+    elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+      log_err "SSM command failed with status: $STATUS"
+    fi
+
+    printf "\r  ${CYAN}⠋${NC} Waiting... ($STATUS)"
+    sleep 5
+  done
+  echo ""
+
+  if [ "$STATUS" != "Success" ]; then
+    log_warn "Command still running after 2 minutes — check SSM console"
+  else
+    log_ok "Redeploy complete!"
+  fi
+
+  # Get instance IP
+  INSTANCE_IP=$(aws ec2 describe-instances \
+    --region "$AWS_REGION" \
+    --instance-ids "$INSTANCE_ID" \
+    --query "Reservations[0].Instances[0].PublicIpAddress" \
+    --output text)
+
+  echo ""
+  echo -e "${GREEN}${BOLD}================================================${NC}"
+  echo -e "${GREEN}${BOLD}   ✅ SheryMeet redeployed!                     ${NC}"
+  echo -e "${GREEN}${BOLD}================================================${NC}"
+  echo ""
+  echo -e "  ${BOLD}Instance:${NC}   ${CYAN}${INSTANCE_ID}${NC}"
+  echo -e "  ${BOLD}Public IP:${NC}  ${CYAN}${INSTANCE_IP}${NC} (unchanged)"
+  echo -e "  ${BOLD}Image:${NC}      ${CYAN}${AWS_ECR_IMAGE}${NC}"
+  echo ""
+  exit 0
+fi
+
+# ============================================================
+# HANDLE --update ACTION (terminate old, then deploy new)
+# ============================================================
+if [ "$ACTION" = "update" ]; then
+  log_step 0 "Finding existing SheryMeet instances"
+
+  INSTANCE_IDS=$(aws ec2 describe-instances \
+    --region "$AWS_REGION" \
+    --filters "Name=tag:Name,Values=$SHERYMEET_INSTANCE_NAME" "Name=instance-state-name,Values=running,pending,stopped" \
+    --query "Reservations[].Instances[].InstanceId" \
+    --output text)
+
+  if [ -n "$INSTANCE_IDS" ] && [ "$INSTANCE_IDS" != "None" ]; then
+    echo -e "  Found existing instances: ${CYAN}${INSTANCE_IDS}${NC}"
+    log_step 1 "Terminating old instances"
+    for INSTANCE_ID in $INSTANCE_IDS; do
+      run "Terminating $INSTANCE_ID" \
+        aws ec2 terminate-instances \
+          --region "$AWS_REGION" \
+          --instance-ids "$INSTANCE_ID" >/dev/null
+    done
+    log_ok "Old instances terminated — deploying fresh instance"
+  else
+    log_warn "No existing instances found — deploying fresh instance"
+  fi
+  # Continue to normal deployment below...
+fi
 
 # ============================================================
 # STEP 0: Preflight — required .env.deploy variables
@@ -235,9 +424,12 @@ unzip -q awscliv2.zip
 # silently break if this is ever deployed into a different account).
 ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)
 
-# Login to ECR (same account/region this instance is deployed in).
-aws ecr get-login-password --region "\$AWS_REGION" \\
-  | docker login --username AWS --password-stdin "\${ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+# Extract ECR region from the image URI (format: account.dkr.ecr.REGION.amazonaws.com/repo)
+ECR_REGION=\$(echo "$AWS_ECR_IMAGE" | sed 's/.*\.ecr\.\([^.]*\)\.amazonaws\.com.*/\1/')
+
+# Login to ECR (may be different region than the instance).
+aws ecr get-login-password --region "\$ECR_REGION" \\
+  | docker login --username AWS --password-stdin "\${ACCOUNT_ID}.dkr.ecr.\${ECR_REGION}.amazonaws.com"
 
 mkdir -p /opt/sherymeet
 
@@ -247,17 +439,20 @@ mkdir -p /opt/sherymeet
 # script or EC2's console/API-visible instance metadata — only the
 # secret's *name* does.
 aws secretsmanager get-secret-value \\
-  --region "\$AWS_REGION" \\
-  --secret-id "\$SHERYMEET_SECRET_MANAGER_NAME" \\
+  --region "$AWS_REGION" \\
+  --secret-id "$SHERYMEET_SECRET_MANAGER_NAME" \\
   --query SecretString \\
   --output text \\
   | jq -r 'to_entries[] | "\(.key)=\(.value)"' > /opt/sherymeet/app.env
+
+# Restrict secrets file to root only
+chmod 600 /opt/sherymeet/app.env
 
 # Create Docker Network
 docker network create sherymeet-network
 
 # Pull Image
-docker pull "\$AWS_ECR_IMAGE"
+docker pull "$AWS_ECR_IMAGE"
 
 # Run SheryMeet Container — its entire runtime config comes from the
 # Secrets Manager-sourced env file above. NODE_ENV is forced to
@@ -270,7 +465,7 @@ docker run -d \\
   -p 3000:3000 \\
   -e NODE_ENV=production \\
   --env-file /opt/sherymeet/app.env \\
-  "\$AWS_ECR_IMAGE"
+$AWS_ECR_IMAGE
 
 # Create Caddyfile
 cat > /home/ubuntu/Caddyfile <<CADDY
