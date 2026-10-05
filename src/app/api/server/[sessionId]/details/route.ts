@@ -2,7 +2,6 @@ import { ApiError, ApiResponse } from "@/server/utils/api-helper";
 import { verifyRoomToken } from "@/server/services/livekit/verify-room-token";
 import { getSessionDetails, toPublicMeetDetails } from "@/server/services/server/server.services";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
-import { serverApiMiddleware } from "@/server/middleware/server-api-middleware";
 import { requestIdMiddleware } from "@/server/middleware/requestid-middleware";
 import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
 import { AuthenticatedRequest } from "@/server/types/auth.types";
@@ -42,7 +41,4 @@ export async function getDetailsHandler(request: AuthenticatedRequest): Promise<
   }
 }
 
-export const GET = runMiddlewares(
-  [requestIdMiddleware, ipRateLimitMiddleware, serverApiMiddleware],
-  getDetailsHandler,
-);
+export const GET = runMiddlewares([requestIdMiddleware, ipRateLimitMiddleware], getDetailsHandler);

@@ -1,0 +1,217 @@
+# ============================================================
+# LIVEKIT SERVER - DAEMONSET
+# ============================================================
+# LiveKit runs as a DaemonSet (one pod per node) because:
+#
+# 1. HOST NETWORKING: WebRTC requires direct access to UDP ports.
+#    Running hostNetwork: true means each pod uses the node's
+#    network stack directly - no NAT, no port mapping.
+#
+# 2. ONE POD PER NODE: With hostNetwork, only one pod can bind
+#    to port 7880 per node. DaemonSet ensures exactly one.
+#
+# 3. HORIZONTAL SCALING: Scale by adding/removing nodes, not
+#    pods. The Cluster Autoscaler handles this automatically.
+#
+# 4. STICKY SESSIONS: Participants connect to a specific node.
+#    The ALB routes based on room ID to ensure all participants
+#    in a room connect to the same LiveKit instance.
+#
+# Key settings:
+# - hostNetwork: true - Direct network access for WebRTC
+# - terminationGracePeriodSeconds: 18000 - 5 hours for graceful
+#   draining (rooms can be long-running)
+# - nodeSelector: Use dedicated node pool for isolation
+# ============================================================
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: livekit-server
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: server
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: livekit
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: livekit
+        app.kubernetes.io/component: server
+      annotations:
+        # Force restart on config changes
+        checksum/config: "68e19fa0"
+    spec:
+      # ============================================================
+      # HOST NETWORKING
+      # ============================================================
+      # Required for WebRTC media. The pod uses the node's network
+      # interface directly - UDP ports 50000-60000 are accessible
+      # from the internet via the node's public IP.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+
+      # ============================================================
+      # GRACEFUL TERMINATION (5 HOURS)
+      # ============================================================
+      # LiveKit rooms can run for hours. When a node is being
+      # drained (scale-down, upgrade), LiveKit stops accepting
+      # new rooms but lets existing ones finish naturally.
+      # 18000 seconds = 5 hours max drain time.
+      terminationGracePeriodSeconds: 18000
+
+      # ============================================================
+      # NODE SELECTOR
+      # ============================================================
+      # Run only on nodes labeled for LiveKit. This allows:
+      # - Dedicated instance types (compute-optimized)
+      # - Network isolation (security groups)
+      # - Separate autoscaling policies
+      nodeSelector:
+        livekit.io/node-pool: livekit
+
+      # Tolerate the LiveKit node taint (optional)
+      tolerations:
+        - key: "livekit.io/dedicated"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+
+      containers:
+        - name: livekit
+          image: livekit/livekit-server:latest
+          args:
+            - --config
+            - /etc/livekit/livekit.yaml
+          ports:
+            # WebSocket/HTTP API
+            - containerPort: 7880
+              hostPort: 7880
+              protocol: TCP
+              name: http
+            # RTC TCP fallback
+            - containerPort: 7881
+              hostPort: 7881
+              protocol: TCP
+              name: rtc-tcp
+            # TURN TLS
+            - containerPort: 5349
+              hostPort: 5349
+              protocol: TCP
+              name: turn-tls
+            # TURN UDP
+            - containerPort: 3478
+              hostPort: 3478
+              protocol: UDP
+              name: turn-udp
+            # Note: UDP ports 50000-60000 are used dynamically
+            # and don't need explicit hostPort mapping with hostNetwork
+          env:
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secrets
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secrets
+                  key: LIVEKIT_API_SECRET
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1Gi
+            limits:
+              cpu: 4000m
+              memory: 4Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/livekit
+              readOnly: true
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7880
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7880
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # Security context
+          securityContext:
+            readOnlyRootFilesystem: true
+
+        # ============================================================
+        # CADDY SIDECAR
+        # ============================================================
+        # Provides TLS termination on the same host. Caddy handles:
+        # - Automatic Let's Encrypt certificates
+        # - SNI-based routing for multiple domains
+        # - Layer 4 proxying for TURN passthrough
+        - name: caddy
+          image: livekit/caddyl4:latest
+          args:
+            - run
+            - --config
+            - /etc/caddy/caddy.yaml
+            - --adapter
+            - yaml
+          ports:
+            - containerPort: 443
+              hostPort: 443
+              protocol: TCP
+              name: https
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy
+              readOnly: true
+            - name: caddy-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+      volumes:
+        - name: config
+          configMap:
+            name: livekit-config
+        - name: caddy-data
+          emptyDir: {}
+---
+# ============================================================
+# LIVEKIT SERVICE
+# ============================================================
+# Internal service for other pods (egress, ingress) to connect.
+# External traffic goes through the ALB Ingress instead.
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-server
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: server
+spec:
+  selector:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: server
+  ports:
+    - port: 7880
+      targetPort: 7880
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
+  type: ClusterIP

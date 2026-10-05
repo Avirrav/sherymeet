@@ -94,6 +94,10 @@ fi
 [ -z "$AWS_REGION" ] && log_err "No region set. Pass --region, or set AWS_REGION in .env.deploy."
 log_ok "Region: ${AWS_REGION}"
 
+# Use SHERYMEET_SECRET_MANAGER_NAME from .env.deploy, or fall back to default
+AWS_SECRET_MANAGER_NAME="${SHERYMEET_SECRET_MANAGER_NAME:-${SECRET_NAME}}"
+[ -z "$AWS_SECRET_MANAGER_NAME" ] && log_err "No secret name set. Set SHERYMEET_SECRET_MANAGER_NAME in .env.deploy or pass --name."
+
 
 # ============================================================
 # STEP 1: Build the secret JSON from every KEY=VALUE in .env

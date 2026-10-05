@@ -1,0 +1,226 @@
+# ============================================================
+# NODE AUTOSCALING CONFIGURATION
+# ============================================================
+# LiveKit uses a DaemonSet (one pod per node), so horizontal
+# scaling = adding/removing nodes, not pods.
+#
+# This file contains:
+# 1. Karpenter provisioner for dynamic node provisioning
+# 2. VPA for vertical scaling (optional)
+# 3. PodDisruptionBudget for safe upgrades
+#
+# HYBRID SCALING STRATEGY:
+# - Horizontal: Karpenter adds nodes when pods are pending
+# - Vertical: VPA recommends resource adjustments
+# - LiveKit's built-in load balancing distributes rooms
+# ============================================================
+
+# ============================================================
+# KARPENTER PROVISIONER
+# ============================================================
+# Karpenter dynamically provisions EC2 instances when pods
+# can't be scheduled. It's faster than Cluster Autoscaler
+# and supports mixed instance types.
+#
+# For LiveKit, we need:
+# - Compute-optimized instances (c5/c6i) for media processing
+# - Nodes with public IPs for direct WebRTC connections
+# - Specific security groups for UDP port access
+# ============================================================
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: livekit-nodes
+spec:
+  # Taints to ensure only LiveKit pods run here
+  taints:
+    - key: livekit.io/dedicated
+      value: "true"
+      effect: NoSchedule
+
+  # Labels for node selection
+  labels:
+    livekit.io/node-pool: livekit
+
+  requirements:
+    # Instance types - compute optimized for media
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5.xlarge      # 4 vCPU, 8 GB  - small rooms
+        - c5.2xlarge     # 8 vCPU, 16 GB - medium rooms
+        - c5.4xlarge     # 16 vCPU, 32 GB - large rooms
+        - c6i.xlarge     # 4 vCPU, 8 GB  - newer gen
+        - c6i.2xlarge    # 8 vCPU, 16 GB
+        - c6i.4xlarge    # 16 vCPU, 32 GB
+
+    # Availability zones - spread for resilience
+    - key: topology.kubernetes.io/zone
+      operator: In
+      values:
+        - ap-south-2a
+        - ap-south-2b
+        - ap-south-2c
+
+    # Capacity type - on-demand for reliability
+    # (Spot can work for dev/test environments)
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+        # - spot  # Uncomment for cost savings in dev
+
+    # Architecture
+    - key: kubernetes.io/arch
+      operator: In
+      values:
+        - amd64
+
+  # Instance profile with permissions for:
+  # - EC2 metadata (for external IP discovery)
+  # - CloudWatch logs
+  # - (Optional) S3 for egress uploads
+  providerRef:
+    name: livekit-node-template
+
+  # Limits
+  limits:
+    resources:
+      cpu: 100    # Max 100 vCPUs total
+      memory: 200Gi
+
+  # Consolidation - remove underutilized nodes
+  # Disabled for LiveKit because:
+  # - Rooms are long-running (hours)
+  # - Disruption = bad user experience
+  consolidation:
+    enabled: false
+
+  # TTL - how long empty nodes live before termination
+  ttlSecondsAfterEmpty: 300
+
+  # TTL - max node lifetime (forces rotation for security/updates)
+  ttlSecondsUntilExpired: 604800  # 7 days
+---
+# ============================================================
+# KARPENTER AWS NODE TEMPLATE
+# ============================================================
+# Defines the AWS-specific configuration for nodes.
+# ============================================================
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: livekit-node-template
+spec:
+  # Subnet selector - must have public IPs for WebRTC
+  subnetSelector:
+    karpenter.sh/discovery: "sherymeet-cluster"
+    # Or use specific subnets:
+    # aws-ids: subnet-xxx,subnet-yyy
+
+  # Security group selector
+  securityGroupSelector:
+    karpenter.sh/discovery: "sherymeet-cluster"
+    # LiveKit SG must allow:
+    # - TCP 7880, 7881, 443, 5349, 1935, 8080
+    # - UDP 3478, 50000-60000
+
+  # AMI family
+  amiFamily: AL2
+
+  # Instance profile
+  instanceProfile: "SheryMeetEC2Profile"
+
+  # Block device mappings
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        iops: 3000
+        throughput: 125
+        deleteOnTermination: true
+
+  # User data for node initialization
+  userData: |
+    #!/bin/bash
+    set -e
+
+    # Increase file descriptor limits for WebRTC
+    echo "* soft nofile 500000" >> /etc/security/limits.conf
+    echo "* hard nofile 500000" >> /etc/security/limits.conf
+
+    # Optimize network for WebRTC
+    cat >> /etc/sysctl.conf <<EOF
+    net.core.rmem_max=8388608
+    net.core.wmem_max=8388608
+    net.core.rmem_default=65536
+    net.core.wmem_default=65536
+    net.ipv4.tcp_rmem=4096 87380 8388608
+    net.ipv4.tcp_wmem=4096 65536 8388608
+    EOF
+    sysctl -p
+
+  # Tags for cost allocation
+  tags:
+    Environment: production
+    Application: livekit
+    ManagedBy: karpenter
+---
+# ============================================================
+# POD DISRUPTION BUDGET
+# ============================================================
+# Ensures at least N LiveKit pods remain during disruptions
+# (upgrades, node drains). Critical for maintaining active rooms.
+# ============================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: livekit-pdb
+  namespace: livekit
+spec:
+  # Minimum available pods during disruption
+  # Set based on expected concurrent rooms
+  minAvailable: 2
+
+  # Or use maxUnavailable for larger deployments
+  # maxUnavailable: 1
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: livekit
+      app.kubernetes.io/component: server
+---
+# ============================================================
+# VERTICAL POD AUTOSCALER (OPTIONAL)
+# ============================================================
+# VPA analyzes actual resource usage and recommends adjustments.
+# For LiveKit, use "Off" mode to get recommendations without
+# automatic updates (disruptions = bad).
+# ============================================================
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: livekit-vpa
+  namespace: livekit
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: livekit-server
+  updatePolicy:
+    # "Off" = recommendations only, no automatic updates
+    # "Auto" = automatic updates (causes pod restarts!)
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: livekit
+        minAllowed:
+          cpu: 1000m
+          memory: 1Gi
+        maxAllowed:
+          cpu: 8000m
+          memory: 16Gi
+        controlledResources:
+          - cpu
+          - memory

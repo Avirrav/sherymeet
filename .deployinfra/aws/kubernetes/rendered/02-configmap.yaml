@@ -1,0 +1,186 @@
+# ============================================================
+# CONFIGMAPS
+# ============================================================
+# Contains non-sensitive configuration for LiveKit services.
+# Separated from secrets to allow easier config updates
+# without touching sensitive data.
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: livekit-config
+  namespace: livekit
+  labels:
+    app.kubernetes.io/name: livekit
+    app.kubernetes.io/component: config
+data:
+  # Domain configuration - update these for your deployment
+  LIVEKIT_DOMAIN: "livekit.sherymeet.online"
+  LIVEKIT_TURN_DOMAIN: "turn.sherymeet.online"
+  LIVEKIT_WHIP_DOMAIN: "whip.sherymeet.online"
+  LIVEKIT_WEBHOOK_DOMAIN: "sherymeet.online"
+
+  # Redis endpoint (internal service DNS)
+  REDIS_ADDRESS: "redis-service.livekit.svc.cluster.local:6379"
+
+  # ============================================================
+  # LiveKit Server Configuration
+  # ============================================================
+  # This is the main LiveKit server config. Key settings:
+  # - port: WebSocket/HTTP API port (7880)
+  # - rtc.tcp_port: TCP fallback for WebRTC (7881)
+  # - rtc.port_range: UDP ports for media (50000-60000)
+  # - rtc.use_external_ip: Uses node's external IP for ICE
+  # - turn: Built-in TURN server for NAT traversal
+  # - redis: Required for multi-node clustering
+  # ============================================================
+  livekit.yaml: |
+    port: 7880
+    bind_addresses:
+      - ""
+
+    rtc:
+      tcp_port: 7881
+      port_range_start: 50000
+      port_range_end: 60000
+      use_external_ip: true
+      enable_loopback_candidate: false
+
+    redis:
+      address: redis-service.livekit.svc.cluster.local:6379
+      password: Sherymeetstrong985
+      db: 0
+
+    turn:
+      enabled: true
+      domain: turn.sherymeet.online
+      tls_port: 5349
+      udp_port: 3478
+      external_tls: true
+
+    ingress:
+      rtmp_base_url: rtmp://livekit.sherymeet.online:1935/x
+      whip_base_url: https://whip.sherymeet.online/w
+
+    keys:
+      cb83dd3a8ca3e998: 9263380a86844e4dce3da4319e81ea08170e1c9eb31fbc8b4e1e3278a907b6e3
+
+    webhook:
+      api_key: cb83dd3a8ca3e998
+      urls:
+        - https://sherymeet.online/api/webhooks/livekit
+
+  # ============================================================
+  # Egress Configuration
+  # ============================================================
+  # Egress handles recording and streaming out of LiveKit rooms.
+  # Uses headless Chrome to capture video/audio.
+  # Requires SYS_ADMIN capability for Chrome sandbox.
+  # ============================================================
+  egress.yaml: |
+    log_level: info
+    api_key: cb83dd3a8ca3e998
+    api_secret: 9263380a86844e4dce3da4319e81ea08170e1c9eb31fbc8b4e1e3278a907b6e3
+    ws_url: ws://livekit-server.livekit.svc.cluster.local:7880
+    insecure: true
+    redis:
+      address: redis-service.livekit.svc.cluster.local:6379
+      password: Sherymeetstrong985
+      db: 0
+
+  # ============================================================
+  # Ingress Configuration
+  # ============================================================
+  # Ingress handles RTMP and WHIP streams into LiveKit rooms.
+  # Supports OBS, ffmpeg, and WebRTC-based streaming.
+  # ============================================================
+  ingress.yaml: |
+    api_key: cb83dd3a8ca3e998
+    api_secret: 9263380a86844e4dce3da4319e81ea08170e1c9eb31fbc8b4e1e3278a907b6e3
+    ws_url: wss://livekit.sherymeet.online
+    redis:
+      address: redis-service.livekit.svc.cluster.local:6379
+      password: Sherymeetstrong985
+      db: 0
+    rtmp_port: 1935
+    whip_port: 8080
+    http_relay_port: 9090
+    logging:
+      json: false
+      level: ""
+    development: false
+    rtc_config:
+      udp_port: 7885
+      use_external_ip: true
+      enable_loopback_candidate: false
+
+  # ============================================================
+  # Caddy Configuration
+  # ============================================================
+  # Caddy provides TLS termination and routing:
+  # - Automatic HTTPS certificates via Let's Encrypt
+  # - Layer 4 routing for TURN (TLS passthrough)
+  # - HTTP reverse proxy for LiveKit API and WHIP
+  # ============================================================
+  caddy.yaml: |
+    logging:
+      logs:
+        default:
+          level: INFO
+    storage:
+      module: file_system
+      root: /data
+    apps:
+      tls:
+        certificates:
+          automate:
+            - livekit.sherymeet.online
+            - turn.sherymeet.online
+            - whip.sherymeet.online
+      layer4:
+        servers:
+          main:
+            listen:
+              - ":443"
+            routes:
+              # TURN TLS - direct passthrough
+              - match:
+                  - tls:
+                      sni:
+                        - turn.sherymeet.online
+                handle:
+                  - handler: tls
+                  - handler: proxy
+                    upstreams:
+                      - dial:
+                          - localhost:5349
+              # LiveKit API - TLS termination + proxy
+              - match:
+                  - tls:
+                      sni:
+                        - livekit.sherymeet.online
+                handle:
+                  - handler: tls
+                    connection_policies:
+                      - alpn:
+                          - http/1.1
+                          - acme-tls/1
+                  - handler: proxy
+                    upstreams:
+                      - dial:
+                          - localhost:7880
+              # WHIP endpoint - TLS termination + proxy
+              - match:
+                  - tls:
+                      sni:
+                        - whip.sherymeet.online
+                handle:
+                  - handler: tls
+                    connection_policies:
+                      - alpn:
+                          - http/1.1
+                          - acme-tls/1
+                  - handler: proxy
+                    upstreams:
+                      - dial:
+                          - localhost:8080

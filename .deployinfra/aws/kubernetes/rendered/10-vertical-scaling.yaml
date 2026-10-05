@@ -1,0 +1,264 @@
+# ============================================================
+# VERTICAL SCALING FOR LIVEKIT
+# ============================================================
+# LiveKit pods can't be resized without disconnecting users.
+# Instead, we use NODE-LEVEL vertical scaling:
+#
+# Strategy:
+# 1. Multiple node pools with different instance sizes
+# 2. LiveKit routes large rooms to bigger nodes
+# 3. Karpenter picks instance size based on pod requests
+#
+# This gives vertical scaling WITHOUT pod restarts.
+# ============================================================
+
+# ============================================================
+# OPTION 1: MULTI-TIER NODE POOLS
+# ============================================================
+# Create separate node pools for different room sizes.
+# Label nodes so LiveKit can route appropriately.
+# ============================================================
+
+# Small rooms node pool (default)
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: livekit-small
+spec:
+  labels:
+    livekit.io/node-pool: livekit
+    livekit.io/capacity: small
+
+  taints:
+    - key: livekit.io/dedicated
+      value: "true"
+      effect: NoSchedule
+
+  requirements:
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5.xlarge      # 4 vCPU, 8 GB - up to ~50 participants
+        - c6i.xlarge
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+
+  limits:
+    resources:
+      cpu: 40  # Max 10 small nodes
+
+  providerRef:
+    name: livekit-node-template
+
+  # Weight determines priority (higher = preferred)
+  weight: 100  # Prefer small nodes by default
+---
+# Medium rooms node pool
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: livekit-medium
+spec:
+  labels:
+    livekit.io/node-pool: livekit
+    livekit.io/capacity: medium
+
+  taints:
+    - key: livekit.io/dedicated
+      value: "true"
+      effect: NoSchedule
+
+  requirements:
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5.2xlarge     # 8 vCPU, 16 GB - up to ~150 participants
+        - c6i.2xlarge
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+
+  limits:
+    resources:
+      cpu: 40  # Max 5 medium nodes
+
+  providerRef:
+    name: livekit-node-template
+
+  weight: 50  # Lower priority than small
+---
+# Large rooms node pool
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: livekit-large
+spec:
+  labels:
+    livekit.io/node-pool: livekit
+    livekit.io/capacity: large
+
+  taints:
+    - key: livekit.io/dedicated
+      value: "true"
+      effect: NoSchedule
+
+  requirements:
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5.4xlarge     # 16 vCPU, 32 GB - up to ~300 participants
+        - c5.9xlarge     # 36 vCPU, 72 GB - up to ~500 participants
+        - c6i.4xlarge
+        - c6i.8xlarge
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+
+  limits:
+    resources:
+      cpu: 72  # Max 2 large nodes
+
+  providerRef:
+    name: livekit-node-template
+
+  weight: 10  # Lowest priority - only when needed
+
+---
+# ============================================================
+# OPTION 2: KARPENTER AUTO-SIZING
+# ============================================================
+# Single provisioner that picks instance size based on
+# resource requests. Simpler but less control.
+# ============================================================
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: livekit-autosized
+spec:
+  labels:
+    livekit.io/node-pool: livekit
+
+  taints:
+    - key: livekit.io/dedicated
+      value: "true"
+      effect: NoSchedule
+
+  requirements:
+    # Allow Karpenter to pick from a range of sizes
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values:
+        - c5.xlarge
+        - c5.2xlarge
+        - c5.4xlarge
+        - c5.9xlarge
+        - c6i.xlarge
+        - c6i.2xlarge
+        - c6i.4xlarge
+        - c6i.8xlarge
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values:
+        - on-demand
+
+  providerRef:
+    name: livekit-node-template
+
+  limits:
+    resources:
+      cpu: 200
+      memory: 400Gi
+
+---
+# ============================================================
+# VPA FOR RECOMMENDATIONS (Safe Mode)
+# ============================================================
+# VPA in "Off" mode provides resource recommendations
+# without restarting pods. Use these recommendations to:
+# 1. Adjust pod resource requests for future deployments
+# 2. Decide when to migrate to larger instance types
+# ============================================================
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: livekit-vpa-recommendations
+  namespace: livekit
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: livekit-server
+  updatePolicy:
+    updateMode: "Off"  # Recommendations only - NO restarts
+  resourcePolicy:
+    containerPolicies:
+      - containerName: livekit
+        minAllowed:
+          cpu: 500m
+          memory: 512Mi
+        maxAllowed:
+          cpu: 16000m    # Up to 16 vCPU
+          memory: 32Gi   # Up to 32 GB RAM
+        controlledResources:
+          - cpu
+          - memory
+
+---
+# ============================================================
+# RESOURCE QUOTA PER ROOM SIZE
+# ============================================================
+# Different resource requests for different expected room sizes.
+# Deploy the appropriate variant based on your use case.
+# ============================================================
+
+# ConfigMap with resource profiles
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: livekit-resource-profiles
+  namespace: livekit
+data:
+  # Use these values in your DaemonSet based on expected load
+  small.yaml: |
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+      limits:
+        cpu: 4000m
+        memory: 4Gi
+    # Capacity: ~50 participants per room
+
+  medium.yaml: |
+    resources:
+      requests:
+        cpu: 2000m
+        memory: 2Gi
+      limits:
+        cpu: 8000m
+        memory: 8Gi
+    # Capacity: ~150 participants per room
+
+  large.yaml: |
+    resources:
+      requests:
+        cpu: 4000m
+        memory: 4Gi
+      limits:
+        cpu: 16000m
+        memory: 16Gi
+    # Capacity: ~300 participants per room
+
+  xlarge.yaml: |
+    resources:
+      requests:
+        cpu: 8000m
+        memory: 8Gi
+      limits:
+        cpu: 32000m
+        memory: 32Gi
+    # Capacity: ~500+ participants per room

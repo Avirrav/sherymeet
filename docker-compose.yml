@@ -84,6 +84,14 @@ services:
 
       # ── Room Settings ───────────────────────────────────────────────────────
       ROOM_EMPTY_TIMEOUT: ${ROOM_EMPTY_TIMEOUT:-300}
+      MAX_PARTICIPANTS: ${MAX_PARTICIPANTS:-50}
+      LIVEKIT_TOKEN_TTL: ${LIVEKIT_TOKEN_TTL:-2h}
+
+      # ── Website URL (for sitemap/robots.ts) ─────────────────────────────────
+      WEBSITE_URL: ${WEBSITE_URL:-}
+
+      # ── Redis (optional - for multi-instance scaling) ───────────────────────
+      REDIS_URL: ${REDIS_URL:-}
 
 # ── Persistent Volumes ────────────────────────────────────────────────────────
 volumes:

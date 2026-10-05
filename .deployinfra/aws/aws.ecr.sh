@@ -149,8 +149,9 @@ else
   log_warn ".env file not found — NEXT_PUBLIC_ vars may be empty in the build"
 fi
 
-docker compose build --no-cache
-log_ok "Docker image built successfully"
+# Build for linux/amd64 (EC2 is x86_64, not ARM like Apple Silicon Macs)
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build --no-cache
+log_ok "Docker image built successfully (linux/amd64)"
 
 
 # ============================================================
