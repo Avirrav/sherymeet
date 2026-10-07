@@ -5,7 +5,6 @@ import { ulid } from "ulid";
 import {
   StatusType,
   ConferenceRoomType,
-  IConferenceRoomDocument,
   IConferenceRoom,
 } from "@/server/types/conferenceroom.types";
 import { logger } from "@/server/utils/logger";

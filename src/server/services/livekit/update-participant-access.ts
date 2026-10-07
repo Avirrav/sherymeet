@@ -34,22 +34,37 @@ export async function updateParticipantAccess(
   let roomId = "";
   try {
     roomId = request.nextUrl.pathname.split("/")[3] || "";
+
     const token = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
+
     if (!token) throw new ApiError("Room token required", 401);
+
     const verified = await verifyRoomToken(token, roomId);
+
     actor = verified.identity;
+
     if (!verified.roomAdmin) throw new ApiError("Room admin permission required", 403);
+
     const body = await request.json().catch(() => null);
-    if (!body || typeof body !== "object" || Array.isArray(body) || "kind" in body)
+
+    if (!body || typeof body !== "object" || Array.isArray(body) || "kind" in body) {
       throw new ApiError("Invalid permission request", 400);
+    }
+
     const parsed = schema.safeParse({ ...body, kind });
     if (!parsed.success) throw new ApiError("Invalid permission request", 400);
+
     const { identity } = parsed.data;
     target = identity;
+
     if (actor === identity) throw new ApiError("Cannot change your own permissions", 403);
+
     const limit = await getStore().checkRateLimit(`participant-access:${roomId}:${actor}`, 30, 60);
+
     if (!limit.allowed) throw new ApiError("Too many permission changes", 429);
+
     const room = await ConferenceRoomDao.getConferenceRoom({ roomId });
+
     if (
       !room ||
       room.status !== StatusType.Active ||
@@ -60,15 +75,21 @@ export async function updateParticipantAccess(
         409,
       );
     }
+
     await dbConnect();
     const caller = await RoomMember.findOne({ roomId, identity: actor });
-    if (!caller || !isAdminRole(caller.role))
+
+    if (!caller || !isAdminRole(caller.role)) {
       throw new ApiError("Current admin membership required; rejoin the room", 403);
+    }
+
     const member = await RoomMember.findOne({ roomId, identity });
     if (!member)
       throw new ApiError("Participant must rejoin before changing their permissions", 409);
+
     if (kind === "panel" && isAdminRole(member.role))
       throw new ApiError("Cannot change an admin's role with panel controls", 403);
+
     const service = new RoomServiceClient(
       config.LIVEKIT_URL.replace(/^wss:/, "https:").replace(/^ws:/, "http:"),
       config.LIVEKIT_API_KEY,

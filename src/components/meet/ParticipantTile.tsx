@@ -6,6 +6,7 @@ import {
   Track,
   ParticipantEvent,
   RemoteTrackPublication,
+  RemoteParticipant,
   VideoQuality,
 } from "livekit-client";
 import {
@@ -155,7 +156,44 @@ export default function ParticipantTile({
       forceUpdate((n) => n + 1);
     };
 
+    // For remote participants, ensure we subscribe to any unsubscribed tracks
+    // This handles the case where a panelist publishes after being promoted
+    const ensureSubscribed = () => {
+      if (isLocal || !(participant instanceof RemoteParticipant)) return;
+
+      let subscribed = false;
+      for (const pub of participant.videoTrackPublications.values()) {
+        const remotePub = pub as RemoteTrackPublication;
+        if (!remotePub.isSubscribed && remotePub.trackSid) {
+          remotePub.setSubscribed(true);
+          remotePub.setEnabled(true);
+          subscribed = true;
+        }
+      }
+      for (const pub of participant.audioTrackPublications.values()) {
+        const remotePub = pub as RemoteTrackPublication;
+        if (!remotePub.isSubscribed && remotePub.trackSid) {
+          remotePub.setSubscribed(true);
+          remotePub.setEnabled(true);
+          subscribed = true;
+        }
+      }
+      return subscribed;
+    };
+
+    // Retry subscription with delay if tracks aren't immediately available
+    const ensureSubscribedWithRetry = () => {
+      const didSubscribe = ensureSubscribed();
+      if (didSubscribe) {
+        // If we subscribed, wait a bit for the track to become available then sync
+        setTimeout(() => {
+          syncTracks();
+        }, 500);
+      }
+    };
+
     syncTracks();
+    ensureSubscribedWithRetry();
 
     // Event listeners
     const handleTrackSubscribed = () => syncTracks();
@@ -163,24 +201,39 @@ export default function ParticipantTile({
     const handleTrackMuted = () => syncTracks();
     const handleTrackUnmuted = () => syncTracks();
 
+    // When a track is published, ensure we subscribe to it
+    const handleTrackPublished = () => {
+      ensureSubscribedWithRetry();
+      syncTracks();
+    };
+
     participant.on(ParticipantEvent.TrackSubscribed, handleTrackSubscribed);
     participant.on(ParticipantEvent.TrackUnsubscribed, handleTrackUnsubscribed);
-    participant.on(ParticipantEvent.TrackPublished, syncTracks);
+    participant.on(ParticipantEvent.TrackPublished, handleTrackPublished);
     participant.on(ParticipantEvent.TrackUnpublished, syncTracks);
     participant.on(ParticipantEvent.TrackMuted, handleTrackMuted);
     participant.on(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
     participant.on(ParticipantEvent.IsSpeakingChanged, syncTracks);
 
+    // Periodic check to catch any missed tracks (runs 3 times over 3 seconds after mount)
+    const retryIntervals = [500, 1500, 3000];
+    const retryTimers = retryIntervals.map((delay) =>
+      setTimeout(() => {
+        ensureSubscribedWithRetry();
+      }, delay),
+    );
+
     return () => {
+      retryTimers.forEach(clearTimeout);
       participant.off(ParticipantEvent.TrackSubscribed, handleTrackSubscribed);
       participant.off(ParticipantEvent.TrackUnsubscribed, handleTrackUnsubscribed);
-      participant.off(ParticipantEvent.TrackPublished, syncTracks);
+      participant.off(ParticipantEvent.TrackPublished, handleTrackPublished);
       participant.off(ParticipantEvent.TrackUnpublished, syncTracks);
       participant.off(ParticipantEvent.TrackMuted, handleTrackMuted);
       participant.off(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
       participant.off(ParticipantEvent.IsSpeakingChanged, syncTracks);
     };
-  }, [participant, updateKey]);
+  }, [participant, updateKey, isLocal]);
 
   // True only while the <video> element is actually receiving frames. The
   // camera takes ~0.5-2s to warm up after unmute (LiveKit stops the physical

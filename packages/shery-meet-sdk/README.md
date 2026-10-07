@@ -15,7 +15,11 @@ pnpm add sherymeet-sdk
 ### CDN (Script Tag)
 
 ```html
-<script src="https://your-domain.com/sdk/shery-meet.global.js"></script>
+<!-- unpkg -->
+<script src="https://unpkg.com/sherymeet-sdk/dist/index.global.js"></script>
+
+<!-- or jsdelivr -->
+<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk/dist/index.global.js"></script>
 ```
 
 ## Quick Start
@@ -55,7 +59,7 @@ meet.on("meeting-ended", () => {
 ```html
 <div id="meeting" style="width: 100%; height: 600px;"></div>
 
-<script src="https://your-domain.com/sdk/shery-meet.global.js"></script>
+<script src="https://unpkg.com/sherymeet-sdk/dist/index.global.js"></script>
 <script>
   const meet = new SheryMeet({
     container: "#meeting",
