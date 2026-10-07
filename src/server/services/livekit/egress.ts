@@ -73,3 +73,26 @@ export async function stopEgress(egressId: string): Promise<EgressInfo> {
   const egressInfo = await client.stopEgress(egressId);
   return egressInfo;
 }
+
+export async function listRoomEgresses(roomId: string): Promise<EgressInfo[]> {
+  const host = config.LIVEKIT_URL.replace("wss://", "https://").replace("ws://", "http://");
+  const client = new EgressClient(host, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
+  const egresses = await client.listEgress({ roomName: roomId });
+  return egresses;
+}
+
+export async function getActiveRoomEgress(roomId: string): Promise<EgressInfo | null> {
+  const egresses = await listRoomEgresses(roomId);
+  const activeEgress = egresses.find(
+    (e) => e.status === EgressStatus.EGRESS_ACTIVE || e.status === EgressStatus.EGRESS_STARTING,
+  );
+  return activeEgress || null;
+}
+
+export async function stopRoomRecording(roomId: string): Promise<EgressInfo | null> {
+  const activeEgress = await getActiveRoomEgress(roomId);
+  if (!activeEgress) {
+    return null;
+  }
+  return await stopEgress(activeEgress.egressId);
+}

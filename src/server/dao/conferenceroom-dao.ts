@@ -89,4 +89,36 @@ export class ConferenceRoomDao {
       { returnDocument: "after" },
     );
   }
+
+  /**
+   * Updates a conference room by roomId.
+   */
+  static async updateConferenceRoomByRoomId(
+    roomId: string,
+    update: Partial<IConferenceRoom>,
+  ): Promise<IConferenceRoomDocument | null> {
+    await dbConnect();
+    return await ConferenceRoom.findOneAndUpdate(
+      { roomId },
+      { $set: update },
+      { returnDocument: "after" },
+    );
+  }
+
+  /**
+   * Atomic update: only updates if the filter conditions are met.
+   * Returns the updated document if successful, null if no document matched.
+   * Used to prevent race conditions (e.g., starting recording only if not already recording).
+   */
+  static async updateConferenceRoomAtomic(
+    filter: QueryFilter<IConferenceRoom>,
+    update: Partial<IConferenceRoom>,
+  ): Promise<IConferenceRoomDocument | null> {
+    await dbConnect();
+    return await ConferenceRoom.findOneAndUpdate(
+      filter,
+      { $set: update },
+      { returnDocument: "after" },
+    );
+  }
 }

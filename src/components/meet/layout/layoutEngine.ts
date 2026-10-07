@@ -85,6 +85,7 @@ export function optimizeGrid(
 
 /**
  * Generates layout coordinates for a centered grid, centering the last row items horizontally.
+ * Single tile uses full container height to match sidebar panel height.
  */
 function fitGrid(
   ids: { id: string; type: "video" | "screen" }[],
@@ -96,6 +97,25 @@ function fitGrid(
 ): LayoutItem[] {
   const count = ids.length;
   if (count === 0) return [];
+
+  // Single tile: height matches container (same as sidebar), width from aspect ratio (capped)
+  if (count === 1) {
+    const tileH = containerH;
+    const tileW = Math.min(containerW, tileH * aspect);
+    const startX = (containerW - tileW) / 2;
+
+    return [
+      {
+        id: ids[0].id,
+        type: ids[0].type,
+        x: Math.round(startX),
+        y: Math.round(yOffsetStart),
+        width: Math.round(tileW),
+        height: Math.round(tileH),
+        zIndex,
+      },
+    ];
+  }
 
   const { cols, rows, tileW, tileH } = optimizeGrid(count, containerW, containerH, aspect);
 

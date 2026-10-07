@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Room, ConnectionState } from "livekit-client";
 import { useParticipants } from "@/hooks/media-server/useParticipants";
 import { useScreenShare } from "@/hooks/media-server/useScreenShare";
@@ -41,6 +41,8 @@ import {
   Users,
   Clock,
   LayoutGrid,
+  Circle,
+  Square,
 } from "lucide-react";
 import LayoutManager from "./layout/LayoutManager";
 
@@ -86,9 +88,17 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showViewerNotice, setShowViewerNotice] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingLoading, setIsRecordingLoading] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Keeps the sidebar mounted briefly after close so it can slide out.
   const [renderedSidebar, setRenderedSidebar] = useState<typeof activeSidebar>(null);
   const isPanelClosing = !activeSidebar && !!renderedSidebar;
+
+  // Role comes from the token metadata, never from "is this me"
+  const isHost = isHostRole(room.localParticipant);
+  const isAdmin = isCoHostOrAbove(room.localParticipant);
 
   useEffect(() => {
     if (activeSidebar) {
@@ -118,16 +128,113 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     return () => clearTimeout(timer);
   }, [showViewerNotice]);
 
+  // Auto-hide controls after 3 seconds of inactivity
+  const resetControlsTimer = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 3000);
+  }, []);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    resetControlsTimer();
+  }, [resetControlsTimer]);
+
+  // Start auto-hide timer on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setControlsVisible(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show controls on mouse movement
+  useEffect(() => {
+    const handleMouseMove = () => showControls();
+    const handleMouseLeave = () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, 1000);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [showControls]);
+
+  // Check recording status on mount (for hosts/admins)
+  useEffect(() => {
+    if (!isAdmin || !roomId || !token) return;
+    const checkRecordingStatus = async () => {
+      try {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsRecording(data.data?.isRecording || false);
+        }
+      } catch {
+        // Ignore errors on initial check
+      }
+    };
+    checkRecordingStatus();
+  }, [isAdmin, roomId, token]);
+
+  const toggleRecording = async () => {
+    if (isRecordingLoading) return;
+    setIsRecordingLoading(true);
+    try {
+      if (isRecording) {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          setIsRecording(false);
+          toast.success("Recording stopped");
+        } else {
+          const data = await res.json();
+          toast.error(data.message || "Failed to stop recording");
+        }
+      } else {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          setIsRecording(true);
+          toast.success("Recording started");
+        } else {
+          const data = await res.json();
+          toast.error(data.message || "Failed to start recording");
+        }
+      }
+    } catch {
+      toast.error("Error toggling recording");
+    } finally {
+      setIsRecordingLoading(false);
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-  {
-    /* Role comes from the token metadata, never from "is this me" */
-  }
-  const isHost = isHostRole(room.localParticipant);
-  const isAdmin = isCoHostOrAbove(room.localParticipant);
 
   // Each media source has its own grant. Speaking does not require panel membership.
   const canUseMicrophone = canParticipantUseMicrophone(room.localParticipant);
@@ -209,6 +316,15 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           <span className="text-xs font-semibold text-md-on-surface-variant font-mono tracking-wide">
             {roomId}
           </span>
+          {isRecording && (
+            <>
+              <span className="text-md-outline-variant">|</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-md-error">
+                <Circle className="w-2.5 h-2.5 fill-md-error animate-pulse" />
+                <span>REC</span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Participants Sidebar Toggle */}
@@ -260,9 +376,9 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       </header>
 
       {/* Main Area */}
-      <div className="flex-1 flex overflow-hidden relative mx-10">
+      <div className="flex-1 flex overflow-hidden relative mx-10 gap-4">
         {/* Main Video Area */}
-        <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <LayoutManager
             updateKey={updateKey}
             localParticipant={stageLocalParticipant}
@@ -298,8 +414,18 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
         )}
       </div>
 
+      {/* Bottom hover trigger zone - shows controls when mouse enters bottom area */}
+      {!controlsVisible && (
+        <div className="absolute bottom-0 left-0 right-0 h-16 z-20" onMouseEnter={showControls} />
+      )}
+
       {/* Controls Bar — M3 toolbar on a tonal surface container */}
-      <footer className="mb-4 py-2 px-6 flex items-center justify-center z-10">
+      <footer
+        className={`py-2 px-6 flex items-center justify-center z-10 transition-all duration-300 ease-in-out ${
+          controlsVisible ? "translate-y-0 opacity-100 mb-4" : "translate-y-full opacity-0 mb-0"
+        }`}
+        onMouseEnter={showControls}
+      >
         <div className="flex items-center gap-2 px-3 py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
           <ReactionControls
             sendReaction={sendReaction}
@@ -380,6 +506,25 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
               <Monitor className="w-5 h-5 animate-pop-in" />
             )}
           </button>
+          {/* Recording (Host/Admin only) */}
+          {isAdmin && (
+            <button
+              onClick={toggleRecording}
+              disabled={isRecordingLoading}
+              className={`control-btn p-3.5 rounded-full border disabled:opacity-50 ${
+                isRecording
+                  ? "bg-md-error-container border-md-error/40 text-md-error"
+                  : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+              }`}
+              title={isRecording ? "Stop Recording" : "Start Recording"}
+            >
+              {isRecording ? (
+                <Square className="w-4 h-4 fill-current animate-pop-in" />
+              ) : (
+                <Circle className="w-5 h-5 animate-pop-in" />
+              )}
+            </button>
+          )}
         </div>
       </footer>
 

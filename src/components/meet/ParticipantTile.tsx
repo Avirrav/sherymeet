@@ -309,13 +309,14 @@ export default function ParticipantTile({
       } ${isFullscreen ? "!rounded-none" : ""} ${className}`}
     >
       {/* Video element - always rendered for track attachment */}
+      {/* Parent's overflow-hidden clips to inner rounded shape automatically */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted={isLocal}
         style={{ imageRendering: "auto" }}
-        className={`w-full h-full object-cover rounded-2xl ${
+        className={`w-full h-full object-cover ${
           isLocal ? "transform -scale-x-100" : ""
         } ${videoMuted || !videoTrack || !isVideoLive || isVirtual || enhanceVideo ? "hidden" : ""}`}
       />
@@ -328,7 +329,7 @@ export default function ParticipantTile({
           enabled={isVideoLive}
           sharpness={0.6}
           clarity={0.35}
-          className="absolute inset-0 rounded-2xl"
+          className="absolute inset-0"
         />
       )}
 
