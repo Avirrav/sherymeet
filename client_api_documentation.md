@@ -272,7 +272,7 @@ Ends a webinar from your backend: transitions status to `"ended"`, stops any act
 
 ```json
 {
-  "roomId": "01HXYZ..."
+  "webinarId": "01HXYZ..."
 }
 ```
 
@@ -428,3 +428,472 @@ Ends a meeting: transitions status to `"ended"`, stops active recordings, and de
    - The token from **Register for a Webinar** strictly limits the holder to publishing/subscribing as a regular participant.
 3. **Tokens live in the hash fragment** (`#token=...`) when building a join URL, never in query strings — hash fragments are not sent to servers, so they cannot leak through access logs, proxies, or `Referer` headers. Preserve the full URL including the fragment when passing links around.
 4. **Keep signing server-side**: the API key and secret must only ever live in your backend. Your frontend receives finished meeting links or tokens — it never talks to the SheryMeet client API directly.
+
+---
+
+## 6. Error Reference
+
+All API errors follow a consistent response format. Use `success: false` and `statusCode` for error handling — never match on message text.
+
+### Error Response Format
+
+```typescript
+interface ApiErrorResponse {
+  statusCode: number; // HTTP status code
+  message: string; // Human-readable error message
+  errors: ApiErrorDetail[]; // Field-level validation errors (if any)
+  success: false; // Always false for errors
+  data: null; // Always null for errors
+}
+
+interface ApiErrorDetail {
+  field?: string; // Field name (for validation errors)
+  message: string; // Error description
+}
+```
+
+### Error Codes by Category
+
+#### Authentication Errors (400, 401, 403)
+
+| Code | Error                                              | Cause                                                                                  | Fix                                                       |
+| ---- | -------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 400  | `Missing required authentication headers`          | Missing `x-api-key`, `x-timestamp`, `x-nonce`, `x-signature`, or `x-signature-version` | Include all required headers                              |
+| 400  | `Invalid timestamp format`                         | `x-timestamp` is not a valid integer                                                   | Send Unix epoch seconds as integer string                 |
+| 401  | `Invalid, suspended, or revoked API Key`           | API key not found, revoked, or client suspended                                        | Check API key or contact admin                            |
+| 401  | `Request timestamp expired (drift limit exceeded)` | Timestamp more than ±5 minutes from server time                                        | Sync client clock, regenerate request                     |
+| 401  | `Invalid signature matching failed`                | HMAC signature doesn't match                                                           | Check signing algorithm, secret, and payload construction |
+| 403  | `HTTPS is required`                                | Request sent over HTTP in production                                                   | Use HTTPS                                                 |
+| 403  | `Origin domain not allowed`                        | Request origin not in client's `allowedDomains`                                        | Add domain to allowlist or check CORS                     |
+
+#### Validation Errors (400)
+
+| Code | Error                                     | Cause                                                              |
+| ---- | ----------------------------------------- | ------------------------------------------------------------------ |
+| 400  | `Invalid request body`                    | JSON body fails schema validation (see `errors` array for details) |
+| 400  | `Webinar ID is required`                  | Missing webinar ID in path or body                                 |
+| 400  | `Room ID is required`                     | Missing room ID                                                    |
+| 400  | `Email query parameter is required`       | Missing `?email=` for registrant lookup                            |
+| 400  | `Webinar already ended`                   | Attempting to register for ended webinar                           |
+| 400  | `Slow mode seconds must be from 0 to 300` | Invalid slow mode value                                            |
+| 400  | `A boolean chatEnabled field is required` | Invalid chat lock request body                                     |
+
+#### Not Found Errors (404)
+
+| Code | Error                           | Cause                                          |
+| ---- | ------------------------------- | ---------------------------------------------- |
+| 404  | `Webinar not found`             | Webinar ID doesn't exist                       |
+| 404  | `Meeting not found`             | Meeting/room doesn't exist                     |
+| 404  | `Meeting unavailable`           | Meeting ended or doesn't exist                 |
+| 404  | `Registrant not found`          | No registrant with that email for this webinar |
+| 404  | `Live room not found`           | LiveKit room doesn't exist                     |
+| 404  | `Egress with ID {id} not found` | Recording egress not found                     |
+
+#### Conflict Errors (409)
+
+| Code | Error                                               | Cause                                    |
+| ---- | --------------------------------------------------- | ---------------------------------------- |
+| 409  | `This email is already registered for this webinar` | Duplicate registration attempt           |
+| 409  | `Meeting already ended`                             | Attempting to start an ended meeting     |
+| 409  | `Meeting is not active`                             | Attempting action on inactive meeting    |
+| 409  | `Permissions are changing; retry shortly`           | Concurrent permission update in progress |
+| 409  | `Egress with ID {id} is already ending`             | Recording already stopping               |
+| 409  | `Room metadata is invalid`                          | Concurrent metadata update conflict      |
+
+#### Authorization Errors (401, 403)
+
+| Code | Error                                      | Cause                                 |
+| ---- | ------------------------------------------ | ------------------------------------- |
+| 401  | `Invalid or expired token`                 | JWT token invalid or expired          |
+| 401  | `Token expired`                            | Token TTL exceeded                    |
+| 401  | `Room token required`                      | Missing token in request              |
+| 401  | `Token does not grant access to this room` | Token for different room              |
+| 403  | `Host permission required`                 | Action requires `roomAdmin` grant     |
+| 403  | `Only the host can end the meeting`        | Non-host attempting to end            |
+| 403  | `Only the host can start the meeting`      | Non-host attempting to start          |
+| 403  | `Only the host can change slow mode`       | Non-host attempting settings change   |
+| 403  | `Invalid admin role`                       | Token role doesn't match claimed role |
+
+#### Rate Limit Errors (429)
+
+| Code | Error                        | Cause                                            |
+| ---- | ---------------------------- | ------------------------------------------------ |
+| 429  | `Too many requests`          | Exceeded rate limit (check `Retry-After` header) |
+| 429  | `Too many slow mode changes` | Action rate limit exceeded                       |
+| 429  | `Too many chat changes`      | Action rate limit exceeded                       |
+
+#### Server Errors (500)
+
+| Code | Error                                              | Cause                       |
+| ---- | -------------------------------------------------- | --------------------------- |
+| 500  | `Failed to create webinar`                         | Database or internal error  |
+| 500  | `Failed to create webinar after multiple attempts` | Retry exhausted             |
+| 500  | `Failed to generate token`                         | Token generation error      |
+| 500  | `Failed to generate registrant token`              | Token generation error      |
+| 500  | `Failed to end meeting in database`                | Database update failed      |
+| 500  | `Failed to start meeting`                          | Meeting start error         |
+| 500  | `Could not create participant`                     | Participant creation failed |
+
+### Example Error Handling (JavaScript)
+
+```javascript
+async function callSheryMeetAPI(endpoint, options) {
+  const response = await fetch(endpoint, options);
+  const data = await response.json();
+
+  if (!data.success) {
+    switch (data.statusCode) {
+      case 400:
+        // Validation error — check data.errors for field details
+        if (data.errors?.length) {
+          data.errors.forEach((err) => {
+            console.error(`Field ${err.field}: ${err.message}`);
+          });
+        }
+        throw new ValidationError(data.message, data.errors);
+
+      case 401:
+        // Auth error — token expired, invalid signature, etc.
+        if (data.message.includes("timestamp")) {
+          // Clock drift — retry with fresh timestamp
+          return retryWithFreshTimestamp();
+        }
+        throw new AuthError(data.message);
+
+      case 403:
+        // Forbidden — wrong permissions or domain not allowed
+        throw new ForbiddenError(data.message);
+
+      case 404:
+        // Not found
+        throw new NotFoundError(data.message);
+
+      case 409:
+        // Conflict — duplicate or concurrent update
+        if (data.message.includes("retry")) {
+          // Transient conflict — safe to retry
+          await sleep(500);
+          return callSheryMeetAPI(endpoint, options);
+        }
+        throw new ConflictError(data.message);
+
+      case 429:
+        // Rate limited — check Retry-After header
+        const retryAfter = response.headers.get("Retry-After") || 60;
+        throw new RateLimitError(data.message, retryAfter);
+
+      default:
+        // 500+ server error
+        throw new ServerError(data.message);
+    }
+  }
+
+  return data.data;
+}
+```
+
+---
+
+## 7. SheryMeet Embed SDK
+
+The SheryMeet Embed SDK allows you to embed SheryMeet video conferences directly into your web application using an iframe with postMessage-based communication.
+
+### Installation
+
+#### npm / pnpm / yarn
+
+```bash
+npm install sherymeet-sdk
+# or
+pnpm add sherymeet-sdk
+# or
+yarn add sherymeet-sdk
+```
+
+#### CDN (Script Tag)
+
+```html
+<!-- unpkg -->
+<script src="https://unpkg.com/sherymeet-sdk/dist/index.global.js"></script>
+
+<!-- or jsdelivr -->
+<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk/dist/index.global.js"></script>
+```
+
+When loaded via script tag, `SheryMeet` is available as a global variable.
+
+### Quick Start
+
+#### ESM / TypeScript
+
+```typescript
+import { SheryMeet } from "@sheryians/shery-meet-sdk";
+
+// Initialize the SDK
+const meet = new SheryMeet({
+  container: "#meeting-container", // CSS selector or HTMLElement
+  baseUrl: "https://meet.example.com", // Your SheryMeet server URL
+  debug: false, // Enable console logging for debugging
+});
+
+// Join a meeting (token comes from your backend via the Register API)
+await meet.join("room-id", {
+  token: "eyJhbGciOi...", // JWT token from registration
+  username: "Jane Doe",
+  email: "jane@example.com", // optional
+  audioEnabled: true, // optional, default: true
+  videoEnabled: true, // optional, default: true
+});
+
+// Listen for events
+meet.on("joined", ({ roomId }) => {
+  console.log(`Joined room: ${roomId}`);
+});
+
+// Clean up when done
+meet.destroy();
+```
+
+#### Script Tag
+
+```html
+<div id="meeting" style="width: 100%; height: 600px;"></div>
+
+<script src="https://unpkg.com/sherymeet-sdk/dist/index.global.js"></script>
+<script>
+  const meet = new SheryMeet({
+    container: "#meeting",
+    baseUrl: "https://meet.example.com",
+  });
+
+  meet
+    .join("room-abc123", {
+      token: "your-jwt-token",
+      username: "John Doe",
+    })
+    .then(() => {
+      console.log("Joined!");
+    });
+</script>
+```
+
+### Configuration Options
+
+#### `SheryMeetOptions`
+
+| Option      | Type                    | Required | Description                                      |
+| :---------- | :---------------------- | :------- | :----------------------------------------------- |
+| `container` | `string \| HTMLElement` | Yes      | CSS selector or DOM element to render iframe in  |
+| `baseUrl`   | `string`                | Yes      | Base URL of your SheryMeet server                |
+| `debug`     | `boolean`               | No       | Enable debug logging to console (default: false) |
+
+#### `JoinOptions`
+
+| Option         | Type      | Required | Description                                |
+| :------------- | :-------- | :------- | :----------------------------------------- |
+| `token`        | `string`  | Yes      | JWT token from your backend (via Register) |
+| `username`     | `string`  | Yes      | Display name for the participant           |
+| `email`        | `string`  | No       | Participant's email address                |
+| `audioEnabled` | `boolean` | No       | Start with microphone on (default: true)   |
+| `videoEnabled` | `boolean` | No       | Start with camera on (default: true)       |
+
+### Methods
+
+#### Lifecycle
+
+| Method                  | Description                                                      |
+| :---------------------- | :--------------------------------------------------------------- |
+| `join(roomId, options)` | Join a meeting room. Returns a Promise that resolves when joined |
+| `leave()`               | Leave the current meeting                                        |
+| `endMeeting()`          | End the meeting for all participants (host only)                 |
+| `destroy()`             | Destroy the SDK instance and clean up resources                  |
+
+#### Media Controls
+
+| Method                        | Description                                        |
+| :---------------------------- | :------------------------------------------------- |
+| `toggleCamera(enabled?)`      | Toggle camera on/off, or set to specific state     |
+| `toggleMic(enabled?)`         | Toggle microphone on/off, or set to specific state |
+| `toggleScreenShare(enabled?)` | Toggle screen sharing on/off                       |
+
+#### Meeting Controls
+
+| Method                          | Description                                                                           |
+| :------------------------------ | :------------------------------------------------------------------------------------ |
+| `sendChat(message, recipient?)` | Send a chat message to "everyone" or "host"                                           |
+| `raiseHand(raised?)`            | Raise or lower hand                                                                   |
+| `setLayout(mode)`               | Set video layout: "grid", "spotlight", "sidebar", "presenter", "content-first", "pip" |
+| `requestState()`                | Request current meeting state (triggers `state-changed` event)                        |
+| `fullscreen(enabled?)`          | Toggle fullscreen mode                                                                |
+| `enterFullscreen()`             | Enter fullscreen mode                                                                 |
+| `exitFullscreen()`              | Exit fullscreen mode                                                                  |
+
+#### Getters
+
+| Method         | Returns              | Description                             |
+| :------------- | :------------------- | :-------------------------------------- |
+| `getState()`   | `EmbedState \| null` | Get cached meeting state (may be stale) |
+| `getRoomId()`  | `string \| null`     | Get current room ID                     |
+| `getIsReady()` | `boolean`            | Check if SDK is ready for commands      |
+
+### Events
+
+Subscribe to events with `on(event, callback)`, unsubscribe with `off(event, callback)`, or use `once(event, callback)` for one-time handlers.
+
+```typescript
+meet.on("participant-joined", (participant) => {
+  console.log(`${participant.name} joined the meeting`);
+});
+
+meet.once("joined", () => {
+  console.log("Successfully joined!");
+});
+```
+
+#### Event Reference
+
+| Event                    | Payload                            | Description                                    |
+| :----------------------- | :--------------------------------- | :--------------------------------------------- |
+| `ready`                  | `undefined`                        | SDK is ready to receive commands               |
+| `status`                 | `{ gateStatus, roomId, message? }` | Gate status update (verifying, waiting, ready) |
+| `joined`                 | `{ roomId }`                       | Successfully joined the meeting                |
+| `left`                   | `{ roomId }`                       | Left the meeting                               |
+| `meeting-ended`          | `{ roomId }`                       | Meeting was ended by host                      |
+| `error`                  | `{ message }`                      | An error occurred                              |
+| `participant-joined`     | `EmbedParticipant`                 | A participant joined                           |
+| `participant-left`       | `{ participantId, name }`          | A participant left                             |
+| `camera-changed`         | `{ enabled }`                      | Camera state changed                           |
+| `mic-changed`            | `{ enabled }`                      | Microphone state changed                       |
+| `screen-share-changed`   | `{ enabled }`                      | Screen share state changed                     |
+| `chat-received`          | `ChatMessage`                      | Chat message received                          |
+| `active-speaker-changed` | `{ participantId \| null }`        | Active speaker changed                         |
+| `hand-raised`            | `{ participantId, raised }`        | Hand raised/lowered                            |
+| `state-changed`          | `EmbedState`                       | Full state update                              |
+
+### Types
+
+#### `EmbedParticipant`
+
+```typescript
+interface EmbedParticipant {
+  id: string;
+  name: string;
+  isLocal: boolean;
+  isCameraEnabled: boolean;
+  isMicEnabled: boolean;
+  isScreenSharing: boolean;
+  isHandRaised: boolean;
+}
+```
+
+#### `EmbedState`
+
+```typescript
+interface EmbedState {
+  isConnected: boolean;
+  roomId: string | null;
+  localParticipant: EmbedParticipant | null;
+  participants: EmbedParticipant[];
+  isCameraEnabled: boolean;
+  isMicEnabled: boolean;
+  isScreenSharing: boolean;
+  isHandRaised: boolean;
+  layoutMode: LayoutMode;
+}
+```
+
+#### `ChatMessage`
+
+```typescript
+interface ChatMessage {
+  id: string;
+  senderName: string;
+  senderId: string;
+  text: string;
+  timestamp: number;
+  isLocal: boolean;
+}
+```
+
+#### `LayoutMode`
+
+```typescript
+type LayoutMode = "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
+```
+
+### Complete Example
+
+```typescript
+import { SheryMeet, type EmbedParticipant } from "@sheryians/shery-meet-sdk";
+
+// Your backend should call the SheryMeet API to register and get a token
+async function getTokenFromBackend(roomId: string, user: { name: string; email: string }) {
+  const res = await fetch("/api/join-meeting", {
+    method: "POST",
+    body: JSON.stringify({ roomId, ...user }),
+  });
+  return res.json(); // { token: '...' }
+}
+
+// Initialize
+const meet = new SheryMeet({
+  container: document.getElementById("meeting")!,
+  baseUrl: "https://meet.yourcompany.com",
+  debug: true,
+});
+
+// Set up event handlers
+meet.on("joined", ({ roomId }) => {
+  console.log("Joined room:", roomId);
+  document.getElementById("status")!.textContent = "Connected";
+});
+
+meet.on("participant-joined", (p: EmbedParticipant) => {
+  console.log(`${p.name} joined`);
+});
+
+meet.on("participant-left", ({ name }) => {
+  console.log(`${name} left`);
+});
+
+meet.on("chat-received", (msg) => {
+  console.log(`${msg.senderName}: ${msg.text}`);
+});
+
+meet.on("error", ({ message }) => {
+  console.error("Meeting error:", message);
+});
+
+meet.on("meeting-ended", () => {
+  console.log("Meeting has ended");
+  meet.destroy();
+});
+
+// Join the meeting
+const roomId = "your-room-id";
+const { token } = await getTokenFromBackend(roomId, {
+  name: "Jane Doe",
+  email: "jane@example.com",
+});
+
+await meet.join(roomId, {
+  token,
+  username: "Jane Doe",
+  email: "jane@example.com",
+});
+
+// UI controls
+document.getElementById("mute-btn")?.addEventListener("click", () => meet.toggleMic());
+document.getElementById("camera-btn")?.addEventListener("click", () => meet.toggleCamera());
+document.getElementById("share-btn")?.addEventListener("click", () => meet.toggleScreenShare());
+document.getElementById("leave-btn")?.addEventListener("click", () => {
+  meet.leave();
+  meet.destroy();
+});
+```
+
+### Security Notes
+
+1. **Tokens come from your backend**: Never expose your API key or client secret to the frontend. The SDK only needs the JWT token obtained via the Register API endpoint.
+2. **Tokens expire**: LiveKit tokens expire based on server policy (2 hours by default). Request fresh tokens when users join, don't cache them long-term.
+3. **One token per session**: Each token is tied to a specific room and participant. Generate a new token for each join attempt

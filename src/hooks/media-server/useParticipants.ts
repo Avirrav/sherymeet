@@ -73,6 +73,11 @@ export function useParticipants(room: Room | null) {
       forceUpdate();
     };
 
+    // Handle remote track published (e.g., panelist starts video after promotion)
+    const handleTrackPublished = () => forceUpdate();
+    const handleTrackUnpublished = () => forceUpdate();
+    const handleTrackSubscriptionStatusChanged = () => forceUpdate();
+
     room.on(RoomEvent.ParticipantPermissionsChanged, forceUpdate);
     room.on(RoomEvent.ParticipantMetadataChanged, forceUpdate);
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
@@ -81,6 +86,9 @@ export function useParticipants(room: Room | null) {
     room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
     room.on(RoomEvent.TrackMuted, handleTrackMuted);
     room.on(RoomEvent.TrackUnmuted, handleTrackUnmuted);
+    room.on(RoomEvent.TrackPublished, handleTrackPublished);
+    room.on(RoomEvent.TrackUnpublished, handleTrackUnpublished);
+    room.on(RoomEvent.TrackSubscriptionStatusChanged, handleTrackSubscriptionStatusChanged);
     room.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
     room.on(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
     room.on(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
@@ -94,6 +102,9 @@ export function useParticipants(room: Room | null) {
       room.off(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
       room.off(RoomEvent.TrackMuted, handleTrackMuted);
       room.off(RoomEvent.TrackUnmuted, handleTrackUnmuted);
+      room.off(RoomEvent.TrackPublished, handleTrackPublished);
+      room.off(RoomEvent.TrackUnpublished, handleTrackUnpublished);
+      room.off(RoomEvent.TrackSubscriptionStatusChanged, handleTrackSubscriptionStatusChanged);
       room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
       room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
       room.off(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);

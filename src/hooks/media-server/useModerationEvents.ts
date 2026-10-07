@@ -71,11 +71,41 @@ export function useModerationEvents(room: Room) {
             !!publication.track,
         );
     };
+    // Track previous permission state to detect grants (not just revokes)
+    let prevCanMic = canParticipantUseMicrophone(room.localParticipant);
+    let prevCanCam = canParticipantUseCamera(room.localParticipant);
+    let prevCanScreen = canParticipantShareScreen(room.localParticipant);
+
     const syncPermissions = () => {
       const state = useMeetingStore.getState();
-      if (!canParticipantUseMicrophone(room.localParticipant)) state.setAudioEnabled(false);
-      if (!canParticipantUseCamera(room.localParticipant)) state.setVideoEnabled(false);
-      if (!canParticipantShareScreen(room.localParticipant)) state.toggleScreenShare(false);
+      const canMic = canParticipantUseMicrophone(room.localParticipant);
+      const canCam = canParticipantUseCamera(room.localParticipant);
+      const canScreen = canParticipantShareScreen(room.localParticipant);
+
+      // Revoke permissions if no longer allowed
+      if (!canMic) state.setAudioEnabled(false);
+      if (!canCam) state.setVideoEnabled(false);
+      if (!canScreen) state.toggleScreenShare(false);
+
+      // Notify when permissions are granted (promoted to panelist)
+      if (!prevCanCam && canCam) {
+        toast.success("You can now share your camera!", {
+          id: "panel-camera-granted",
+          duration: 5000,
+        });
+      }
+      if (!prevCanMic && canMic && !prevCanCam) {
+        // Only show mic toast if camera wasn't also granted (avoid double toast)
+        toast.success("You can now use your microphone!", {
+          id: "panel-mic-granted",
+          duration: 5000,
+        });
+      }
+
+      // Update previous state
+      prevCanMic = canMic;
+      prevCanCam = canCam;
+      prevCanScreen = canScreen;
     };
     room.on(RoomEvent.TrackMuted, syncTrack);
     room.on(RoomEvent.TrackUnmuted, syncTrack);
