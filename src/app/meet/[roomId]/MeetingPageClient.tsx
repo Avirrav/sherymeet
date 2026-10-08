@@ -176,6 +176,27 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     return () => clearInterval(interval);
   }, [gateStatus, roomId]);
 
+  // Periodically refresh token while on prejoin screen to prevent expiration during idle time
+  useEffect(() => {
+    if (gateStatus !== GateStatus.READY || hasEntered) return;
+    const refreshToken = async () => {
+      try {
+        const result = await verifyMeetingToken({
+          roomId,
+          token: verifyParamsRef.current.token,
+        });
+        if (result.success && result.data?.token) {
+          setActiveToken(result.data.token);
+        }
+      } catch {
+        // Silent refresh failure is fine; will retry on next interval
+      }
+    };
+    // Refresh token every 60 seconds while idle on prejoin
+    const interval = setInterval(refreshToken, 60000);
+    return () => clearInterval(interval);
+  }, [gateStatus, hasEntered, roomId]);
+
   // Host-triggered: creates the LiveKit room, activates the meeting, and
   // (only if the meet was created with recording enabled) starts Egress.
   const handleStartMeeting = useCallback(async () => {

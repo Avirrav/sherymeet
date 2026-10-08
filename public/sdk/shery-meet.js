@@ -4,7 +4,7 @@ var SheryMeetSDK = (() => {
   var v = Object.getOwnPropertyDescriptor;
   var f = Object.getOwnPropertyNames;
   var g = Object.prototype.hasOwnProperty;
-  var p = (i, e) => {
+  var E = (i, e) => {
       for (var t in e) m(i, t, { get: e[t], enumerable: !0 });
     },
     y = (i, e, t, n) => {
@@ -15,9 +15,9 @@ var SheryMeetSDK = (() => {
             m(i, s, { get: () => e[s], enumerable: !(n = v(e, s)) || n.enumerable });
       return i;
     };
-  var E = (i) => y(m({}, "__esModule", { value: !0 }), i);
-  var w = {};
-  p(w, { SheryMeet: () => a, default: () => h });
+  var p = (i) => y(m({}, "__esModule", { value: !0 }), i);
+  var S = {};
+  E(S, { SheryMeet: () => a, default: () => c });
   var b = "sherymeet-sdk",
     M = "sherymeet";
   var l = class l {
@@ -33,7 +33,11 @@ var SheryMeetSDK = (() => {
         if (!t) throw new Error(`[SheryMeet] Container not found: ${e.container}`);
         this.container = t;
       } else this.container = e.container;
-      ((this.baseUrl = e.baseUrl || this.detectBaseUrl()),
+      if (!e.baseUrl)
+        throw new Error(
+          "[SheryMeet] baseUrl is required. Please provide the SheryMeet server URL.",
+        );
+      ((this.baseUrl = e.baseUrl),
         (this.debug = e.debug || !1),
         (this.readyPromise = new Promise((t) => {
           this.readyResolve = t;
@@ -41,19 +45,6 @@ var SheryMeetSDK = (() => {
         (this.boundMessageHandler = this.handleMessage.bind(this)),
         window.addEventListener("message", this.boundMessageHandler),
         this.log("SDK initialized", { baseUrl: this.baseUrl, version: l.VERSION }));
-    }
-    detectBaseUrl() {
-      if (typeof document < "u") {
-        let e = document.querySelectorAll('script[src*="shery-meet"]');
-        for (let t of e) {
-          let n = t.getAttribute("src");
-          if (n)
-            try {
-              return new URL(n, window.location.href).origin;
-            } catch {}
-        }
-      }
-      return typeof window < "u" ? window.location.origin : "https://sherymeet.pugly.in";
     }
     log(...e) {
       this.debug && console.log("[SheryMeet SDK]", ...e);
@@ -122,16 +113,16 @@ var SheryMeetSDK = (() => {
         this.createIframe(e, n),
         await this.readyPromise,
         new Promise((s, r) => {
-          let c = setTimeout(() => {
+          let h = setTimeout(() => {
               (this.off("joined", o),
                 this.off("error", d),
                 r(new Error("Join timeout - meeting may not be active")));
-            }, 3e4),
+            }, 6e5),
             o = () => {
-              (clearTimeout(c), this.off("joined", o), this.off("error", d), s());
+              (clearTimeout(h), this.off("joined", o), this.off("error", d), s());
             },
             d = (u) => {
-              (clearTimeout(c),
+              (clearTimeout(h),
                 this.off("joined", o),
                 this.off("error", d),
                 r(new Error(u.message)));
@@ -210,8 +201,8 @@ var SheryMeetSDK = (() => {
   };
   l.VERSION = "1.0.0";
   var a = l,
-    h = a;
-  return E(w);
+    c = a;
+  return p(S);
 })();
 window.SheryMeet = SheryMeetSDK.SheryMeet;
 //# sourceMappingURL=index.global.js.map

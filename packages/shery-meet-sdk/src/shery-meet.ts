@@ -193,12 +193,13 @@ export class SheryMeet {
     await this.readyPromise;
 
     // Wait for joined event or error
+    // Timeout is 10 minutes to allow plenty of time on prejoin screen
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.off("joined", onJoined);
         this.off("error", onError);
         reject(new Error("Join timeout - meeting may not be active"));
-      }, 30000);
+      }, 600000);
 
       const onJoined = () => {
         clearTimeout(timeout);

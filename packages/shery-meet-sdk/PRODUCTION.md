@@ -181,17 +181,17 @@ sherymeet/                          # Project root
 Using unpkg or jsdelivr serves the SDK from free CDNs — no bandwidth cost on your server.
 
 ```html
-<!-- unpkg (latest) -->
-<script src="https://unpkg.com/sherymeet-sdk/dist/index.global.js"></script>
+<!-- unpkg (always latest) -->
+<script src="https://unpkg.com/sherymeet-sdk@latest/dist/index.global.js"></script>
 
-<!-- unpkg (pinned version) -->
-<script src="https://unpkg.com/sherymeet-sdk@2.0.0/dist/index.global.js"></script>
+<!-- unpkg (pinned version - for production stability) -->
+<script src="https://unpkg.com/sherymeet-sdk@2.0.1/dist/index.global.js"></script>
 
-<!-- jsdelivr (latest) -->
-<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk/dist/index.global.js"></script>
+<!-- jsdelivr (always latest) -->
+<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk@latest/dist/index.global.js"></script>
 
-<!-- jsdelivr (pinned version) -->
-<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk@2.0.0/dist/index.global.js"></script>
+<!-- jsdelivr (pinned version - for production stability) -->
+<script src="https://cdn.jsdelivr.net/npm/sherymeet-sdk@2.0.1/dist/index.global.js"></script>
 ```
 
 ---

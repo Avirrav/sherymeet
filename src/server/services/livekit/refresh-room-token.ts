@@ -50,12 +50,14 @@ export async function refreshRoomToken(
     throw new ApiError("Permissions are changing; retry shortly", 409);
   // Admin grants are not renewable through the panel flow.
   if (isAdminRole(member.role)) return original;
-  const ttl = (claims.exp || 0) - Math.ceil(Date.now() / 1000);
-  if (ttl <= 0) throw new ApiError("Token expired", 401);
+  // Check if original token is still valid (at least 10 seconds remaining)
+  const remainingTtl = (claims.exp || 0) - Math.ceil(Date.now() / 1000);
+  if (remainingTtl <= 10) throw new ApiError("Token expired", 401);
+  // Issue fresh token with full TTL so users can stay on prejoin without expiration
   const at = new AccessToken(config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET, {
     identity,
     name: member.name,
-    ttl,
+    ttl: config.LIVEKIT_TOKEN_TTL,
     metadata: JSON.stringify({
       roomId,
       participant: { name: member.name, email: member.email, role: member.role },
