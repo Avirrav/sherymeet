@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, X, MessageSquare, Lock } from "lucide-react";
+import { Send, X, MessageSquare, Lock, ChevronDown } from "lucide-react";
 import { useChat } from "@/hooks/media-server/useChat";
 import { Room, ConnectionState } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
@@ -63,7 +63,7 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
   }, [messages]);
 
   return (
-    <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-2xl flex flex-col overflow-hidden relative z-20">
+    <div className="w-full md:w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-none md:rounded-2xl flex flex-col overflow-hidden relative z-20">
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3.5 border-b border-md-outline-variant/30 flex items-center justify-between bg-md-surface-container/50">
         <div className="flex items-center gap-2.5">
@@ -103,7 +103,7 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scrollbar-hidden">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
             <div className="w-14 h-14 rounded-2xl bg-md-surface-container flex items-center justify-center mb-3">
@@ -166,15 +166,18 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
       >
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-medium text-md-on-surface-variant">To:</span>
-          <select
-            value={recipient}
-            disabled={!canCompose || sending}
-            onChange={(event) => setRecipient(event.target.value as ChatRecipient)}
-            className="rounded-lg border border-md-outline-variant/50 bg-md-surface px-2.5 py-1 text-xs text-md-on-surface outline-none focus:border-md-primary/50 disabled:opacity-50 cursor-pointer"
-          >
-            <option value="everyone">Everyone</option>
-            <option value="host">Host only</option>
-          </select>
+          <div className="relative">
+            <select
+              value={recipient}
+              disabled={!canCompose || sending}
+              onChange={(event) => setRecipient(event.target.value as ChatRecipient)}
+              className="appearance-none rounded-lg border border-md-outline-variant/50 bg-md-surface pl-3 pr-7 py-1.5 text-xs text-md-on-surface outline-none focus:border-md-primary disabled:opacity-50 cursor-pointer"
+            >
+              <option value="everyone">Everyone</option>
+              <option value="host">Host only</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-md-on-surface-variant pointer-events-none" />
+          </div>
         </div>
 
         <div className="flex items-end gap-2">

@@ -98,18 +98,31 @@ function fitGrid(
   const count = ids.length;
   if (count === 0) return [];
 
-  // Single tile: height matches container (same as sidebar), width from aspect ratio (capped)
+  // Gap between tiles
+  const gap = 8;
+
+  // Single tile: maintain fixed aspect ratio and center in container (like Google Meet)
   if (count === 1) {
-    const tileH = containerH;
-    const tileW = Math.min(containerW, tileH * aspect);
+    // Calculate max size that fits while maintaining aspect ratio
+    let tileW = containerW;
+    let tileH = tileW / aspect;
+
+    // If height exceeds container, constrain by height instead
+    if (tileH > containerH) {
+      tileH = containerH;
+      tileW = tileH * aspect;
+    }
+
+    // Center the tile in the container
     const startX = (containerW - tileW) / 2;
+    const startY = (containerH - tileH) / 2;
 
     return [
       {
         id: ids[0].id,
         type: ids[0].type,
         x: Math.round(startX),
-        y: Math.round(yOffsetStart),
+        y: Math.round(yOffsetStart + startY),
         width: Math.round(tileW),
         height: Math.round(tileH),
         zIndex,
@@ -119,8 +132,14 @@ function fitGrid(
 
   const { cols, rows, tileW, tileH } = optimizeGrid(count, containerW, containerH, aspect);
 
-  const gridW = cols * tileW;
-  const gridH = rows * tileH;
+  // Account for gaps in grid dimensions
+  const totalGapX = (cols - 1) * gap;
+  const totalGapY = (rows - 1) * gap;
+  const adjustedTileW = tileW - totalGapX / cols;
+  const adjustedTileH = tileH - totalGapY / rows;
+
+  const gridW = cols * adjustedTileW + totalGapX;
+  const gridH = rows * adjustedTileH + totalGapY;
   const startX = (containerW - gridW) / 2;
   const startY = yOffsetStart + (containerH - gridH) / 2;
 
@@ -134,24 +153,24 @@ function fitGrid(
     const isLastRow = r === rows - 1;
     const itemsInLastRow = count - r * cols;
 
-    let x = startX + c * tileW;
+    let x = startX + c * (adjustedTileW + gap);
 
     if (isLastRow && itemsInLastRow < cols) {
       // Center the remaining items of the last row horizontally
-      const lastRowGridW = itemsInLastRow * tileW;
+      const lastRowGridW = itemsInLastRow * adjustedTileW + (itemsInLastRow - 1) * gap;
       const lastRowStartX = (containerW - lastRowGridW) / 2;
-      x = lastRowStartX + c * tileW;
+      x = lastRowStartX + c * (adjustedTileW + gap);
     }
 
-    const y = startY + r * tileH;
+    const y = startY + r * (adjustedTileH + gap);
 
     items.push({
       id: ids[i].id,
       type: ids[i].type,
       x: Math.round(x),
       y: Math.round(y),
-      width: Math.round(tileW),
-      height: Math.round(tileH),
+      width: Math.round(adjustedTileW),
+      height: Math.round(adjustedTileH),
       zIndex,
     });
   }
@@ -175,9 +194,8 @@ export function calculateLayout(params: LayoutEngineParams): LayoutItem[] {
   // Convert pinnedUsers to Set for O(1) lookups
   const pinnedSet = new Set(pinnedUsers);
 
-  // Determine aspect ratio dynamically (portrait for portrait layout, landscape for landscape)
-  const isPortraitViewport = viewportWidth < viewportHeight;
-  const targetAspect = isPortraitViewport ? 3 / 4 : 16 / 9;
+  // Always use 16:9 aspect ratio for consistent tile sizing (like Google Meet)
+  const targetAspect = 16 / 9;
 
   // 1. Sort participants by priority
   const sortedPart = sortParticipants(participants, pinnedUsers, activeSpeakerId);

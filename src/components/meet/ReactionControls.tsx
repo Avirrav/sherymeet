@@ -44,9 +44,9 @@ export default function ReactionControls({
         aria-label="Reactions"
         aria-expanded={open && !disabled}
         title="Reactions"
-        className="control-btn p-3.5 rounded-full hover:bg-md-surface-container-highest text-md-on-surface-variant disabled:opacity-30 disabled:pointer-events-none"
+        className="control-btn p-2.5 sm:p-3.5 rounded-full hover:bg-md-surface-container-highest text-md-on-surface-variant disabled:opacity-30 disabled:pointer-events-none"
       >
-        <Smile className="w-5 h-5" />
+        <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
       {open && !disabled && (
         <div

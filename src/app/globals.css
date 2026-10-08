@@ -90,6 +90,7 @@
   --animate-pop-in: popIn 0.28s var(--ease-spring) forwards;
   --animate-message-in: messageIn 0.3s var(--ease-spring) forwards;
   --animate-fade-in-up: fadeInUp 0.4s var(--ease-spring) forwards;
+  --animate-slide-up: slideUp 0.3s var(--ease-spring) forwards;
 }
 
 /* M3 elevation levels (shadow tokens, used sparingly — surfaces
@@ -167,6 +168,17 @@
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
@@ -338,6 +350,16 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-md-outline);
+}
+
+/* Hidden scrollbar utility */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
 
 /* ============================================================
