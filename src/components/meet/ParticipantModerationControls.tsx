@@ -139,15 +139,15 @@ export default function ParticipantModerationControls({
     toast.success(onPanel ? "Moved to audience" : "Added to panel");
   }
 
+  const hasMicPermission = canParticipantUseMicrophone(participant);
+
   const iconBtnClass =
     "w-6 h-6 rounded-md flex items-center justify-center transition-colors disabled:opacity-40";
 
-  const hasMicPermission = canParticipantUseMicrophone(participant);
-
   return (
-    <div className="flex items-center gap-1 flex-shrink-0">
+    <div className="flex items-center gap-1.5 shrink-0">
       {pending ? (
-        <Loader2 className="w-3.5 h-3.5 text-md-on-surface-variant animate-spin" />
+        <Loader2 className="w-4 h-4 text-md-on-surface-variant animate-spin" />
       ) : (
         <>
           {/* Ask to unmute - show when user doesn't have mic permission */}
@@ -155,11 +155,11 @@ export default function ParticipantModerationControls({
             <button
               type="button"
               disabled={pending}
-              className={`${iconBtnClass} bg-md-surface-variant/50 hover:bg-md-primary/20 text-md-on-surface-variant hover:text-md-primary`}
+              className={`${iconBtnClass} bg-md-primary/10 hover:bg-md-primary/20 text-md-primary`}
               onClick={() => void run(requestUnmute)}
               title="Allow microphone"
             >
-              <Mic className="w-3 h-3" />
+              <Mic className="w-3.5 h-3.5" />
             </button>
           )}
           {/* Mute - show when user is unmuted */}
@@ -171,7 +171,7 @@ export default function ParticipantModerationControls({
               onClick={() => void run(mute)}
               title="Mute"
             >
-              <MicOff className="w-3 h-3" />
+              <MicOff className="w-3.5 h-3.5" />
             </button>
           )}
           {/* Revoke mic permission - show in webinars when user has mic permission */}
@@ -183,7 +183,7 @@ export default function ParticipantModerationControls({
               onClick={() => void run(revokeMicrophone)}
               title="Revoke microphone permission"
             >
-              <ShieldOff className="w-3 h-3" />
+              <ShieldOff className="w-3.5 h-3.5" />
             </button>
           )}
           {/* Panel control - webinar only */}
@@ -199,7 +199,11 @@ export default function ParticipantModerationControls({
               onClick={() => void run(changePanel)}
               title={onPanel ? "Remove from panel" : "Add to panel"}
             >
-              {onPanel ? <UserMinus className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
+              {onPanel ? (
+                <UserMinus className="w-3.5 h-3.5" />
+              ) : (
+                <UserPlus className="w-3.5 h-3.5" />
+              )}
             </button>
           )}
         </>

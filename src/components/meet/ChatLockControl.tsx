@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Room, ConnectionState } from "livekit-client";
 import { toast } from "sonner";
 import { useMeetingStore } from "@/store/useMeetingStore";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 
 export default function ChatLockControl({ room }: { room: Room }) {
   const { chatEnabled, chatSlowModeSeconds, token } = useMeetingStore();
@@ -83,18 +83,21 @@ export default function ChatLockControl({ room }: { room: Room }) {
           <span className="text-xs font-medium text-md-on-surface">Slow mode</span>
           {pending === "slow" && <Loader2 className="w-3 h-3 animate-spin text-md-primary" />}
         </div>
-        <select
-          value={chatSlowModeSeconds}
-          disabled={isDisabled}
-          onChange={(event) => updateSlowMode(Number(event.target.value))}
-          className="rounded-lg border border-md-outline-variant/50 bg-md-surface px-2.5 py-1 text-xs text-md-on-surface outline-none focus:border-md-primary/50 disabled:opacity-50 cursor-pointer"
-        >
-          <option value={0}>Off</option>
-          <option value={5}>5s</option>
-          <option value={10}>10s</option>
-          <option value={30}>30s</option>
-          <option value={60}>60s</option>
-        </select>
+        <div className="relative">
+          <select
+            value={chatSlowModeSeconds}
+            disabled={isDisabled}
+            onChange={(event) => updateSlowMode(Number(event.target.value))}
+            className="appearance-none rounded-lg border border-md-outline-variant/50 bg-md-surface pl-3 pr-7 py-1.5 text-xs text-md-on-surface outline-none focus:border-md-primary disabled:opacity-50 cursor-pointer"
+          >
+            <option value={0}>Off</option>
+            <option value={5}>5s</option>
+            <option value={10}>10s</option>
+            <option value={30}>30s</option>
+            <option value={60}>60s</option>
+          </select>
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-md-on-surface-variant pointer-events-none" />
+        </div>
       </div>
     </div>
   );

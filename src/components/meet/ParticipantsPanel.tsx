@@ -70,7 +70,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   };
 
   return (
-    <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-2xl flex flex-col overflow-hidden relative z-20">
+    <div className="w-full md:w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-none md:rounded-2xl flex flex-col overflow-hidden relative z-20">
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3.5 border-b border-md-outline-variant/30 bg-md-surface-container/50">
         <div className="flex items-center justify-between mb-3">
@@ -106,7 +106,7 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 scrollbar-hidden">
         {filteredParticipants.length === 0 && searchQuery.trim() && (
           <div className="text-center py-6 text-md-on-surface-variant text-xs">
             No participants found matching &ldquo;{searchQuery}&rdquo;
@@ -122,75 +122,81 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
           return (
             <div
               key={p.identity}
-              className={`p-2.5 rounded-xl transition-colors ${
+              className={`p-3 rounded-xl transition-colors ${
                 hasHandRaised
                   ? "bg-md-primary/5 border border-md-primary/20"
                   : "bg-md-surface-container border border-md-outline-variant/30 hover:border-md-outline-variant/60"
               }`}
             >
-              <div className="flex items-center gap-2">
+              {/* Main row: Avatar + Name */}
+              <div className="flex items-center gap-3">
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   <img
                     src={getAvatarUrl(p.name, p.identity)}
                     alt={p.name || p.identity || "Participant"}
-                    className={`w-8 h-8 rounded-full ${isLocal ? "ring-2 ring-md-primary" : ""}`}
+                    className={`w-10 h-10 rounded-full ${isLocal ? "ring-2 ring-md-primary" : ""}`}
                   />
                   {hasHandRaised && (
-                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-md-primary flex items-center justify-center animate-bounce">
-                      <Hand className="w-2 h-2 text-md-on-primary" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-md-primary flex items-center justify-center animate-bounce">
+                      <Hand className="w-2.5 h-2.5 text-md-on-primary" />
                     </div>
                   )}
                 </div>
 
                 {/* Name & Role */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-medium text-md-on-surface truncate">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-medium text-md-on-surface truncate max-w-[140px]">
                       {p.name || p.identity}
                     </span>
                     {isLocal && (
-                      <span className="text-[8px] font-semibold text-md-primary bg-md-primary/10 px-1 py-0.5 rounded">
+                      <span className="text-[9px] font-semibold text-md-primary bg-md-primary/10 px-1.5 py-0.5 rounded">
                         You
                       </span>
                     )}
                     {roleIcon}
                   </div>
-                  <span className="text-[9px] text-md-on-surface-variant">
+                  <span className="text-[10px] text-md-on-surface-variant">
                     {getParticipantRoleLabel(p)}
                   </span>
                 </div>
 
-                {/* Status Icons */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Connection Quality - always visible */}
+                <div className="flex-shrink-0">{renderQuality(p)}</div>
+              </div>
+
+              {/* Status & Actions row */}
+              <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-md-outline-variant/20">
+                {/* Media Status */}
+                <div className="flex items-center gap-1.5">
                   <div
-                    className={`w-5 h-5 rounded flex items-center justify-center ${
-                      isMuted ? "bg-md-error/10" : "bg-md-surface-variant/50"
+                    className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                      isMuted
+                        ? "bg-md-error/10 text-md-error"
+                        : "bg-md-tertiary/10 text-md-tertiary"
                     }`}
+                    title={isMuted ? "Muted" : "Unmuted"}
                   >
-                    {isMuted ? (
-                      <MicOff className="w-2.5 h-2.5 text-md-error" />
-                    ) : (
-                      <Mic className="w-2.5 h-2.5 text-md-on-surface-variant" />
-                    )}
+                    {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
                   </div>
                   <div
-                    className={`w-5 h-5 rounded flex items-center justify-center ${
-                      isCamOff ? "bg-md-error/10" : "bg-md-surface-variant/50"
+                    className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                      isCamOff
+                        ? "bg-md-error/10 text-md-error"
+                        : "bg-md-tertiary/10 text-md-tertiary"
                     }`}
+                    title={isCamOff ? "Camera Off" : "Camera On"}
                   >
                     {isCamOff ? (
-                      <VideoOff className="w-2.5 h-2.5 text-md-error" />
+                      <VideoOff className="w-3.5 h-3.5" />
                     ) : (
-                      <Video className="w-2.5 h-2.5 text-md-on-surface-variant" />
+                      <Video className="w-3.5 h-3.5" />
                     )}
-                  </div>
-                  <div className="w-5 h-5 rounded flex items-center justify-center bg-md-surface-variant/50">
-                    {renderQuality(p)}
                   </div>
                 </div>
 
-                {/* Moderation Controls - inline */}
+                {/* Moderation Controls */}
                 <ParticipantModerationControls room={room} participant={p} />
               </div>
             </div>

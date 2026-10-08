@@ -58,7 +58,7 @@ export default function SettingsPanel({
   const transcriptionAllowed = meetDetails?.isTranscription === true;
 
   return (
-    <div className="w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-2xl flex flex-col overflow-hidden relative z-20">
+    <div className="w-full md:w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-none md:rounded-2xl flex flex-col overflow-hidden relative z-20">
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3.5 border-b border-md-outline-variant/30 flex items-center justify-between bg-md-surface-container/50">
         <div className="flex items-center gap-2.5">
@@ -79,7 +79,7 @@ export default function SettingsPanel({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hidden">
         {/* Layout Section */}
         <div className="px-3 py-4">
           <span className="px-1 text-[10px] font-semibold text-md-on-surface-variant uppercase tracking-wide">
