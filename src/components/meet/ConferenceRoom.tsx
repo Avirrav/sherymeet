@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Room, ConnectionState } from "livekit-client";
 import { useParticipants } from "@/hooks/media-server/useParticipants";
 import { useScreenShare } from "@/hooks/media-server/useScreenShare";
@@ -41,6 +41,9 @@ import {
   Users,
   Clock,
   LayoutGrid,
+  Circle,
+  Square,
+  X,
 } from "lucide-react";
 import LayoutManager from "./layout/LayoutManager";
 
@@ -86,9 +89,16 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
   const [duration, setDuration] = useState(0);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showViewerNotice, setShowViewerNotice] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingLoading, setIsRecordingLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Keeps the sidebar mounted briefly after close so it can slide out.
   const [renderedSidebar, setRenderedSidebar] = useState<typeof activeSidebar>(null);
   const isPanelClosing = !activeSidebar && !!renderedSidebar;
+
+  // Role comes from the token metadata, never from "is this me"
+  const isHost = isHostRole(room.localParticipant);
+  const isAdmin = isCoHostOrAbove(room.localParticipant);
 
   useEffect(() => {
     if (activeSidebar) {
@@ -118,16 +128,66 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     return () => clearTimeout(timer);
   }, [showViewerNotice]);
 
+  // Check recording status on mount (for hosts/admins)
+  useEffect(() => {
+    if (!isAdmin || !roomId || !token) return;
+    const checkRecordingStatus = async () => {
+      try {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsRecording(data.data?.isRecording || false);
+        }
+      } catch {
+        // Ignore errors on initial check
+      }
+    };
+    checkRecordingStatus();
+  }, [isAdmin, roomId, token]);
+
+  const toggleRecording = async () => {
+    if (isRecordingLoading) return;
+    setIsRecordingLoading(true);
+    try {
+      if (isRecording) {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          setIsRecording(false);
+          toast.success("Recording stopped");
+        } else {
+          const data = await res.json();
+          toast.error(data.message || "Failed to stop recording");
+        }
+      } else {
+        const res = await fetch(`/api/server/${roomId}/recording`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          setIsRecording(true);
+          toast.success("Recording started");
+        } else {
+          const data = await res.json();
+          toast.error(data.message || "Failed to start recording");
+        }
+      }
+    } catch {
+      toast.error("Error toggling recording");
+    } finally {
+      setIsRecordingLoading(false);
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-  {
-    /* Role comes from the token metadata, never from "is this me" */
-  }
-  const isHost = isHostRole(room.localParticipant);
-  const isAdmin = isCoHostOrAbove(room.localParticipant);
 
   // Each media source has its own grant. Speaking does not require panel membership.
   const canUseMicrophone = canParticipantUseMicrophone(room.localParticipant);
@@ -205,64 +265,151 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             <Clock className="w-3.5 h-3.5 text-md-primary" />
             <span>{formatDuration(duration)}</span>
           </div>
-          <span className="text-md-outline-variant">|</span>
-          <span className="text-xs font-semibold text-md-on-surface-variant font-mono tracking-wide">
+          <span className="hidden sm:inline text-md-outline-variant">|</span>
+          <span className="hidden sm:inline text-xs font-semibold text-md-on-surface-variant font-mono tracking-wide">
             {roomId}
           </span>
+          {isRecording && (
+            <>
+              <span className="text-md-outline-variant">|</span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-md-error">
+                <Circle className="w-2.5 h-2.5 fill-md-error animate-pulse" />
+                <span>REC</span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Participants Sidebar Toggle */}
-          {isAdmin && (
+          {/* Desktop: Show all buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            {/* Participants Sidebar Toggle */}
+            {isAdmin && (
+              <button
+                onClick={() => toggleSidebar("participants")}
+                className={`control-btn p-3.5 rounded-full border ${
+                  activeSidebar === "participants"
+                    ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                    : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
+                }`}
+                title="Participants Panel"
+              >
+                <Users className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Chat Sidebar Toggle */}
             <button
-              onClick={() => toggleSidebar("participants")}
-              className={`control-btn p-3.5 rounded-full border ${
-                activeSidebar === "participants"
+              onClick={() => toggleSidebar("chat")}
+              className={`control-btn p-3.5 rounded-full border relative ${
+                activeSidebar === "chat"
                   ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
                   : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
               }`}
-              title="Participants Panel"
+              title="Chat Panel"
             >
-              <Users className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5" />
+              {unreadChatCount > 0 && activeSidebar !== "chat" && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-md-primary border-2 border-md-surface flex items-center justify-center text-[9px] font-extrabold text-md-on-primary animate-scale-in">
+                  {unreadChatCount}
+                </span>
+              )}
             </button>
-          )}
 
-          {/* Chat Sidebar Toggle */}
+            {/* Settings & Layout Sidebar Toggle */}
+            <button
+              onClick={() => toggleSidebar("settings")}
+              className={`control-btn p-3.5 rounded-full border ${
+                activeSidebar === "settings"
+                  ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
+                  : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
+              }`}
+              title="Settings & Layout"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Mobile: Show menu icon */}
           <button
-            onClick={() => toggleSidebar("chat")}
-            className={`control-btn p-3.5 rounded-full border relative ${
-              activeSidebar === "chat"
-                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
-                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
-            }`}
-            title="Chat Panel"
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden control-btn p-3.5 rounded-full border bg-transparent border-transparent hover:bg-md-surface-container text-md-on-surface-variant hover:text-md-on-surface relative"
+            title="Menu"
           >
-            <MessageSquare className="w-5 h-5" />
+            <LayoutGrid className="w-5 h-5" />
             {unreadChatCount > 0 && activeSidebar !== "chat" && (
               <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-md-primary border-2 border-md-surface flex items-center justify-center text-[9px] font-extrabold text-md-on-primary animate-scale-in">
                 {unreadChatCount}
               </span>
             )}
           </button>
-
-          {/* Settings & Layout Sidebar Toggle */}
-          <button
-            onClick={() => toggleSidebar("settings")}
-            className={`control-btn p-3.5 rounded-full border ${
-              activeSidebar === "settings"
-                ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
-                : "bg-transparent border-transparent hover:bg-md-surface-container hover:border-md-outline-variant text-md-on-surface-variant hover:text-md-on-surface"
-            }`}
-            title="Settings & Layout"
-          >
-            <LayoutGrid className="w-5 h-5" />
-          </button>
         </div>
       </header>
 
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileMenuOpen(false)} />
+          {/* Menu Panel */}
+          <div className="relative w-full max-w-md mx-4 mb-4 bg-md-surface-container rounded-2xl border border-md-outline-variant/40 overflow-hidden animate-slide-up">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-md-outline-variant/40">
+              <span className="text-sm font-semibold text-md-on-surface">Menu</span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-md-surface-container-highest text-md-on-surface-variant"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Menu Items */}
+            <div className="p-2">
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    toggleSidebar("participants");
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-md-surface-container-highest text-md-on-surface"
+                >
+                  <Users className="w-5 h-5 text-md-on-surface-variant" />
+                  <span>Participants</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  toggleSidebar("chat");
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-md-surface-container-highest text-md-on-surface relative"
+              >
+                <MessageSquare className="w-5 h-5 text-md-on-surface-variant" />
+                <span>Chat</span>
+                {unreadChatCount > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full bg-md-primary text-[10px] font-bold text-md-on-primary">
+                    {unreadChatCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  toggleSidebar("settings");
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-md-surface-container-highest text-md-on-surface"
+              >
+                <LayoutGrid className="w-5 h-5 text-md-on-surface-variant" />
+                <span>Settings & Layout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Area */}
-      <div className="flex-1 flex overflow-hidden relative mx-10">
+      <div className="flex-1 flex overflow-hidden relative mx-2 sm:mx-4 md:mx-10 gap-4">
         {/* Main Video Area */}
-        <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <LayoutManager
             updateKey={updateKey}
             localParticipant={stageLocalParticipant}
@@ -273,34 +420,45 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           {/* Real-time Captions Overlay */}
           <CaptionOverlay room={room} />
         </div>
-        {/* Sidebar panel (stays mounted during the slide-out animation) */}
+        {/* Sidebar panel - desktop: inline, mobile: overlay */}
         {renderedSidebar && (renderedSidebar !== "participants" || isAdmin) && (
-          <div
-            key={renderedSidebar}
-            className={`h-full ${isPanelClosing ? "panel-slide-out" : "panel-slide-in"}`}
-          >
-            {renderedSidebar === "chat" && (
-              <ChatPanel room={room} onClose={() => toggleSidebar("chat")} />
-            )}
-            {renderedSidebar === "participants" && isAdmin && (
-              <ParticipantsPanel room={room} onClose={() => toggleSidebar("participants")} />
-            )}
-            {renderedSidebar === "settings" && (
-              <SettingsPanel
-                room={room}
-                onClose={() => toggleSidebar("settings")}
-                isHost={isHost}
-                handleEndMeeting={handleEndMeeting}
-                setShowLeaveModal={setShowLeaveModal}
-              />
-            )}
-          </div>
+          <>
+            {/* Mobile overlay backdrop */}
+            <div
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
+              onClick={() => toggleSidebar(renderedSidebar)}
+            />
+            <div
+              key={renderedSidebar}
+              className={`
+                md:h-full md:relative md:z-auto
+                fixed inset-0 z-50 md:inset-auto
+                ${isPanelClosing ? "panel-slide-out" : "panel-slide-in"}
+              `}
+            >
+              {renderedSidebar === "chat" && (
+                <ChatPanel room={room} onClose={() => toggleSidebar("chat")} />
+              )}
+              {renderedSidebar === "participants" && isAdmin && (
+                <ParticipantsPanel room={room} onClose={() => toggleSidebar("participants")} />
+              )}
+              {renderedSidebar === "settings" && (
+                <SettingsPanel
+                  room={room}
+                  onClose={() => toggleSidebar("settings")}
+                  isHost={isHost}
+                  handleEndMeeting={handleEndMeeting}
+                  setShowLeaveModal={setShowLeaveModal}
+                />
+              )}
+            </div>
+          </>
         )}
       </div>
 
       {/* Controls Bar — M3 toolbar on a tonal surface container */}
-      <footer className="mb-4 py-2 px-6 flex items-center justify-center z-10">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
+      <footer className="py-2 px-2 sm:px-6 flex items-center justify-center z-10 mb-2 sm:mb-4">
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
           <ReactionControls
             sendReaction={sendReaction}
             disabled={
@@ -312,20 +470,20 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           <button
             onClick={() => raiseHand(!isHandRaised)}
             disabled={remoteParticipants.length === 0}
-            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+            className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               isHandRaised
                 ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
                 : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
             }`}
             title="Raise Hand"
           >
-            <Hand className="w-5 h-5" />
+            <Hand className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           {/* Mute Mic */}
           <button
             onClick={toggleMicrophone}
             disabled={!canUseMicrophone}
-            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+            className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               audioEnabled
                 ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
                 : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
@@ -333,18 +491,20 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             title={canUseMicrophone ? (audioEnabled ? "Mute Mic" : "Unmute Mic") : noPublishReason}
           >
             {audioEnabled ? (
-              <Mic className="w-5 h-5 animate-pop-in" />
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             ) : (
-              <MicOff className="w-5 h-5 animate-pop-in" />
+              <MicOff className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             )}
           </button>
-          {/* Mic Sound Bar Visualizer */}
-          <MicVisualizer isActive={audioEnabled} />
+          {/* Mic Sound Bar Visualizer - hidden on mobile */}
+          <div className="hidden sm:block">
+            <MicVisualizer isActive={audioEnabled} />
+          </div>
           {/* Toggle Camera */}
           <button
             onClick={toggleCamera}
             disabled={!canUseCamera}
-            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+            className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               videoEnabled
                 ? "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
                 : "bg-md-error-container border-md-error/40 text-md-on-error-container hover:bg-md-error-container/80"
@@ -352,16 +512,16 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             title={canUseCamera ? (videoEnabled ? "Stop Camera" : "Start Camera") : noPublishReason}
           >
             {videoEnabled ? (
-              <VideoIcon className="w-5 h-5 animate-pop-in" />
+              <VideoIcon className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             ) : (
-              <VideoOff className="w-5 h-5 animate-pop-in" />
+              <VideoOff className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             )}
           </button>
           {/* Screen Share */}
           <button
             onClick={toggleScreenShare}
             disabled={!canShareScreen || remoteParticipants.length === 0}
-            className={`control-btn p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
+            className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               isScreenSharing
                 ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
                 : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
@@ -375,11 +535,30 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             }
           >
             {isScreenSharing ? (
-              <MonitorOff className="w-5 h-5 animate-pop-in" />
+              <MonitorOff className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             ) : (
-              <Monitor className="w-5 h-5 animate-pop-in" />
+              <Monitor className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             )}
           </button>
+          {/* Recording (Host/Admin only) */}
+          {isAdmin && (
+            <button
+              onClick={toggleRecording}
+              disabled={isRecordingLoading}
+              className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-50 ${
+                isRecording
+                  ? "bg-md-error-container border-md-error/40 text-md-error"
+                  : "bg-transparent hover:bg-md-surface-container-highest text-md-on-surface-variant hover:text-md-on-surface border-transparent"
+              }`}
+              title={isRecording ? "Stop Recording" : "Start Recording"}
+            >
+              {isRecording ? (
+                <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current animate-pop-in" />
+              ) : (
+                <Circle className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
+              )}
+            </button>
+          )}
         </div>
       </footer>
 
