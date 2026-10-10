@@ -8,17 +8,9 @@ import {
 } from "@/server/services/livekit/egress";
 import { ConferenceRoomDao } from "@/server/dao/conferenceroom-dao";
 import { RecordingDao } from "@/server/dao/recording-dao";
-import { StatusType, RecordingStatus } from "@/server/types/conferenceroom.types";
+import { RecordingStatus, StatusType } from "@/server/types/conferenceroom.types";
 import { dbConnect } from "@/server/utils/db-connect";
 import { config } from "@/server/utils/config";
-
-const RECORDING_STATUS: Record<string, RecordingStatus> = {
-  STARTING: "starting",
-  RECORDING: "recording",
-  COMPLETED: "completed",
-  FAILED: "failed",
-  ABORTED: "aborted",
-};
 
 async function validateRequest(request: NextRequest, roomId: string) {
   const token = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
@@ -49,7 +41,7 @@ export async function GET(
     // Check MongoDB for active recording first
     const activeRecording = await RecordingDao.getRecording({
       roomId,
-      recordingStatus: { $in: [RECORDING_STATUS.STARTING, RECORDING_STATUS.RECORDING] },
+      recordingStatus: { $in: [RecordingStatus.STARTING, RecordingStatus.RECORDING] },
     });
 
     // Also verify with LiveKit
@@ -58,8 +50,7 @@ export async function GET(
     return ApiResponse.success({
       isRecording: !!activeRecording || !!activeEgress,
       egressId: activeRecording?.egressId || activeEgress?.egressId || null,
-      status:
-        activeRecording?.recordingStatus || (activeEgress ? RECORDING_STATUS.RECORDING : null),
+      status: activeRecording?.recordingStatus || (activeEgress ? RecordingStatus.RECORDING : null),
     });
   } catch (error) {
     return ApiResponse.fromError(error, "Failed to get recording status");
@@ -95,7 +86,7 @@ export async function POST(
     // Double-check no active recording in MongoDB
     const existingRecording = await RecordingDao.getRecording({
       roomId,
-      recordingStatus: { $in: [RECORDING_STATUS.STARTING, RECORDING_STATUS.RECORDING] },
+      recordingStatus: { $in: [RecordingStatus.STARTING, RecordingStatus.RECORDING] },
     });
 
     if (existingRecording) {
@@ -133,7 +124,7 @@ export async function POST(
       conferenceRoomId: String(updatedRoom._id),
       roomId,
       egressId: egressInfo.egressId,
-      recordingStatus: RECORDING_STATUS.RECORDING,
+      recordingStatus: RecordingStatus.RECORDING,
       startedAt: new Date(),
       s3Bucket: config.AWS_S3_BUCKET_NAME,
       s3Region: config.AWS_S3_REGION,
@@ -143,7 +134,7 @@ export async function POST(
     return ApiResponse.success({
       isRecording: true,
       egressId: egressInfo.egressId,
-      status: RECORDING_STATUS.RECORDING,
+      status: RecordingStatus.RECORDING,
     });
   } catch (error) {
     return ApiResponse.fromError(error, "Failed to start recording");
@@ -167,7 +158,7 @@ export async function DELETE(
     // Find active recording in MongoDB using DAO
     const activeRecording = await RecordingDao.getRecording({
       roomId,
-      recordingStatus: { $in: [RECORDING_STATUS.STARTING, RECORDING_STATUS.RECORDING] },
+      recordingStatus: { $in: [RecordingStatus.STARTING, RecordingStatus.RECORDING] },
     });
 
     // Try to stop via LiveKit (may fail if egress already stopped)
@@ -194,7 +185,7 @@ export async function DELETE(
     return ApiResponse.success({
       isRecording: false,
       egressId: stoppedEgress?.egressId || activeRecording?.egressId,
-      status: RECORDING_STATUS.COMPLETED,
+      status: RecordingStatus.COMPLETED,
     });
   } catch (error) {
     // Ensure flag is reset even on error

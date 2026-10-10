@@ -34,8 +34,14 @@ export interface IConferenceRoomDocument extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export type RecordingStatus = "starting" | "recording" | "completed" | "failed" | "aborted";
+export enum RecordingStatus {
+  STARTING = "starting",
+  RECORDING = "recording",
+  ENDING = "ending",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  ABORTED = "aborted",
+}
 
 export interface IRecordingFileResult {
   filename: string;

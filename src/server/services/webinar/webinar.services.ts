@@ -1,5 +1,6 @@
 import { ConferenceRoomDao } from "@/server/dao/conferenceroom-dao";
 import { ApiError } from "@/server/utils/api-helper";
+import { RecordingStatus } from "@/server/types/conferenceroom.types";
 import bcrypt from "bcryptjs";
 import { ulid } from "ulid";
 import {
@@ -114,7 +115,7 @@ export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConfer
   try {
     const activeRecordings = await RecordingDao.getRecordings({
       roomId,
-      recordingStatus: "recording",
+      recordingStatus: { $in: [RecordingStatus.STARTING, RecordingStatus.RECORDING] },
     });
     await Promise.all(
       activeRecordings.map(async (rec) => {
@@ -124,7 +125,7 @@ export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConfer
           await RecordingDao.updateRecording(
             { egressId: rec.egressId },
             {
-              recordingStatus: "completed",
+              recordingStatus: RecordingStatus.COMPLETED,
               endedAt: new Date(),
             },
           );
@@ -133,7 +134,7 @@ export async function endWebinar({ roomId }: EndWebinarOptions): Promise<IConfer
           await RecordingDao.updateRecording(
             { egressId: rec.egressId },
             {
-              recordingStatus: "failed",
+              recordingStatus: RecordingStatus.FAILED,
               endedAt: new Date(),
             },
           );
