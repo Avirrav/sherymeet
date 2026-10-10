@@ -11,6 +11,7 @@ import {
   StatusType,
   IConferenceRoom,
   ConferenceRoomType,
+  RecordingStatus,
 } from "@/server/types/conferenceroom.types";
 
 export interface EndSessionOptions {
@@ -73,7 +74,7 @@ export async function endSession({ roomId }: EndSessionOptions): Promise<IConfer
   try {
     const activeRecordings = await RecordingDao.getRecordings({
       roomId,
-      recordingStatus: "recording",
+      recordingStatus: RecordingStatus.RECORDING,
     });
     await Promise.all(
       activeRecordings.map(async (rec) => {
@@ -83,7 +84,7 @@ export async function endSession({ roomId }: EndSessionOptions): Promise<IConfer
           await RecordingDao.updateRecording(
             { egressId: rec.egressId },
             {
-              recordingStatus: "completed",
+              recordingStatus: RecordingStatus.COMPLETED,
               endedAt: new Date(),
             },
           );
@@ -92,7 +93,7 @@ export async function endSession({ roomId }: EndSessionOptions): Promise<IConfer
           await RecordingDao.updateRecording(
             { egressId: rec.egressId },
             {
-              recordingStatus: "failed",
+              recordingStatus: RecordingStatus.FAILED,
               endedAt: new Date(),
             },
           );
@@ -151,7 +152,7 @@ export async function startSession({ roomId }: StartSessionOptions): Promise<ICo
           conferenceRoomId: String(startedConferenceRoom._id),
           roomId,
           egressId: egressInfo.egressId,
-          recordingStatus: "recording",
+          recordingStatus: RecordingStatus.RECORDING,
           startedAt: new Date(),
           s3Bucket: config.AWS_S3_BUCKET_NAME,
           s3Region: config.AWS_S3_REGION,

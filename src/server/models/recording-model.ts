@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { RecordingStatus } from "../types/conferenceroom.types";
 
 const RecordingSchema = new mongoose.Schema(
   {
@@ -24,8 +25,8 @@ const RecordingSchema = new mongoose.Schema(
 
     recordingStatus: {
       type: String,
-      enum: ["starting", "recording", "completed", "failed", "aborted"],
-      default: "starting",
+      enum: RecordingStatus,
+      default: RecordingStatus.STARTING,
     },
 
     startedAt: Date,
