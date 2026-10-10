@@ -519,7 +519,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           {/* Screen Share */}
           <button
             onClick={toggleScreenShare}
-            disabled={!canShareScreen || remoteParticipants.length === 0}
+            disabled={!canShareScreen}
             className={`control-btn p-2.5 sm:p-3.5 rounded-full border disabled:opacity-30 disabled:pointer-events-none ${
               isScreenSharing
                 ? "bg-md-secondary-container text-md-on-secondary-container border-transparent"
