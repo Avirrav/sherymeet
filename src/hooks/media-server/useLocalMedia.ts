@@ -45,9 +45,6 @@ export function useLocalMedia() {
   // Load available media input devices and set the default selections if not already set.
   const loadDevices = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-      console.warn(
-        "Media devices API is not supported in this browser context (unsecure connection).",
-      );
       return;
     }
     try {
@@ -66,7 +63,6 @@ export function useLocalMedia() {
       }
     } catch (unknownErr) {
       const err = toAppError(unknownErr);
-      console.error("Error listing devices:", err.message);
     }
   }, [videoDeviceId, audioDeviceId, setVideoDeviceId, setAudioDeviceId]);
 
@@ -86,7 +82,6 @@ export function useLocalMedia() {
       // 1. If camera is disabled, stop existing track and cleanup
       if (!videoEnabled) {
         if (videoTrackRef.current) {
-          console.log("Stopping local video track preview...");
           videoTrackRef.current.stop();
           videoTrackRef.current = null;
           setVideoTrack(null);
@@ -115,10 +110,6 @@ export function useLocalMedia() {
           videoTrackRef.current = null;
         }
 
-        console.log(
-          "Creating local video track preview with HD resolution for device:",
-          videoDeviceId,
-        );
         const track = await createLocalVideoTrack({
           deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
           resolution: VideoPresets.h1080.resolution, // Capture in HD quality (1920x1080)
@@ -138,15 +129,9 @@ export function useLocalMedia() {
         try {
           const vDevices = await Room.getLocalDevices("videoinput");
           otherCameras = vDevices.filter((d) => d.deviceId !== videoDeviceId && d.deviceId !== "");
-        } catch (deviceErr) {
-          console.error("Failed to query video devices inside fallback:", deviceErr);
-        }
+        } catch (deviceErr) {}
 
         if (otherCameras.length > 0) {
-          console.warn(
-            "Selected camera failed/busy. Trying fallback camera:",
-            otherCameras[0].deviceId,
-          );
           try {
             const fallbackTrack = await createLocalVideoTrack({
               deviceId: { exact: otherCameras[0].deviceId },
@@ -164,14 +149,11 @@ export function useLocalMedia() {
               id: "cam-fallback-info",
             });
             return;
-          } catch (fallbackErr) {
-            console.error("Fallback camera also failed:", fallbackErr);
-          }
+          } catch (fallbackErr) {}
         }
 
         if (!active) return;
         const err = toAppError(unknownErr);
-        console.error("Error creating video track:", err.message);
         setIsCameraPermissionDenied(true);
         setVideoEnabled(false);
         setVideoTrack(null);
@@ -200,7 +182,6 @@ export function useLocalMedia() {
       // 1. If microphone is disabled, stop existing track and cleanup
       if (!audioEnabled) {
         if (audioTrackRef.current) {
-          console.log("Stopping local audio track preview...");
           audioTrackRef.current.stop();
           audioTrackRef.current = null;
           setAudioTrack(null);
@@ -250,15 +231,9 @@ export function useLocalMedia() {
         try {
           const aDevices = await Room.getLocalDevices("audioinput");
           otherMics = aDevices.filter((d) => d.deviceId !== audioDeviceId && d.deviceId !== "");
-        } catch (deviceErr) {
-          console.error("Failed to query audio devices inside fallback:", deviceErr);
-        }
+        } catch (deviceErr) {}
 
         if (otherMics.length > 0) {
-          console.warn(
-            "Selected microphone failed/busy. Trying fallback microphone:",
-            otherMics[0].deviceId,
-          );
           try {
             const fallbackTrack = await createLocalAudioTrack({
               deviceId: otherMics[0].deviceId,
@@ -278,14 +253,11 @@ export function useLocalMedia() {
               id: "mic-fallback-info",
             });
             return;
-          } catch (fallbackErr) {
-            console.error("Fallback microphone also failed:", fallbackErr);
-          }
+          } catch (fallbackErr) {}
         }
 
         if (!active) return;
         const err = toAppError(unknownErr);
-        console.error("Error creating audio track:", err.message);
         setIsMicPermissionDenied(true);
         setAudioEnabled(false);
         setAudioTrack(null);

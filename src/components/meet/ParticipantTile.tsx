@@ -73,9 +73,7 @@ export default function ParticipantTile({
         await document.exitFullscreen();
         setIsFullscreen(false);
       }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-    }
+    } catch (err) {}
   };
 
   // Listen for fullscreen changes (e.g., user presses Escape)

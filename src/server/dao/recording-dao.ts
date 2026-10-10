@@ -1,3 +1,4 @@
+import mongoose, { ClientSession } from "mongoose";
 import { dbConnect } from "@/server/utils/db-connect";
 import Recording from "@/server/models/recording-model";
 import {
@@ -31,14 +32,32 @@ export interface IRecordingUpdate {
   error?: IRecordingError;
 }
 
+export interface IRecordingQueryOptions {
+  select?: QuerySelect;
+  sort?: QuerySort<IRecordingDocument>;
+  limit?: number;
+  session?: ClientSession;
+}
+
 export class RecordingDao {
+  /**
+   * Starts a new MongoDB session for transactions.
+   */
+  static async startSession(): Promise<ClientSession> {
+    await dbConnect();
+    return await mongoose.startSession();
+  }
+
   /**
    * Creates and saves a new Recording document.
    */
-  static async createRecording(data: ICreateRecordingInput): Promise<IRecordingDocument> {
+  static async createRecording(
+    data: ICreateRecordingInput,
+    session?: ClientSession,
+  ): Promise<IRecordingDocument> {
     await dbConnect();
     const recording = new Recording(data);
-    return await recording.save();
+    return await recording.save({ session });
   }
 
   /**
@@ -46,12 +65,15 @@ export class RecordingDao {
    */
   static async getRecording(
     filter: QueryFilter<IRecordingDocument>,
-    select?: QuerySelect,
+    options?: { select?: QuerySelect; session?: ClientSession },
   ): Promise<IRecordingDocument | null> {
     await dbConnect();
     let query = Recording.findOne(filter);
-    if (select) {
-      query = query.select(select);
+    if (options?.select) {
+      query = query.select(options.select);
+    }
+    if (options?.session) {
+      query = query.session(options.session);
     }
     return await query;
   }
@@ -61,7 +83,7 @@ export class RecordingDao {
    */
   static async getRecordings(
     filter: QueryFilter<IRecordingDocument>,
-    options?: { select?: QuerySelect; sort?: QuerySort<IRecordingDocument>; limit?: number },
+    options?: IRecordingQueryOptions,
   ): Promise<IRecordingDocument[]> {
     await dbConnect();
     let query = Recording.find(filter);
@@ -74,6 +96,9 @@ export class RecordingDao {
     if (options?.limit) {
       query = query.limit(options.limit);
     }
+    if (options?.session) {
+      query = query.session(options.session);
+    }
     return await query;
   }
 
@@ -83,12 +108,16 @@ export class RecordingDao {
   static async updateRecording(
     filter: QueryFilter<IRecordingDocument>,
     updateData: IRecordingUpdate,
+    session?: ClientSession,
   ): Promise<IRecordingDocument | null> {
     await dbConnect();
     return await Recording.findOneAndUpdate(
       filter,
       { $set: updateData },
-      { returnDocument: "after" },
+      {
+        returnDocument: "after",
+        session,
+      },
     );
   }
 }

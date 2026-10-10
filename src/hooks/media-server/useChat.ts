@@ -52,7 +52,6 @@ export function useChat(
         return true;
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
-        console.error("Failed to send data:", err.message);
         return false;
       }
     },
@@ -184,7 +183,6 @@ export function useChat(
         }
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
-        console.error("Error parsing data channel payload:", err.message);
       }
     };
 

@@ -155,7 +155,6 @@ export function useTranscribe(room: Room | null) {
         room.localParticipant.publishData(data, { reliable: true });
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
-        console.error("Failed to broadcast transcription:", err.message);
       }
     },
     [room],
@@ -175,7 +174,6 @@ export function useTranscribe(room: Room | null) {
     if (audioContextRef.current) {
       audioContextRef.current.close().catch((unknownErr) => {
         const err = toAppError(unknownErr);
-        console.error("AudioContext close error:", err.message);
       });
       audioContextRef.current = null;
     }
@@ -187,9 +185,7 @@ export function useTranscribe(room: Room | null) {
         try {
           const emptyAudioEvent = encodeEventStreamMessage(new Uint8Array(0));
           wsRef.current.send(toArrayBufferView(emptyAudioEvent));
-        } catch (unknownErr) {
-          console.log("AWS", unknownErr);
-        }
+        } catch (unknownErr) {}
       }
       wsRef.current.close();
       wsRef.current = null;
@@ -275,7 +271,6 @@ export function useTranscribe(room: Room | null) {
           };
         } catch (unknownErr) {
           const err = toAppError(unknownErr);
-          console.error("[useTranscribe] Audio processing setup failed:", err.message);
           toast.error("Failed to configure audio context downsampling");
           stopTranscription();
         }
@@ -328,16 +323,13 @@ export function useTranscribe(room: Room | null) {
         }
       };
 
-      ws.onerror = (e) => {
-        console.error("[useTranscribe] Transcription WebSocket error:", e);
-      };
+      ws.onerror = (e) => {};
 
       ws.onclose = () => {
         setIsTranscribing(false);
       };
     } catch (unknownErr) {
       const err = toAppError(unknownErr);
-      console.error("Failed to start AWS Transcribe:", err.message);
       toast.error(err.message || "Transcription connection failed");
       stopTranscription();
     }
@@ -395,7 +387,6 @@ export function useTranscribe(room: Room | null) {
         }
       } catch (unknownErr) {
         // Ignore non-transcription packets
-        console.log("AWS data error", unknownErr);
       }
     };
 

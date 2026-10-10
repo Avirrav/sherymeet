@@ -249,7 +249,6 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           toast.error("Failed to end meeting");
         }
       } catch (err) {
-        console.error("Error ending meeting:", err);
         toast.error("Error ending meeting");
       }
     }

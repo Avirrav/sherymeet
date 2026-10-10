@@ -49,7 +49,7 @@ export async function startRoomRecording(
         width: 1920,
         height: 1080,
         framerate: 30,
-        videoBitrate: 6000,
+        videoBitrate: 1000,
         audioBitrate: 256,
       }),
     },

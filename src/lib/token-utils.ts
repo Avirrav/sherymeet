@@ -48,7 +48,6 @@ export function extractUserFromToken(token: string): TokenUserMetadata | null {
 
     return { name, email, role };
   } catch {
-    console.error("Failed to decode token");
     return null;
   }
 }

@@ -77,9 +77,7 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
       } else {
         await document.exitFullscreen();
       }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-    }
+    } catch (err) {}
   }, []);
 
   // Listen for fullscreen changes
@@ -110,9 +108,7 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
         await videoRef.current.requestPictureInPicture();
         setIsPiP(true);
       }
-    } catch (err) {
-      console.error("PiP error:", err);
-    }
+    } catch (err) {}
   }, []);
 
   // Listen for PiP changes

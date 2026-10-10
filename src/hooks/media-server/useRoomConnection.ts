@@ -29,11 +29,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
   const connectingRef = useRef(false);
 
   useEffect(() => {
-    // Return early if connection parameters are not yet loaded.
-    // This prevents the LiveKit client from attempting to connect with empty strings,
-    // which throws an "Invalid URL" TypeError.
     if (!serverUrl || !token) {
-      console.log("Connection parameters missing. Waiting for serverUrl and token...");
       return;
     }
     if (room || connectingRef.current) {
@@ -43,7 +39,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
     setConnectionStatus(true, false, null);
     const r = new Room({
       adaptiveStream: {
-        pixelDensity: "screen",
+        pixelDensity: 3,
         pauseVideoInBackground: true,
       },
       dynacast: true,
@@ -53,62 +49,49 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
       },
       publishDefaults: {
         videoSimulcastLayers: [VideoPresets.h1080, VideoPresets.h720, VideoPresets.h360],
-        videoCodec: "vp9", // Better compression than VP8 for same quality
-        backupCodec: { codec: "vp8" }, // Fallback for older browsers
+        videoCodec: "vp9",
+        backupCodec: { codec: "vp8" },
         videoEncoding: {
-          maxBitrate: 2_500_000, // 2.5 Mbps for 1080p (VP9 is more efficient)
+          maxBitrate: 4_000_000,
           maxFramerate: 30,
           priority: "high",
         },
         screenShareEncoding: {
-          maxBitrate: 3_000_000, // 3 Mbps for screen share
-          maxFramerate: 15, // 15fps for screen share (smoother for content)
+          maxBitrate: 4_000_000,
+          maxFramerate: 30,
           priority: "high",
         },
         simulcast: true,
-        stopMicTrackOnMute: false, // Faster unmute
-        dtx: true, // Discontinuous transmission for audio (saves bandwidth)
+        stopMicTrackOnMute: false,
+        dtx: true,
       },
     });
-
     const handleConnected = () => {
-      console.log("RoomEvent.Connected event handler triggered");
       setConnectionStatus(false, true, null);
       toast.success("Successfully connected to meeting");
     };
-
     const handleDisconnected = () => {
       setConnectionStatus(false, false, null);
       toast.info("Disconnected from meeting");
     };
-
     const handleReconnecting = () => {
       setConnectionStatus(true, true, null);
       toast.warning("Network unstable, reconnecting...");
     };
-
     const handleReconnected = () => {
       setConnectionStatus(false, true, null);
       toast.success("Reconnected to meeting");
     };
-
     r.on(RoomEvent.Connected, handleConnected);
     r.on(RoomEvent.Disconnected, handleDisconnected);
     r.on(RoomEvent.Reconnecting, handleReconnecting);
     r.on(RoomEvent.Reconnected, handleReconnected);
-
     async function connect() {
       try {
-        console.log("Calling r.connect(serverUrl, token)...", {
-          serverUrl,
-          timestamp: Date.now(),
-        });
         await r.connect(serverUrl, token);
-        console.log("r.connect completed successfully! Room status:", r.state, "at", Date.now());
         setRoom(r);
         connectingRef.current = false;
-
-        // Microphone permission can be granted without camera/panel access.
+        // Check if the local participant has permission to use the microphone and camera
         const canUseMicrophone = canParticipantUseMicrophone(r.localParticipant);
         const canUseCamera = canParticipantUseCamera(r.localParticipant);
         if ((!canUseCamera && videoEnabled) || (!canUseMicrophone && audioEnabled)) {
@@ -117,36 +100,27 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         if (!canUseMicrophone) setAudioEnabled(false);
         if (!canUseCamera) setVideoEnabled(false);
         if (!canUseMicrophone && !canUseCamera) return;
-
-        // Wait a short moment for any Pre-Join preview tracks to fully release their media handles
         await new Promise((resolve) => setTimeout(resolve, 400));
-
         const isMediaSupported = typeof navigator !== "undefined" && !!navigator.mediaDevices;
         if (!isMediaSupported && (videoEnabled || audioEnabled)) {
           toast.warning(
             "Camera/Microphone access is not supported on unsecure HTTP connections. Please use HTTPS or localhost.",
           );
         }
-
-        // Publish camera track if enabled
+        // Attempt to enable the camera if allowed and supported
         if (videoEnabled && canUseCamera && isMediaSupported) {
           let success = false;
+          // Try to enable the camera with the preferred device ID first
           try {
-            console.log("Publishing camera track in HD quality...");
             await r.localParticipant.setCameraEnabled(true, {
               deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-              resolution: VideoPresets.h1080.resolution, // Publish in Full HD
+              resolution: VideoPresets.h1080.resolution,
             });
-            console.log("Camera track published successfully.");
             success = true;
-          } catch (unknownErr) {
-            const err = toAppError(unknownErr);
-            console.warn(
-              "First camera publication attempt failed. Trying fallback devices...",
-              err.message,
-            );
+          } catch {
+            // First attempt failed, try fallback
           }
-
+          // If the initial attempt to enable the camera failed, try to find a fallback camera
           if (!success) {
             try {
               const vDevices = await Room.getLocalDevices("videoinput");
@@ -154,7 +128,6 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 (d) => d.deviceId !== videoDeviceId && d.deviceId !== "",
               );
               if (otherCameras.length > 0) {
-                console.log("Publishing fallback camera device:", otherCameras[0].deviceId);
                 await r.localParticipant.setCameraEnabled(true, {
                   deviceId: { exact: otherCameras[0].deviceId },
                   resolution: VideoPresets.h1080.resolution,
@@ -165,11 +138,11 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                   id: "room-cam-fallback",
                 });
               }
-            } catch (fallbackErr) {
-              console.error("Fallback camera failed:", fallbackErr);
+            } catch {
+              // Fallback failed
             }
           }
-
+          // If all attempts to enable the camera failed, notify the user
           if (!success) {
             try {
               await new Promise((resolve) => setTimeout(resolve, 600));
@@ -177,38 +150,29 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 deviceId: videoDeviceId || undefined,
                 resolution: VideoPresets.h1080.resolution,
               });
-              console.log("Camera track published successfully on second attempt.");
-            } catch (retryErr) {
-              const err = toAppError(retryErr);
-              console.error("Failed to publish camera on retry:", err.message);
+            } catch {
               toast.error(
                 "Failed to enable camera. Please make sure your camera is not in use by another app.",
               );
             }
           }
         }
-
-        // Publish microphone track if enabled
+        // Attempt to enable the microphone if allowed and supported
         if (audioEnabled && canUseMicrophone && isMediaSupported) {
           let success = false;
+          // Try to enable the microphone with the preferred device ID first
           try {
-            console.log("Publishing microphone track...");
             await r.localParticipant.setMicrophoneEnabled(true, {
               deviceId: audioDeviceId || undefined,
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true,
             });
-            console.log("Microphone track published successfully.");
             success = true;
-          } catch (unknownErr) {
-            const err = toAppError(unknownErr);
-            console.warn(
-              "First microphone publication attempt failed. Trying fallback devices...",
-              err.message,
-            );
+          } catch {
+            // First attempt failed, try fallback
           }
-
+          // If the initial attempt to enable the microphone failed, try to find a fallback microphone
           if (!success) {
             try {
               const aDevices = await Room.getLocalDevices("audioinput");
@@ -216,7 +180,6 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 (d) => d.deviceId !== audioDeviceId && d.deviceId !== "",
               );
               if (otherMics.length > 0) {
-                console.log("Publishing fallback microphone device:", otherMics[0].deviceId);
                 await r.localParticipant.setMicrophoneEnabled(true, {
                   deviceId: otherMics[0].deviceId,
                   echoCancellation: true,
@@ -229,11 +192,11 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                   id: "room-mic-fallback",
                 });
               }
-            } catch (fallbackErr) {
-              console.error("Fallback microphone failed:", fallbackErr);
+            } catch {
+              // Fallback failed
             }
           }
-
+          // If all attempts to enable the microphone failed, notify the user
           if (!success) {
             try {
               await new Promise((resolve) => setTimeout(resolve, 600));
@@ -243,17 +206,13 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
                 noiseSuppression: true,
                 autoGainControl: true,
               });
-              console.log("Microphone track published successfully on second attempt.");
-            } catch (retryErr) {
-              const err = toAppError(retryErr);
-              console.error("Failed to publish microphone on retry:", err.message);
+            } catch {
               toast.error("Failed to enable microphone.");
             }
           }
         }
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
-        console.error("Connection failed inside catch block:", err);
         const errMsg = err.message || "Connection failed";
         let userFriendlyMsg = errMsg;
         if (
@@ -269,9 +228,7 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
         r.disconnect();
       }
     }
-
     connect();
-
     return () => {
       r.off(RoomEvent.Connected, handleConnected);
       r.off(RoomEvent.Disconnected, handleDisconnected);
@@ -283,49 +240,36 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverUrl, token]);
-
-  // Sync mic/camera state toggles in the active room with fallback logic and HD settings
+  // Effect to synchronize the local media state with the room's state
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
-    // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
     if (!canParticipantUseCamera(room.localParticipant)) return;
-
     let active = true;
-
+    // Flag to track if the component is still mounted and active
     const syncMedia = async () => {
       if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-        console.warn(
-          "Active Room: Media devices API is not supported in this browser context (unsecure connection).",
-        );
         return;
       }
       try {
+        // Attempt to enable the camera if it is supposed to be enabled
         if (videoEnabled) {
-          // If no device ID is set, enumerate devices first to get a valid ID
           let deviceId = videoDeviceId;
           if (!deviceId) {
             const vDevices = await Room.getLocalDevices("videoinput");
             if (vDevices.length > 0 && vDevices[0].deviceId) {
               deviceId = vDevices[0].deviceId;
               setVideoDeviceId(deviceId);
-              console.log("Active Room: discovered camera device:", deviceId);
             }
           }
-          console.log("Active Room: enabling camera with HD quality for device:", deviceId);
           await room.localParticipant.setCameraEnabled(true, {
             deviceId: deviceId ? { exact: deviceId } : undefined,
             resolution: VideoPresets.h1080.resolution,
           });
-          console.log("Active Room: camera enabled successfully.");
         } else {
-          console.log("Active Room: disabling camera.");
           await room.localParticipant.setCameraEnabled(false);
         }
-      } catch (unknownErr) {
+      } catch {
         if (!active) return;
-        const err = toAppError(unknownErr);
-        console.warn("Active Room: error toggling camera, trying fallback...", err.message);
-
         if (videoEnabled) {
           try {
             const vDevices = await Room.getLocalDevices("videoinput");
@@ -333,7 +277,6 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               (d) => d.deviceId !== videoDeviceId && d.deviceId !== "",
             );
             if (otherCameras.length > 0) {
-              console.log("Active Room: trying fallback camera device:", otherCameras[0].deviceId);
               await room.localParticipant.setCameraEnabled(true, {
                 deviceId: { exact: otherCameras[0].deviceId },
                 resolution: VideoPresets.h1080.resolution,
@@ -346,66 +289,53 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               }
               return;
             }
-          } catch (fallbackErr) {
-            console.error("Active Room: fallback camera failed:", fallbackErr);
+          } catch {
+            // Fallback failed
           }
         }
-
         toast.error("Failed to enable camera. Please make sure it is not in use by another app.", {
           id: "room-cam-error-sync",
         });
       }
     };
     syncMedia();
-
     return () => {
       active = false;
     };
   }, [videoEnabled, videoDeviceId, room, setVideoDeviceId]);
-
+  // Effect to synchronize the local audio state with the room's state
   useEffect(() => {
     if (!room || room.state !== ConnectionState.Connected) return;
-    // Publishing is denied by the token (e.g. webinar attendee) — nothing to sync.
     if (!canParticipantUseMicrophone(room.localParticipant)) return;
-
     let active = true;
-
+    // Function to synchronize the local media state with the room's state
     const syncMedia = async () => {
       if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-        console.warn(
-          "Active Room: Media devices API is not supported in this browser context (unsecure connection).",
-        );
         return;
       }
+      // If the browser does not support media devices, exit early
       try {
         if (audioEnabled) {
-          // If no device ID is set, enumerate devices first to get a valid ID
           let deviceId = audioDeviceId;
           if (!deviceId) {
             const aDevices = await Room.getLocalDevices("audioinput");
             if (aDevices.length > 0 && aDevices[0].deviceId) {
               deviceId = aDevices[0].deviceId;
               setAudioDeviceId(deviceId);
-              console.log("Active Room: discovered microphone device:", deviceId);
             }
           }
-          console.log("Active Room: enabling microphone for device:", deviceId);
           await room.localParticipant.setMicrophoneEnabled(true, {
             deviceId: deviceId || undefined,
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
           });
-          console.log("Active Room: microphone enabled successfully.");
         } else {
-          console.log("Active Room: disabling microphone.");
           await room.localParticipant.setMicrophoneEnabled(false);
         }
-      } catch (unknownErr) {
+      } catch {
         if (!active) return;
-        const err = toAppError(unknownErr);
-        console.warn("Active Room: error toggling microphone, trying fallback...", err.message);
-
+        // If enabling the microphone failed, attempt to find a fallback microphone
         if (audioEnabled) {
           try {
             const aDevices = await Room.getLocalDevices("audioinput");
@@ -413,7 +343,6 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               (d) => d.deviceId !== audioDeviceId && d.deviceId !== "",
             );
             if (otherMics.length > 0) {
-              console.log("Active Room: trying fallback microphone device:", otherMics[0].deviceId);
               await room.localParticipant.setMicrophoneEnabled(true, {
                 deviceId: otherMics[0].deviceId,
                 echoCancellation: true,
@@ -428,18 +357,16 @@ export function useRoomConnection({ serverUrl, token }: UseRoomConnectionOptions
               }
               return;
             }
-          } catch (fallbackErr) {
-            console.error("Active Room: fallback microphone failed:", fallbackErr);
+          } catch {
+            // Fallback failed
           }
         }
-
         toast.error("Failed to enable microphone. Please check your system settings.", {
           id: "room-mic-error-sync",
         });
       }
     };
     syncMedia();
-
     return () => {
       active = false;
     };

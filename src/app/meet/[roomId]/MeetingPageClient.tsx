@@ -32,11 +32,6 @@ export enum GateStatus {
   ERROR = "error",
 }
 
-/**
- * Full-bleed hero gate: an overhead spotlight, a glowing filled status disc,
- * an overline, a display-serif headline, and a single wide action. Used for
- * every pre-room state so they read as one family.
- */
 function GateScreen({
   eyebrow,
   icon,
@@ -116,11 +111,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
   const gateStatusRef = useRef<GateStatus>(GateStatus.VERIFYING);
   const wasConnectedRef = useRef(false);
 
-  // Confirms the token is genuine and routes by the native roomAdmin grant:
-  // hosts either land straight in (meeting already active) or see the Start
-  // Meeting screen; participants with a valid token land in when the meeting
-  // is active, or wait for the host to start it.
-  // we need the token and password from the verifyParamsRef to authenticate the user.
+  // Verifies the meeting token and updates the gate status accordingly.
   const verifyToken = useCallback(async () => {
     const { token, password } = verifyParamsRef.current;
     setGateStatus(GateStatus.VERIFYING);
@@ -150,7 +141,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
         setGateStatus(isActive ? GateStatus.READY : GateStatus.WAITING_HOST);
       }
     } catch (err) {
-      console.error("Error verifying meeting token:", err);
       setGateMessage("Could not reach the server to verify this meeting link.");
       setGateStatus(GateStatus.ERROR);
     }
@@ -196,7 +186,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     const interval = setInterval(refreshToken, 60000);
     return () => clearInterval(interval);
   }, [gateStatus, hasEntered, roomId]);
-
   // Host-triggered: creates the LiveKit room, activates the meeting, and
   // (only if the meet was created with recording enabled) starts Egress.
   const handleStartMeeting = useCallback(async () => {
@@ -209,13 +198,11 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
         toast.error(result.message || "Failed to start the meeting.");
       }
     } catch (err) {
-      console.error("Error starting meeting:", err);
       toast.error("Could not reach the server to start the meeting.");
     } finally {
       setIsStarting(false);
     }
   }, [roomId]);
-
   // Reset the meeting store state, extract token from prop or hash, and extract user info from token
   useEffect(() => {
     resetMeetingStore();
@@ -256,7 +243,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       resetMeetingStore();
     };
   }, [resetMeetingStore, token, setUsername, setEmail, verifyToken]);
-
   // Handle the user clicking the "Join" button to enter the meeting.
   const handleJoin = useCallback(async () => {
     // Set the connection status to indicate that we are attempting to join the meeting.
@@ -294,23 +280,19 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       toast.error("Could not verify meeting access. Please try again.");
     }
   }, [activeToken, roomId, setConnectionStatus, setMeetingInfo]);
-
   // Establish the room connection using the server URL and the active token if the user has entered.
   const room = useRoomConnection({
     serverUrl,
     token: hasEntered ? activeToken : "",
   });
-
   // Keep a reference to the room connection for use in other hooks and callbacks.
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
-
   // Keep a reference to the current gate status for use in other hooks and callbacks.
   useEffect(() => {
     gateStatusRef.current = gateStatus;
   }, [gateStatus]);
-
   // Embed SDK bridge: when this page runs inside the Sherymeet embed SDK's
   // iframe, report lifecycle events and honor commands.
   useEffect(() => {
@@ -325,7 +307,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
           await endMeeting(roomId, verifyParamsRef.current.token);
           emitEmbedEvent("meeting-ended", { roomId });
         } catch (err) {
-          console.error("Error ending meeting from embed command:", err);
           emitEmbedEvent("error", { message: "Failed to end the meeting" });
         }
         roomRef.current?.disconnect();
@@ -388,14 +369,12 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
             await document.exitFullscreen();
           }
         } catch (err) {
-          console.error("Fullscreen error from embed command:", err);
           emitEmbedEvent("error", { message: "Failed to toggle fullscreen" });
         }
       },
     });
     return cleanup;
   }, [roomId]);
-
   // Report gate transitions and join/leave to the embedding SDK.
   useEffect(() => {
     emitEmbedEvent("status", { gateStatus, roomId, message: gateMessage || undefined });
@@ -403,7 +382,6 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       emitEmbedEvent("error", { message: gateMessage });
     }
   }, [gateStatus, gateMessage, roomId]);
-
   useEffect(() => {
     if (isConnected && !wasConnectedRef.current) {
       wasConnectedRef.current = true;

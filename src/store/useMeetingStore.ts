@@ -154,9 +154,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
           if (cached) {
             savedMessages = JSON.parse(cached);
           }
-        } catch (e) {
-          console.error("Error loading chat from localStorage", e);
-        }
+        } catch (e) {}
       }
       return { roomId, token, chatMessages: savedMessages };
     }),
@@ -188,9 +186,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       if (state.roomId && typeof window !== "undefined") {
         try {
           localStorage.setItem(`chat_messages_${state.roomId}`, JSON.stringify(newMessages));
-        } catch (e) {
-          console.error("Error saving chat to localStorage", e);
-        }
+        } catch (e) {}
       }
       return {
         chatMessages: newMessages,
@@ -202,9 +198,7 @@ export const useMeetingStore = create<MeetingState>((set) => ({
       if (state.roomId && typeof window !== "undefined") {
         try {
           localStorage.removeItem(`chat_messages_${state.roomId}`);
-        } catch (e) {
-          console.error("Error clearing chat from localStorage", e);
-        }
+        } catch (e) {}
       }
       return { chatMessages: [], unreadChatCount: 0 };
     }),

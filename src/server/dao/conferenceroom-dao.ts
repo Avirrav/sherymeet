@@ -74,7 +74,8 @@ export class ConferenceRoomDao {
   }
 
   /**
-   * Updates the room status to 'ended' and records the endedAt timestamp.
+   * Updates the room status to 'ended', records the endedAt timestamp,
+   * and resets the isRecording flag.
    */
   static async endConferenceRoom(roomId: string): Promise<IConferenceRoomDocument | null> {
     await dbConnect();
@@ -84,6 +85,7 @@ export class ConferenceRoomDao {
         $set: {
           status: StatusType.Ended,
           endedAt: new Date(),
+          isRecording: false,
         },
       },
       { returnDocument: "after" },

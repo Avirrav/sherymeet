@@ -27,7 +27,6 @@ export function useScreenShare(room: Room | null) {
       toast.success("Screen sharing started");
     } catch (unknownErr) {
       const err = toAppError(unknownErr);
-      console.error("Failed to start screen share:", err);
       toggleScreenShare(false);
       toast.error("Could not start screen sharing: " + (err.message || "Permission denied"));
     }
@@ -42,7 +41,6 @@ export function useScreenShare(room: Room | null) {
       toast.success("Screen sharing stopped");
     } catch (unknownErr) {
       const err = toAppError(unknownErr);
-      console.error("Failed to stop screen share:", err.message);
       toast.error("Failed to stop screen sharing");
     }
   }, [room, toggleScreenShare]);
