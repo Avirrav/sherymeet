@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     if (event.event === "egress_ended" || event.event === "egress_updated") {
       const egressInfo = event.egressInfo;
       if (egressInfo && egressInfo.egressId) {
+        console.log("Egress zinfo:", egressInfo);
         const egressId = egressInfo.egressId;
 
         // Find the recording document in MongoDB via RecordingDao
