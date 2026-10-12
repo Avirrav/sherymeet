@@ -23,11 +23,18 @@ const schema = z.discriminatedUnion("kind", [
       revoke: z.boolean().optional(),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal("cohost"),
+      identity: identitySchema,
+      promote: z.boolean(),
+    })
+    .strict(),
 ]);
 
 export async function updateParticipantAccess(
   request: AuthenticatedRequest,
-  kind: "panel" | "microphone",
+  kind: "panel" | "microphone" | "cohost",
 ) {
   let actor = "";
   let target = "";
@@ -76,6 +83,14 @@ export async function updateParticipantAccess(
       );
     }
 
+    // Only hosts can promote/demote co-hosts
+    if (kind === "cohost") {
+      const callerMember = await RoomMember.findOne({ roomId, identity: actor });
+      if (!callerMember || callerMember.role !== ParticipantRole.HOST) {
+        throw new ApiError("Only the host can promote or demote co-hosts", 403);
+      }
+    }
+
     await dbConnect();
     const caller = await RoomMember.findOne({ roomId, identity: actor });
 
@@ -90,6 +105,9 @@ export async function updateParticipantAccess(
     if (kind === "panel" && isAdminRole(member.role))
       throw new ApiError("Cannot change an admin's role with panel controls", 403);
 
+    if (kind === "cohost" && member.role === ParticipantRole.HOST)
+      throw new ApiError("Cannot change the host's role", 403);
+
     const service = new RoomServiceClient(
       config.LIVEKIT_URL.replace(/^wss:/, "https:").replace(/^ws:/, "http:"),
       config.LIVEKIT_API_KEY,
@@ -100,12 +118,12 @@ export async function updateParticipantAccess(
     await service.getParticipant(roomId, actor);
     await service.getParticipant(roomId, identity);
     const lockUntil = new Date(Date.now() + 60000);
-    const role =
-      parsed.data.kind === "panel"
-        ? parsed.data.onPanel
-          ? ParticipantRole.PANELIST
-          : ParticipantRole.PARTICIPANT
-        : member.role;
+    let role = member.role;
+    if (parsed.data.kind === "panel") {
+      role = parsed.data.onPanel ? ParticipantRole.PANELIST : ParticipantRole.PARTICIPANT;
+    } else if (parsed.data.kind === "cohost") {
+      role = parsed.data.promote ? ParticipantRole.CO_HOST : ParticipantRole.PARTICIPANT;
+    }
     const microphoneUpdate =
       parsed.data.kind === "microphone"
         ? { microphoneAllowed: parsed.data.revoke !== true, lockUntil }

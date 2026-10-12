@@ -128,9 +128,9 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     return () => clearTimeout(timer);
   }, [showViewerNotice]);
 
-  // Check recording status on mount (for hosts/admins)
+  // Check recording status on mount (for hosts only)
   useEffect(() => {
-    if (!isAdmin || !roomId || !token) return;
+    if (!isHost || !roomId || !token) return;
     const checkRecordingStatus = async () => {
       try {
         const res = await fetch(`/api/server/${roomId}/recording`, {
@@ -145,7 +145,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       }
     };
     checkRecordingStatus();
-  }, [isAdmin, roomId, token]);
+  }, [isHost, roomId, token]);
 
   const toggleRecording = async () => {
     if (isRecordingLoading) return;
@@ -539,8 +539,8 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
               <Monitor className="w-4 h-4 sm:w-5 sm:h-5 animate-pop-in" />
             )}
           </button>
-          {/* Recording (Host/Admin only) */}
-          {isAdmin && (
+          {/* Recording (Host only) */}
+          {isHost && (
             <button
               onClick={toggleRecording}
               disabled={isRecordingLoading}

@@ -3,15 +3,17 @@
 import { useRef, useState } from "react";
 import { Room, Participant, Track } from "livekit-client";
 import { toast } from "sonner";
-import { MicOff, Mic, UserPlus, UserMinus, Loader2, ShieldOff } from "lucide-react";
+import { MicOff, Mic, UserPlus, UserMinus, Loader2, ShieldOff, Shield } from "lucide-react";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { ParticipantRole } from "@/types/roles";
 import {
   getParticipantRole,
   isCoHostOrAbove,
+  isHostRole,
   canParticipantUseMicrophone,
 } from "./participant-permissions";
 import { requestParticipantUnmute } from "./unmute-requests";
+import ConfirmModal from "./ConfirmModal";
 
 export default function ParticipantModerationControls({
   room,
@@ -23,6 +25,7 @@ export default function ParticipantModerationControls({
   const token = useMeetingStore((s) => s.token);
   const webinar = useMeetingStore((s) => s.meetDetails?.type === "webinar");
   const [pending, setPending] = useState(false);
+  const [showCoHostConfirm, setShowCoHostConfirm] = useState(false);
   const busy = useRef(false);
   if (
     participant.identity === room.localParticipant.identity ||
@@ -30,6 +33,8 @@ export default function ParticipantModerationControls({
   )
     return null;
   const onPanel = getParticipantRole(participant) === ParticipantRole.PANELIST;
+  const isCoHost = getParticipantRole(participant) === ParticipantRole.CO_HOST;
+  const isLocalHost = isHostRole(room.localParticipant);
   const microphone = participant.getTrackPublication(Track.Source.Microphone);
   const muted = !participant.isMicrophoneEnabled;
 
@@ -139,6 +144,20 @@ export default function ParticipantModerationControls({
     toast.success(onPanel ? "Moved to audience" : "Added to panel");
   }
 
+  async function changeCoHost() {
+    const response = await fetch(
+      `/api/server/${encodeURIComponent(room.name)}/participants/cohost`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ identity: participant.identity, promote: !isCoHost }),
+      },
+    );
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || "Co-host change failed");
+    toast.success(isCoHost ? "Removed as co-host" : "Promoted to co-host");
+  }
+
   const hasMicPermission = canParticipantUseMicrophone(participant);
 
   const iconBtnClass =
@@ -206,7 +225,47 @@ export default function ParticipantModerationControls({
               )}
             </button>
           )}
+          {/* Co-host control - host only, not for other hosts */}
+          {isLocalHost && !isHostRole(participant) && (
+            <button
+              type="button"
+              disabled={pending}
+              className={`${iconBtnClass} ${
+                isCoHost
+                  ? "bg-md-error/10 hover:bg-md-error/20 text-md-error"
+                  : "bg-md-primary/10 hover:bg-md-primary/20 text-md-primary"
+              }`}
+              onClick={() => setShowCoHostConfirm(true)}
+              title={isCoHost ? "Remove co-host" : "Make co-host"}
+            >
+              {isCoHost ? (
+                <ShieldOff className="w-3.5 h-3.5" />
+              ) : (
+                <Shield className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
         </>
+      )}
+
+      {/* Co-host confirmation modal */}
+      {showCoHostConfirm && (
+        <ConfirmModal
+          title={isCoHost ? "Remove Co-Host?" : "Make Co-Host?"}
+          message={
+            isCoHost
+              ? `Are you sure you want to remove ${participant.name || participant.identity} as co-host? They will lose all admin permissions.`
+              : `This is a privileged action. ${participant.name || participant.identity} will be able to mute participants, manage the meeting, and have full admin access. Are you sure?`
+          }
+          confirmText={isCoHost ? "Remove" : "Make Co-Host"}
+          cancelText="Cancel"
+          variant={isCoHost ? "danger" : "warning"}
+          onConfirm={() => {
+            setShowCoHostConfirm(false);
+            void run(changeCoHost);
+          }}
+          onCancel={() => setShowCoHostConfirm(false)}
+        />
       )}
     </div>
   );
