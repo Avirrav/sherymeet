@@ -144,10 +144,35 @@ export default function ParticipantTile({
 
   // Force re-renders when tracks change
   useEffect(() => {
-    // Initial sync
+    // Initial sync - find camera track specifically (not screen share)
     const syncTracks = () => {
-      const vPub = Array.from(participant.videoTrackPublications.values()).find((pub) => pub.track);
-      const aPub = Array.from(participant.audioTrackPublications.values()).find((pub) => pub.track);
+      // Helper to check if a track is valid and usable
+      const isValidTrack = (track: Track | undefined): track is Track => {
+        if (!track) return false;
+        // Check if the track has a valid media stream track
+        const mst = track.mediaStreamTrack;
+        if (!mst) return false;
+        // Skip ended tracks
+        if (mst.readyState === "ended") return false;
+        return true;
+      };
+
+      // Prefer camera source, fallback to any video track with a valid track object
+      const vPub =
+        Array.from(participant.videoTrackPublications.values()).find(
+          (pub) => isValidTrack(pub.track) && pub.source === Track.Source.Camera,
+        ) ||
+        Array.from(participant.videoTrackPublications.values()).find((pub) =>
+          isValidTrack(pub.track),
+        );
+
+      const aPub =
+        Array.from(participant.audioTrackPublications.values()).find(
+          (pub) => isValidTrack(pub.track) && pub.source === Track.Source.Microphone,
+        ) ||
+        Array.from(participant.audioTrackPublications.values()).find((pub) =>
+          isValidTrack(pub.track),
+        );
 
       setVideoTrack(vPub?.track || null);
       setAudioTrack(aPub?.track || null);
@@ -156,37 +181,73 @@ export default function ParticipantTile({
 
     // For remote participants, ensure we subscribe to any unsubscribed tracks
     // This handles the case where a panelist publishes after being promoted
+    // or when host toggles camera off/on
     const ensureSubscribed = () => {
       if (isLocal || !(participant instanceof RemoteParticipant)) return;
 
-      let subscribed = false;
+      let needsRetry = false;
       for (const pub of participant.videoTrackPublications.values()) {
         const remotePub = pub as RemoteTrackPublication;
-        if (!remotePub.isSubscribed && remotePub.trackSid) {
-          remotePub.setSubscribed(true);
+        if (remotePub.trackSid) {
+          if (!remotePub.isSubscribed) {
+            remotePub.setSubscribed(true);
+            needsRetry = true;
+          }
+          // Always ensure enabled - adaptive streaming may have disabled it
           remotePub.setEnabled(true);
-          subscribed = true;
+          if (!remotePub.track) {
+            // Subscribed but track not yet available - needs retry
+            needsRetry = true;
+          }
         }
       }
       for (const pub of participant.audioTrackPublications.values()) {
         const remotePub = pub as RemoteTrackPublication;
-        if (!remotePub.isSubscribed && remotePub.trackSid) {
-          remotePub.setSubscribed(true);
+        if (remotePub.trackSid) {
+          if (!remotePub.isSubscribed) {
+            remotePub.setSubscribed(true);
+            needsRetry = true;
+          }
+          // Always ensure enabled
           remotePub.setEnabled(true);
-          subscribed = true;
+          if (!remotePub.track) {
+            // Subscribed but track not yet available - needs retry
+            needsRetry = true;
+          }
         }
       }
-      return subscribed;
+      return needsRetry;
     };
 
     // Retry subscription with delay if tracks aren't immediately available
     const ensureSubscribedWithRetry = () => {
-      const didSubscribe = ensureSubscribed();
-      if (didSubscribe) {
-        // If we subscribed, wait a bit for the track to become available then sync
-        setTimeout(() => {
-          syncTracks();
-        }, 500);
+      const needsRetry = ensureSubscribed();
+      if (needsRetry) {
+        // If we subscribed or track isn't ready, retry multiple times with increasing delays
+        const retryDelays = [50, 100, 200, 400, 800, 1500, 2500];
+        retryDelays.forEach((delay) => {
+          setTimeout(() => {
+            ensureSubscribed();
+            syncTracks();
+          }, delay);
+        });
+      }
+    };
+
+    // Poll for track availability when we have publications but no track
+    const checkForNewTracks = () => {
+      const hasVideoPub = participant.videoTrackPublications.size > 0;
+      const hasAudioPub = participant.audioTrackPublications.size > 0;
+      const currentVideoTrack = Array.from(participant.videoTrackPublications.values()).find(
+        (pub) => pub.track && pub.source === Track.Source.Camera,
+      );
+      const currentAudioTrack = Array.from(participant.audioTrackPublications.values()).find(
+        (pub) => pub.track && pub.source === Track.Source.Microphone,
+      );
+
+      // If we have a publication but no track, something may be waiting to subscribe
+      if ((hasVideoPub && !currentVideoTrack) || (hasAudioPub && !currentAudioTrack)) {
+        ensureSubscribedWithRetry();
       }
     };
 
@@ -194,15 +255,26 @@ export default function ParticipantTile({
     ensureSubscribedWithRetry();
 
     // Event listeners
-    const handleTrackSubscribed = () => syncTracks();
+    const handleTrackSubscribed = () => {
+      syncTracks();
+      forceUpdate((n) => n + 1);
+    };
     const handleTrackUnsubscribed = () => syncTracks();
     const handleTrackMuted = () => syncTracks();
     const handleTrackUnmuted = () => syncTracks();
 
     // When a track is published, ensure we subscribe to it
     const handleTrackPublished = () => {
+      checkForNewTracks();
       ensureSubscribedWithRetry();
       syncTracks();
+    };
+
+    // Handle subscription status changes (fires when track becomes available after subscription)
+    const handleSubscriptionStatusChanged = () => {
+      ensureSubscribedWithRetry();
+      syncTracks();
+      forceUpdate((n) => n + 1);
     };
 
     participant.on(ParticipantEvent.TrackSubscribed, handleTrackSubscribed);
@@ -211,12 +283,17 @@ export default function ParticipantTile({
     participant.on(ParticipantEvent.TrackUnpublished, syncTracks);
     participant.on(ParticipantEvent.TrackMuted, handleTrackMuted);
     participant.on(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
+    participant.on(
+      ParticipantEvent.TrackSubscriptionStatusChanged,
+      handleSubscriptionStatusChanged,
+    );
     participant.on(ParticipantEvent.IsSpeakingChanged, syncTracks);
 
-    // Periodic check to catch any missed tracks (runs 3 times over 3 seconds after mount)
-    const retryIntervals = [500, 1500, 3000];
+    // Periodic check to catch any missed tracks
+    const retryIntervals = [500, 1000, 2000, 3000, 5000];
     const retryTimers = retryIntervals.map((delay) =>
       setTimeout(() => {
+        checkForNewTracks();
         ensureSubscribedWithRetry();
       }, delay),
     );
@@ -229,6 +306,10 @@ export default function ParticipantTile({
       participant.off(ParticipantEvent.TrackUnpublished, syncTracks);
       participant.off(ParticipantEvent.TrackMuted, handleTrackMuted);
       participant.off(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
+      participant.off(
+        ParticipantEvent.TrackSubscriptionStatusChanged,
+        handleSubscriptionStatusChanged,
+      );
       participant.off(ParticipantEvent.IsSpeakingChanged, syncTracks);
     };
   }, [participant, updateKey, isLocal]);
