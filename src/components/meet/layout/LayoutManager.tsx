@@ -201,6 +201,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
               <ScreenShareTile
                 track={share.track}
                 presenterName={presenter.name || presenter.identity}
+                presenterIdentity={presenter.identity}
                 presenterVideoTrack={presenterVideoTrack}
               />
             </LayoutAnimator>

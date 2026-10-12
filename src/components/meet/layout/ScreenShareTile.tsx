@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Track } from "livekit-client";
 import { Maximize, Minimize, Volume2, VolumeX, PictureInPicture2 } from "lucide-react";
+import { getAvatarUrl } from "@/lib/avatar";
 
 interface ScreenShareTileProps {
   track: Track;
   presenterName: string;
+  presenterIdentity?: string;
   presenterVideoTrack?: Track | null;
 }
 
 export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
   track,
   presenterName,
+  presenterIdentity,
   presenterVideoTrack,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -20,6 +23,7 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
   const [isMuted, setIsMuted] = useState(true);
   const [duration, setDuration] = useState(0);
   const [isPiP, setIsPiP] = useState(false);
+  const [isPresenterVideoLive, setIsPresenterVideoLive] = useState(false);
   const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -36,16 +40,37 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
   }, [track]);
 
   // Attach presenter's video track for PiP overlay
+  // Re-run when entering fullscreen since the element only exists in fullscreen mode
   useEffect(() => {
     const el = presenterVideoRef.current;
-    if (!el || !presenterVideoTrack) return;
+    if (!el || !presenterVideoTrack) {
+      setIsPresenterVideoLive(false);
+      return;
+    }
+
+    const handleLive = () => setIsPresenterVideoLive(true);
+    const handleDead = () => setIsPresenterVideoLive(false);
+
+    el.addEventListener("loadeddata", handleLive);
+    el.addEventListener("playing", handleLive);
+    el.addEventListener("emptied", handleDead);
 
     presenterVideoTrack.attach(el);
 
+    // Check if already has frames
+    const raf = requestAnimationFrame(() => {
+      if (el.readyState >= 2) setIsPresenterVideoLive(true);
+    });
+
     return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("loadeddata", handleLive);
+      el.removeEventListener("playing", handleLive);
+      el.removeEventListener("emptied", handleDead);
       presenterVideoTrack.detach(el);
+      setIsPresenterVideoLive(false);
     };
-  }, [presenterVideoTrack]);
+  }, [presenterVideoTrack, isFullscreen]);
 
   // Update duration timer
   useEffect(() => {
@@ -140,15 +165,26 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
       </div>
 
       {/* Presenter video PiP - shows in bottom-left during fullscreen */}
-      {isFullscreen && presenterVideoTrack && (
-        <div className="absolute bottom-20 left-4 w-48 h-36 rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl z-30 bg-black">
+      {isFullscreen && (
+        <div className="absolute bottom-20 left-4 w-48 h-36 rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl z-30 bg-md-surface-container">
+          {/* Video element - always rendered to allow attachment */}
           <video
             ref={presenterVideoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover ${isPresenterVideoLive ? "" : "hidden"}`}
           />
+          {/* Avatar fallback when video not live */}
+          {!isPresenterVideoLive && (
+            <div className="w-full h-full flex items-center justify-center bg-md-surface-container">
+              <img
+                src={getAvatarUrl(presenterName, presenterIdentity)}
+                alt={presenterName}
+                className="w-16 h-16 rounded-full"
+              />
+            </div>
+          )}
           <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] text-white font-medium">
             {presenterName}
           </div>
