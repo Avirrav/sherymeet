@@ -260,7 +260,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
           roomId,
           token: verifyParamsRef.current.token,
         });
-        if (!result.success || result.data?.meetStatus !== "active") {
+        if (!result.success || result.data?.meetStatus !== StatusType.Active) {
           setConnectionStatus(false, false, null);
           toast.error(result.message || "Unable to join the meeting.");
           return;
