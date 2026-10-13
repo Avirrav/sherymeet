@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Room, RoomEvent, LocalTrackPublication } from "livekit-client";
+import { Room, RoomEvent, LocalTrackPublication, Track } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import { toast } from "sonner";
 import { toAppError } from "@/types/error-types";
@@ -19,12 +19,36 @@ export function useScreenShare(room: Room | null) {
       return;
     }
     try {
-      const pub = await room.localParticipant.setScreenShareEnabled(true, {
+      // Use createScreenTracks for proper audio support (per LiveKit docs)
+      const tracks = await room.localParticipant.createScreenTracks({
         audio: true,
+        // Request system audio for Chrome 105+
+        systemAudio: "include",
+        // Include current tab option for easier audio sharing
+        selfBrowserSurface: "include",
+        surfaceSwitching: "include",
       });
-      setScreenSharePublication(pub || null);
+
+      // Publish all tracks (video and audio if user selected "Share tab audio")
+      let videoPub: LocalTrackPublication | undefined;
+      for (const track of tracks) {
+        const pub = await room.localParticipant.publishTrack(track);
+        if (track.kind === Track.Kind.Video) {
+          videoPub = pub;
+        }
+      }
+
+      setScreenSharePublication(videoPub || null);
       toggleScreenShare(true);
-      toast.success("Screen sharing started");
+
+      const hasAudio = tracks.some((t) => t.kind === Track.Kind.Audio);
+      if (hasAudio) {
+        toast.success("Screen sharing started with audio");
+      } else {
+        toast.info(
+          "Screen sharing started. To share audio, select a Browser Tab and check 'Share tab audio'",
+        );
+      }
     } catch (unknownErr) {
       const err = toAppError(unknownErr);
       toggleScreenShare(false);
