@@ -47,16 +47,14 @@ export async function updateParticipantAccess(
   let target = "";
   let roomId = "";
   try {
+    // Extract the room ID from the URL path. The room ID is expected to be the fourth segment of the path.
     roomId = request.nextUrl.pathname.split("/")[3] || "";
-
+    // Extract the room token from the Authorization header. The token is expected to be in the format "Bearer <token>".
     const token = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
-
     if (!token) throw new ApiError("Room token required", 401);
-
+    // Verify the room token to ensure the request is authorized for the specified room.
     const verified = await verifyRoomToken(token, roomId);
-
     actor = verified.identity;
-
     if (!verified.roomAdmin) throw new ApiError("Room admin permission required", 403);
 
     const body = await request.json().catch(() => null);
@@ -99,8 +97,8 @@ export async function updateParticipantAccess(
     }
 
     await dbConnect();
-    const caller = await RoomMember.findOne({ roomId, identity: actor });
 
+    const caller = await RoomMember.findOne({ roomId, identity: actor });
     if (!caller || !isAdminRole(caller.role)) {
       throw new ApiError("Current admin membership required; rejoin the room", 403);
     }

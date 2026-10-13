@@ -37,6 +37,7 @@ export function participantPermissions(
   microphoneAllowed = false,
   chatAllowed = true,
 ) {
+  const admin = isAdminRole(role);
   const grants = participantGrants("", role, webinar, microphoneAllowed);
   return {
     canPublish: grants.canPublish === true,
@@ -44,5 +45,6 @@ export function participantPermissions(
     canPublishData: chatAllowed,
     canPublishSources: grants.canPublishSources ?? [],
     canUpdateMetadata: false,
+    roomAdmin: admin,
   };
 }

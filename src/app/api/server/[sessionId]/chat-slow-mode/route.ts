@@ -7,7 +7,7 @@ import { getStore } from "@/server/utils/store";
 import { RoomMember } from "@/server/models/room-member";
 import { ConferenceRoomDao } from "@/server/dao/conferenceroom-dao";
 import { StatusType } from "@/server/types/conferenceroom.types";
-import { ParticipantRole } from "@/types/roles";
+import { isAdminRole } from "@/server/services/livekit/participant-grants";
 import { verifyRoomToken } from "@/server/services/livekit/verify-room-token";
 import { runMiddlewares } from "@/server/middleware/run-middlewares";
 import { ipRateLimitMiddleware } from "@/server/middleware/ip-rate-limit-middleware";
@@ -27,8 +27,8 @@ export async function chatSlowModeHandler(request: AuthenticatedRequest) {
     if (!parsed.success) throw new ApiError("Slow mode seconds must be from 0 to 300", 400);
     await dbConnect();
     const caller = await RoomMember.findOne({ roomId, identity: verified.identity });
-    if (caller?.role !== ParticipantRole.HOST)
-      throw new ApiError("Only the host can change slow mode", 403);
+    if (!caller || !isAdminRole(caller.role))
+      throw new ApiError("Only the host or co-host can change slow mode", 403);
     const meeting = await ConferenceRoomDao.getConferenceRoom({ roomId });
     if (!meeting || meeting.status !== StatusType.Active)
       throw new ApiError("Meeting is not active", 409);

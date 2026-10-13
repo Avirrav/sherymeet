@@ -48,8 +48,9 @@ export async function refreshRoomToken(
   }
   if (!member || member.lockUntil > new Date())
     throw new ApiError("Permissions are changing; retry shortly", 409);
-  // Admin grants are not renewable through the panel flow.
-  if (isAdminRole(member.role)) return original;
+  // Host tokens are not renewable (must use original). Co-hosts who were promoted
+  // from non-admin roles need refreshed tokens to reflect their new permissions.
+  if (member.role === ParticipantRole.HOST) return original;
   // Check if original token is still valid (at least 10 seconds remaining)
   const remainingTtl = (claims.exp || 0) - Math.ceil(Date.now() / 1000);
   if (remainingTtl <= 10) throw new ApiError("Token expired", 401);

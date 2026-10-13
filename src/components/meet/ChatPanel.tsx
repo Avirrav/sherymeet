@@ -172,8 +172,8 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
         </button>
       </div>
 
-      {/* Host Controls */}
-      {isHost && <ChatLockControl room={room} />}
+      {/* Admin Controls (Host & Co-host) */}
+      {isAdmin && <ChatLockControl room={room} />}
 
       {/* Chat Disabled Notice */}
       {!chatEnabled && !isHost && (

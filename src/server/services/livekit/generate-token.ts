@@ -20,12 +20,13 @@ export async function generateToken({
   if (!room || room.status === StatusType.Ended) throw new ApiError("Meeting unavailable", 404);
   await dbConnect();
   const email = participant.email?.trim().toLowerCase();
-  // Only trusted server callers mint identities. Reissues for the same email
-  // retain the saved role instead of restoring obsolete audience permissions.
-  const roleFilter = isAdminRole(participant.role)
-    ? participant.role
-    : { $in: [ParticipantRole.PARTICIPANT, ParticipantRole.PANELIST] };
-  let member = email ? await RoomMember.findOne({ roomId, email, role: roleFilter }) : null;
+  // Look up existing member by email to preserve promoted roles (e.g., CO_HOST).
+  // HOST records require admin caller to prevent impersonation; CO_HOST and below are allowed.
+  let member = email ? await RoomMember.findOne({ roomId, email }) : null;
+  if (member?.role === ParticipantRole.HOST && !isAdminRole(participant.role)) {
+    // Non-admin caller cannot retrieve HOST member record - prevents host impersonation
+    member = null;
+  }
   if (!member) {
     const scope = isAdminRole(participant.role) ? participant.role : "attendee";
     const identity = email
