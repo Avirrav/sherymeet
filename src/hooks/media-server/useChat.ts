@@ -25,6 +25,7 @@ export function useChat(
 ) {
   const {
     addChatMessage,
+    deleteChatMessage,
     addRaisedHand,
     removeRaisedHand,
     chatMessages,
@@ -135,6 +136,18 @@ export function useChat(
     [room, sendData, onReaction],
   );
 
+  const broadcastDeleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!room || room.state !== ConnectionState.Connected) return false;
+      if (!isHostRole(room.localParticipant)) return false;
+      // Delete locally first
+      deleteChatMessage(messageId);
+      // Broadcast to all participants
+      return sendData("message-delete", { messageId });
+    },
+    [room, sendData, deleteChatMessage],
+  );
+
   useEffect(() => {
     if (!room || !receiveEvents) return;
 
@@ -180,6 +193,11 @@ export function useChat(
           } else {
             removeRaisedHand(senderIdentity);
           }
+        } else if (data.type === "message-delete") {
+          // Only hosts can delete messages
+          if (participant && isHostRole(participant) && data.payload?.messageId) {
+            deleteChatMessage(data.payload.messageId);
+          }
         }
       } catch (unknownErr) {
         const err = toAppError(unknownErr);
@@ -192,11 +210,20 @@ export function useChat(
       room.off(RoomEvent.DataReceived, handleDataReceived);
       stopObservingChat();
     };
-  }, [room, addChatMessage, addRaisedHand, removeRaisedHand, onReaction, receiveEvents]);
+  }, [
+    room,
+    addChatMessage,
+    deleteChatMessage,
+    addRaisedHand,
+    removeRaisedHand,
+    onReaction,
+    receiveEvents,
+  ]);
 
   return {
     sendMessage,
     sendReaction,
+    broadcastDeleteMessage,
     messages: chatMessages,
     isHandRaised,
     raiseHand,

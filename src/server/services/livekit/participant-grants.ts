@@ -35,12 +35,13 @@ export function participantPermissions(
   role: ParticipantRole,
   webinar: boolean,
   microphoneAllowed = false,
+  chatAllowed = true,
 ) {
   const grants = participantGrants("", role, webinar, microphoneAllowed);
   return {
     canPublish: grants.canPublish === true,
     canSubscribe: true,
-    canPublishData: true,
+    canPublishData: chatAllowed,
     canPublishSources: grants.canPublishSources ?? [],
     canUpdateMetadata: false,
   };

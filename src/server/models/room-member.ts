@@ -8,6 +8,7 @@ export interface RoomMemberRecord {
   email?: string;
   role: ParticipantRole;
   microphoneAllowed?: boolean;
+  chatBlocked?: boolean;
   lockUntil: Date;
 }
 const schema = new Schema<RoomMemberRecord>(
@@ -17,6 +18,7 @@ const schema = new Schema<RoomMemberRecord>(
     name: { type: String, required: true },
     email: String,
     microphoneAllowed: { type: Boolean, default: false },
+    chatBlocked: { type: Boolean, default: false },
     role: { type: String, enum: Object.values(ParticipantRole), required: true },
     lockUntil: { type: Date, default: () => new Date(0) },
   },

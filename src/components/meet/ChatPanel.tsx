@@ -1,13 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Send, X, MessageSquare, Lock, ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Send,
+  X,
+  MessageSquare,
+  Lock,
+  ChevronDown,
+  MoreVertical,
+  MessageSquareOff,
+  Trash2,
+} from "lucide-react";
 import { useChat } from "@/hooks/media-server/useChat";
 import { Room, ConnectionState } from "livekit-client";
 import { useMeetingStore } from "@/store/useMeetingStore";
 import type { ChatRecipient } from "@/store/useMeetingStore";
-import { isHostRole } from "./participant-permissions";
+import { isHostRole, isCoHostOrAbove } from "./participant-permissions";
 import ChatLockControl from "./ChatLockControl";
+import { toast } from "sonner";
 
 interface ChatPanelProps {
   room: Room;
@@ -15,18 +26,94 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ room, onClose }: ChatPanelProps) {
-  const { sendMessage, messages } = useChat(room, undefined, false);
+  const { sendMessage, messages, broadcastDeleteMessage } = useChat(room, undefined, false);
   const chatEnabled = useMeetingStore((state) => state.chatEnabled);
   const chatSlowModeSeconds = useMeetingStore((state) => state.chatSlowModeSeconds);
   const lastChatSentAt = useMeetingStore((state) => state.lastChatSentAt);
+  const token = useMeetingStore((state) => state.token);
   const isHost = isHostRole(room.localParticipant);
-  const canCompose = (chatEnabled || isHost) && room.state === ConnectionState.Connected;
+  const isAdmin = isCoHostOrAbove(room.localParticipant);
+  const isChatBlocked = room.localParticipant.permissions?.canPublishData === false;
+  const canCompose =
+    (chatEnabled || isHost) && room.state === ConnectionState.Connected && !isChatBlocked;
   const [sending, setSending] = useState(false);
   const [inputText, setInputText] = useState("");
   const [recipient, setRecipient] = useState<ChatRecipient>("everyone");
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const canSend = canCompose && cooldownRemaining === 0;
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openMenuId]);
+
+  const handleOpenMenu = useCallback(
+    (msgId: string, buttonEl: HTMLButtonElement) => {
+      if (openMenuId === msgId) {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+        return;
+      }
+      const rect = buttonEl.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: Math.min(rect.left, window.innerWidth - 160),
+      });
+      setOpenMenuId(msgId);
+    },
+    [openMenuId],
+  );
+
+  const handleToggleChatBlock = async (
+    identity: string,
+    name: string,
+    currentlyBlocked: boolean,
+  ) => {
+    setOpenMenuId(null);
+    setMenuPosition(null);
+    try {
+      const response = await fetch(
+        `/api/server/${encodeURIComponent(room.name)}/participants/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ identity, block: !currentlyBlocked }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || "Failed to update");
+      toast.success(currentlyBlocked ? `${name} unblocked from chat` : `${name} blocked from chat`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update chat permission");
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    setOpenMenuId(null);
+    setMenuPosition(null);
+    await broadcastDeleteMessage(messageId);
+    toast.success("Message deleted for everyone");
+  };
+
+  // Check if a participant is chat blocked
+  const isParticipantChatBlocked = (identity: string): boolean => {
+    const participant = Array.from(room.remoteParticipants.values()).find(
+      (p) => p.identity === identity,
+    );
+    return participant?.permissions?.canPublishData === false;
+  };
 
   useEffect(() => {
     const update = () =>
@@ -102,6 +189,20 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
         </div>
       )}
 
+      {/* Chat Blocked Notice */}
+      {isChatBlocked && (
+        <div className="flex-shrink-0 mx-3 mt-3 p-3 rounded-xl bg-md-error-container/10 border border-md-error/20">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-md-error/10 flex items-center justify-center flex-shrink-0">
+              <MessageSquareOff className="w-4 h-4 text-md-error" />
+            </div>
+            <p className="text-xs text-md-on-surface-variant leading-relaxed">
+              You have been blocked from chatting by the host.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scrollbar-hidden">
         {messages.length === 0 ? (
@@ -117,10 +218,11 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderIdentity === room.localParticipant.identity;
+            const showMenu = isAdmin && !isMe;
             return (
               <div
                 key={msg.id}
-                className={`flex flex-col max-w-[85%] animate-message-in ${
+                className={`group flex flex-col max-w-[85%] animate-message-in ${
                   isMe ? "ml-auto items-end" : "mr-auto items-start"
                 }`}
               >
@@ -143,14 +245,24 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
                     {isMe ? "Private to host" : "Private message"}
                   </span>
                 )}
-                <div
-                  className={`px-3 py-2 text-[13px] leading-relaxed break-words ${
-                    isMe
-                      ? "bg-md-primary text-md-on-primary rounded-2xl rounded-br-md"
-                      : "bg-md-surface-container border border-md-outline-variant/30 text-md-on-surface rounded-2xl rounded-bl-md"
-                  }`}
-                >
-                  {msg.text}
+                <div className="relative flex items-start gap-1">
+                  <div
+                    className={`px-3 py-2 text-[13px] leading-relaxed break-words ${
+                      isMe
+                        ? "bg-md-primary text-md-on-primary rounded-2xl rounded-br-md"
+                        : "bg-md-surface-container border border-md-outline-variant/30 text-md-on-surface rounded-2xl rounded-bl-md"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                  {showMenu && (
+                    <button
+                      onClick={(e) => handleOpenMenu(msg.id, e.currentTarget)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-md-surface-variant/50 text-md-on-surface-variant transition-opacity"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -212,6 +324,54 @@ export default function ChatPanel({ room, onClose }: ChatPanelProps) {
           </button>
         </div>
       </form>
+
+      {/* Dropdown menu rendered via portal */}
+      {openMenuId &&
+        menuPosition &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+            className="fixed z-[200] min-w-[140px] bg-md-surface-container-high border border-md-outline-variant/50 rounded-lg shadow-xl py-1 animate-fade-in"
+          >
+            {(() => {
+              const msg = messages.find((m) => m.id === openMenuId);
+              if (!msg) return null;
+              const userIsBlocked = isParticipantChatBlocked(msg.senderIdentity);
+              return (
+                <>
+                  <button
+                    onClick={() =>
+                      handleToggleChatBlock(msg.senderIdentity, msg.senderName, userIsBlocked)
+                    }
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-md-on-surface hover:bg-md-surface-variant/50 transition-colors"
+                  >
+                    {userIsBlocked ? (
+                      <>
+                        <MessageSquare className="w-3.5 h-3.5 text-md-tertiary" />
+                        Unblock from chat
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquareOff className="w-3.5 h-3.5 text-md-error" />
+                        Block from chat
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-md-on-surface hover:bg-md-surface-variant/50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-md-error" />
+                    Delete message
+                  </button>
+                </>
+              );
+            })()}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

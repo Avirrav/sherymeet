@@ -30,11 +30,18 @@ const schema = z.discriminatedUnion("kind", [
       promote: z.boolean(),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal("chat"),
+      identity: identitySchema,
+      block: z.boolean(),
+    })
+    .strict(),
 ]);
 
 export async function updateParticipantAccess(
   request: AuthenticatedRequest,
-  kind: "panel" | "microphone" | "cohost",
+  kind: "panel" | "microphone" | "cohost" | "chat",
 ) {
   let actor = "";
   let target = "";
@@ -128,21 +135,25 @@ export async function updateParticipantAccess(
       parsed.data.kind === "microphone"
         ? { microphoneAllowed: parsed.data.revoke !== true, lockUntil }
         : undefined;
+    const chatUpdate =
+      parsed.data.kind === "chat" ? { chatBlocked: parsed.data.block, lockUntil } : undefined;
     const locked = await RoomMember.findOneAndUpdate(
       { roomId, identity, role: member.role, lockUntil: { $lte: new Date() } },
       {
-        $set: microphoneUpdate ?? { role, lockUntil },
+        $set: microphoneUpdate ?? chatUpdate ?? { role, lockUntil },
       },
       { new: true },
     );
     if (!locked) throw new ApiError("Another permission change is in progress; retry shortly", 409);
     const microphoneAllowed = locked.microphoneAllowed === true;
+    const chatAllowed = locked.chatBlocked !== true;
     try {
       await service.updateParticipant(roomId, identity, {
         permission: participantPermissions(
           role,
           room.type === ConferenceRoomType.Webinar,
           microphoneAllowed,
+          chatAllowed,
         ),
         metadata: JSON.stringify({
           roomId,
@@ -168,6 +179,7 @@ export async function updateParticipantAccess(
       target,
       role,
       microphoneAllowed,
+      chatAllowed,
       kind,
     });
     return ApiResponse.success({ identity, role, microphoneAllowed });

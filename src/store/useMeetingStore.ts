@@ -84,6 +84,7 @@ interface MeetingState {
   toggleCamera: () => void;
   toggleMicrophone: () => void;
   addChatMessage: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;
+  deleteChatMessage: (messageId: string) => void;
   clearChat: () => void;
   addRaisedHand: (identity: string) => void;
   removeRaisedHand: (identity: string) => void;
@@ -192,6 +193,16 @@ export const useMeetingStore = create<MeetingState>((set) => ({
         chatMessages: newMessages,
         unreadChatCount: state.activeSidebar === "chat" ? 0 : state.unreadChatCount + 1,
       };
+    }),
+  deleteChatMessage: (messageId) =>
+    set((state) => {
+      const newMessages = state.chatMessages.filter((msg) => msg.id !== messageId);
+      if (state.roomId && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`chat_messages_${state.roomId}`, JSON.stringify(newMessages));
+        } catch (e) {}
+      }
+      return { chatMessages: newMessages };
     }),
   clearChat: () =>
     set((state) => {
