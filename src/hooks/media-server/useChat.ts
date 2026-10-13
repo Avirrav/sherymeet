@@ -11,7 +11,7 @@ import {
   type ReactionEmoji,
 } from "@/components/meet/reactions";
 
-import { isHostRole } from "@/components/meet/participant-permissions";
+import { isHostRole, isCoHostOrAbove } from "@/components/meet/participant-permissions";
 import {
   getChatSlowModeSeconds,
   isChatEnabled,
@@ -139,7 +139,7 @@ export function useChat(
   const broadcastDeleteMessage = useCallback(
     async (messageId: string) => {
       if (!room || room.state !== ConnectionState.Connected) return false;
-      if (!isHostRole(room.localParticipant)) return false;
+      if (!isCoHostOrAbove(room.localParticipant)) return false;
       // Delete locally first
       deleteChatMessage(messageId);
       // Broadcast to all participants
@@ -194,8 +194,8 @@ export function useChat(
             removeRaisedHand(senderIdentity);
           }
         } else if (data.type === "message-delete") {
-          // Only hosts can delete messages
-          if (participant && isHostRole(participant) && data.payload?.messageId) {
+          // Only hosts and co-hosts can delete messages
+          if (participant && isCoHostOrAbove(participant) && data.payload?.messageId) {
             deleteChatMessage(data.payload.messageId);
           }
         }
