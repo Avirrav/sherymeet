@@ -5,6 +5,7 @@ import { getAvatarUrl } from "@/lib/avatar";
 
 interface ScreenShareTileProps {
   track: Track;
+  audioTrack?: Track; // Screen share audio track
   presenterName: string;
   presenterIdentity?: string;
   presenterVideoTrack?: Track | null;
@@ -12,20 +13,26 @@ interface ScreenShareTileProps {
 
 export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
   track,
+  audioTrack,
   presenterName,
   presenterIdentity,
   presenterVideoTrack,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const presenterVideoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Start unmuted for audio
   const [duration, setDuration] = useState(0);
   const [isPiP, setIsPiP] = useState(false);
   const [isPresenterVideoLive, setIsPresenterVideoLive] = useState(false);
   const startTimeRef = useRef<number>(0);
 
+  // Derive hasAudio from prop instead of state
+  const hasAudio = !!audioTrack;
+
+  // Attach video track
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
@@ -38,6 +45,18 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
       track.detach(el);
     };
   }, [track]);
+
+  // Attach screen share audio track (separate from video)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !audioTrack) return;
+
+    audioTrack.attach(el);
+
+    return () => {
+      audioTrack.detach(el);
+    };
+  }, [audioTrack]);
 
   // Attach presenter's video track for PiP overlay
   // Re-run when entering fullscreen since the element only exists in fullscreen mode
@@ -114,13 +133,17 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  // Toggle mute
+  // Toggle mute (controls both video and separate audio track)
   const toggleMute = useCallback(() => {
+    const newMuted = !isMuted;
     if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(videoRef.current.muted);
+      videoRef.current.muted = newMuted;
     }
-  }, []);
+    if (audioRef.current) {
+      audioRef.current.muted = newMuted;
+    }
+    setIsMuted(newMuted);
+  }, [isMuted]);
 
   // Toggle Picture-in-Picture
   const togglePiP = useCallback(async () => {
@@ -157,7 +180,16 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
       className={`group w-full h-full bg-black relative flex items-center justify-center border border-md-outline-variant overflow-hidden ${isFullscreen ? "rounded-none" : "rounded-2xl"}`}
     >
       {/* Video element - no native controls */}
-      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={isMuted}
+        className="w-full h-full object-contain"
+      />
+
+      {/* Separate audio element for screen share audio track */}
+      <audio ref={audioRef} autoPlay muted={isMuted} className="hidden" />
 
       {/* White watermark - stays visible in fullscreen */}
       <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-white z-20 font-semibold tracking-wide pointer-events-none">
@@ -206,8 +238,8 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
             {/* Volume */}
             <button
               onClick={toggleMute}
-              className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
-              title={isMuted ? "Unmute" : "Mute"}
+              className={`p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer ${!hasAudio ? "opacity-50" : ""}`}
+              title={hasAudio ? (isMuted ? "Unmute" : "Mute") : "No audio shared"}
             >
               {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>

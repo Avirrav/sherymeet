@@ -87,28 +87,36 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
 
     // Local screen share
     if (localParticipant) {
-      const localPub = Array.from(localParticipant.videoTrackPublications.values()).find(
+      const localVideoPub = Array.from(localParticipant.videoTrackPublications.values()).find(
         (pub) => pub.source === "screen_share" && pub.track,
       );
-      if (localPub && localPub.track) {
+      const localAudioPub = Array.from(localParticipant.audioTrackPublications.values()).find(
+        (pub) => pub.source === "screen_share_audio" && pub.track,
+      );
+      if (localVideoPub && localVideoPub.track) {
         list.push({
-          id: localPub.track.sid || `screen_share_${localParticipant.identity}`,
+          id: localVideoPub.track.sid || `screen_share_${localParticipant.identity}`,
           participantId: localParticipant.identity,
-          track: localPub.track,
+          track: localVideoPub.track,
+          audioTrack: localAudioPub?.track || undefined,
         });
       }
     }
 
     // Remote screen shares
     remoteParticipants.forEach((p) => {
-      const remotePub = Array.from(p.videoTrackPublications.values()).find(
+      const remoteVideoPub = Array.from(p.videoTrackPublications.values()).find(
         (pub) => pub.source === "screen_share" && pub.track,
       );
-      if (remotePub && remotePub.track) {
+      const remoteAudioPub = Array.from(p.audioTrackPublications.values()).find(
+        (pub) => pub.source === "screen_share_audio" && pub.track,
+      );
+      if (remoteVideoPub && remoteVideoPub.track) {
         list.push({
-          id: remotePub.track.sid || `screen_share_${p.identity}`,
+          id: remoteVideoPub.track.sid || `screen_share_${p.identity}`,
           participantId: p.identity,
-          track: remotePub.track,
+          track: remoteVideoPub.track,
+          audioTrack: remoteAudioPub?.track || undefined,
         });
       }
     });
@@ -200,6 +208,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
             <LayoutAnimator key={item.id} layout={item}>
               <ScreenShareTile
                 track={share.track}
+                audioTrack={share.audioTrack}
                 presenterName={presenter.name || presenter.identity}
                 presenterIdentity={presenter.identity}
                 presenterVideoTrack={presenterVideoTrack}

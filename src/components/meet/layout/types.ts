@@ -1,12 +1,6 @@
-import { Track } from 'livekit-client';
+import { Track } from "livekit-client";
 
-export type LayoutMode = 
-  | 'grid' 
-  | 'spotlight' 
-  | 'sidebar' 
-  | 'presenter' 
-  | 'content-first' 
-  | 'pip';
+export type LayoutMode = "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
 
 export interface LayoutParticipant {
   id: string; // Participant identity
@@ -23,14 +17,15 @@ export interface LayoutScreenShare {
   id: string; // Screen share track ID or screen_share_${identity}
   participantId: string;
   track: Track;
+  audioTrack?: Track; // Screen share audio track (if user shared with audio)
 }
 
 export interface LayoutItem {
   id: string; // ID of the tile (participant ID or screen share ID)
-  type: 'video' | 'screen';
-  x: number;     // Left offset in pixels
-  y: number;     // Top offset in pixels
-  width: number;  // Width in pixels
+  type: "video" | "screen";
+  x: number; // Left offset in pixels
+  y: number; // Top offset in pixels
+  width: number; // Width in pixels
   height: number; // Height in pixels
   zIndex: number;
 }
