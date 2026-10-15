@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   isHost: boolean;
   handleEndMeeting: () => void;
   setShowLeaveModal: (show: boolean) => void;
+  isFullScreen?: boolean;
 }
 
 type LayoutMode = "grid" | "spotlight" | "sidebar" | "presenter" | "content-first" | "pip";
@@ -44,6 +45,7 @@ export default function SettingsPanel({
   isHost,
   handleEndMeeting,
   setShowLeaveModal,
+  isFullScreen = false,
 }: SettingsPanelProps) {
   const {
     layoutMode,
@@ -58,7 +60,9 @@ export default function SettingsPanel({
   const transcriptionAllowed = meetDetails?.isTranscription === true;
 
   return (
-    <div className="w-full md:w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-none md:rounded-2xl flex flex-col overflow-hidden relative z-20">
+    <div
+      className={`${isFullScreen ? "w-full rounded-none" : "w-80 rounded-2xl"} h-full bg-md-surface-container-low border border-md-outline-variant/30 flex flex-col overflow-hidden relative z-20`}
+    >
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3.5 border-b border-md-outline-variant/30 flex items-center justify-between bg-md-surface-container/50">
         <div className="flex items-center gap-2.5">

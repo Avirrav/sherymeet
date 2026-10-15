@@ -116,10 +116,10 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
     "focus:border-md-primary disabled:opacity-50";
 
   return (
-    <div className="relative min-h-screen bg-md-surface px-6 py-10 md:px-12 md:py-14  flex flex-col justify-center items-center animate-fade-in">
+    <div className="prejoin-container relative min-h-screen bg-md-surface px-6 py-10 md:px-12 md:py-14 flex flex-col justify-center items-center animate-fade-in">
       <div className="w-full max-w-lg mx-auto">
         {/* Room identifier */}
-        <div className="flex items-center gap-2.5 mb-10">
+        <div className="prejoin-room-label flex items-center gap-2.5 mb-10">
           <span className="w-1.5 h-1.5 rounded-full bg-md-primary" />
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-md-on-surface-variant">
             Room
@@ -129,10 +129,10 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
             {roomId}
           </span>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-10 lg:gap-16 items-start">
+        <div className="prejoin-grid grid grid-cols-1 lg:grid-cols-1 gap-10 lg:gap-16 items-start">
           {/* ---------- Left: preview + device pickers ---------- */}
-          <div className="flex flex-col gap-6">
-            <div className="relative w-full aspect-video rounded-md-lg bg-md-surface-container-low border border-md-outline-variant overflow-hidden flex items-center justify-center">
+          <div className="prejoin-preview-section flex flex-col gap-6">
+            <div className="prejoin-video-container relative w-full aspect-video rounded-md-lg bg-md-surface-container-low border border-md-outline-variant overflow-hidden flex items-center justify-center">
               {videoEnabled && videoTrack ? (
                 <video
                   ref={videoRef}
@@ -149,7 +149,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                   <img
                     src={getAvatarUrl(avatarSeed, undefined)}
                     alt="Your avatar"
-                    className="w-[128px] h-[128px] rounded-full bg-md-surface-container"
+                    className="prejoin-avatar w-[128px] h-[128px] rounded-full bg-md-surface-container"
                   />
                 </div>
               )}
@@ -157,8 +157,8 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
               {/* Camera loading overlay */}
               {videoEnabled && isVideoLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-md-surface-container-low/80 backdrop-blur-sm z-10 transition-opacity">
-                  <Loader2 className="w-8 h-8 text-md-primary animate-spin mb-3" />
-                  <span className="text-xs text-md-on-surface-variant font-medium">
+                  <Loader2 className="prejoin-loading-spinner w-8 h-8 text-md-primary animate-spin mb-3" />
+                  <span className="prejoin-loading-text text-xs text-md-on-surface-variant font-medium">
                     Starting camera...
                   </span>
                 </div>
@@ -166,7 +166,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
 
               {/* Live mic chip */}
               {audioEnabled && (
-                <div className="absolute top-4 left-4 flex items-center gap-2 rounded-md-full bg-md-surface-container border border-md-outline-variant px-3 py-1.5">
+                <div className="prejoin-live-chip absolute top-4 left-4 flex items-center gap-2 rounded-md-full bg-md-surface-container border border-md-outline-variant px-3 py-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-md-primary" />
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
                     Live mic
@@ -175,11 +175,11 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
               )}
 
               {/* Media toggles */}
-              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3">
+              <div className="prejoin-toggle-bar absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={toggleMicrophone}
-                  className={`control-btn w-12 h-12 rounded-full flex items-center justify-center border ${
+                  className={`prejoin-toggle-btn control-btn w-12 h-12 rounded-full flex items-center justify-center border ${
                     audioEnabled
                       ? "bg-md-surface-container border-md-outline-variant text-md-on-surface hover:bg-md-surface-container-high"
                       : "bg-md-error-container border-transparent text-md-on-error-container"
@@ -193,7 +193,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                   type="button"
                   onClick={handleToggleCamera}
                   disabled={isVideoLoading}
-                  className={`control-btn w-12 h-12 rounded-full flex items-center justify-center border transition-opacity ${
+                  className={`prejoin-toggle-btn control-btn w-12 h-12 rounded-full flex items-center justify-center border transition-opacity ${
                     videoEnabled
                       ? "bg-md-surface-container border-md-outline-variant text-md-on-surface hover:bg-md-surface-container-high"
                       : "bg-md-error-container border-transparent text-md-on-error-container"
@@ -211,9 +211,9 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
               </div>
             </div>
             {/* Device pickers */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+            <div className="prejoin-device-pickers grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="prejoin-device-picker flex flex-col gap-2">
+                <label className="prejoin-device-label text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
                   Camera
                 </label>
                 <div className="relative">
@@ -221,7 +221,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                     value={videoDeviceId}
                     onChange={(e) => selectCamera(e.target.value)}
                     disabled={!videoEnabled}
-                    className={selectClass}
+                    className={`prejoin-device-select ${selectClass}`}
                   >
                     {videoDevices.map((d) => (
                       <option key={d.deviceId} value={d.deviceId}>
@@ -230,12 +230,12 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                     ))}
                     {videoDevices.length === 0 && <option>No cameras found</option>}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
+                  <ChevronDown className="prejoin-device-icon pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+              <div className="prejoin-device-picker flex flex-col gap-2">
+                <label className="prejoin-device-label text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
                   Microphone
                 </label>
                 <div className="relative">
@@ -243,7 +243,7 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                     value={audioDeviceId}
                     onChange={(e) => selectMicrophone(e.target.value)}
                     disabled={!audioEnabled}
-                    className={selectClass}
+                    className={`prejoin-device-select ${selectClass}`}
                   >
                     {audioDevices.map((d) => (
                       <option key={d.deviceId} value={d.deviceId}>
@@ -252,18 +252,18 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                     ))}
                     {audioDevices.length === 0 && <option>No microphones found</option>}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
+                  <ChevronDown className="prejoin-device-icon pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
                 </div>
               </div>
             </div>
             {/* Start Button */}
-            <div className="flex flex-col lg:pt-2">
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
+            <div className="prejoin-form-section flex flex-col lg:pt-2">
+              <form onSubmit={handleSubmit} className="prejoin-form flex flex-col gap-6">
+                <div className="prejoin-name-field flex flex-col gap-2">
+                  <label className="prejoin-name-label text-[11px] font-semibold uppercase tracking-[0.16em] text-md-on-surface-variant">
                     Your display name
                   </label>
-                  <div className="relative">
+                  <div className="prejoin-name-input-wrapper relative">
                     <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <User className="h-[18px] w-[18px] text-md-on-surface-variant" />
                     </span>
@@ -274,22 +274,22 @@ export default function PreJoinScreen({ roomId, onJoin, userName }: PreJoinScree
                       onChange={(e) => setInputName(e.target.value)}
                       disabled={!!userName}
                       readOnly={!!userName}
-                      className={`w-full rounded-md-md bg-md-surface-container border border-md-outline-variant pl-12 pr-4 py-4 text-base text-md-on-surface outline-none transition-colors focus:border-md-primary ${
+                      className={`prejoin-name-input w-full rounded-md-md bg-md-surface-container border border-md-outline-variant pl-12 pr-4 py-4 text-base text-md-on-surface outline-none transition-colors focus:border-md-primary ${
                         userName ? "opacity-60 cursor-not-allowed select-none" : ""
                       }`}
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-3">
+                <div className="prejoin-submit-section flex flex-col items-center gap-3">
                   <button
                     type="submit"
-                    className="btn-press group w-full flex items-center justify-center gap-2.5 rounded-md-full bg-md-primary hover:bg-md-primary-hover text-md-on-primary py-4 px-8 text-lg font-medium"
+                    className="prejoin-submit-btn btn-press group w-full flex items-center justify-center gap-2.5 rounded-md-full bg-md-primary hover:bg-md-primary-hover text-md-on-primary py-4 px-8 text-lg font-medium"
                   >
                     <span>Step into the room</span>
                     <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
-                  <p className="text-sm text-md-on-surface-variant">
+                  <p className="prejoin-hint text-sm text-md-on-surface-variant">
                     Others will see you the moment you enter
                   </p>
                 </div>

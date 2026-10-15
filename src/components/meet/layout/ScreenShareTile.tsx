@@ -223,45 +223,53 @@ export const ScreenShareTile: React.FC<ScreenShareTileProps> = ({
         </div>
       )}
 
-      {/* Custom controls bar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+      {/* Custom controls bar - always visible */}
+      <div className="screenshare-controls absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 sm:px-4 py-2 sm:py-3 z-20">
         <div className="flex items-center justify-between">
           {/* Left side - Timer */}
-          <div className="flex items-center gap-3">
-            <span className="text-white text-sm font-medium tabular-nums">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-white text-xs sm:text-sm font-medium tabular-nums">
               {formatDuration(duration)}
             </span>
           </div>
 
           {/* Right side - Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Volume */}
             <button
               onClick={toggleMute}
-              className={`p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer ${!hasAudio ? "opacity-50" : ""}`}
+              className={`p-1.5 sm:p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer ${!hasAudio ? "opacity-50" : ""}`}
               title={hasAudio ? (isMuted ? "Unmute" : "Mute") : "No audio shared"}
             >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
 
             {/* Picture-in-Picture */}
             {document.pictureInPictureEnabled && (
               <button
                 onClick={togglePiP}
-                className={`p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer ${isPiP ? "bg-white/30" : ""}`}
+                className={`p-1.5 sm:p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer ${isPiP ? "bg-white/30" : ""}`}
                 title={isPiP ? "Exit Picture-in-Picture" : "Picture-in-Picture"}
               >
-                <PictureInPicture2 className="w-5 h-5" />
+                <PictureInPicture2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
 
             {/* Fullscreen */}
             <button
               onClick={toggleFullscreen}
-              className="p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {isFullscreen ? (
+                <Minimize className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
           </div>
         </div>

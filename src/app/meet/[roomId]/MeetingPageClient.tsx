@@ -54,32 +54,34 @@ function GateScreen({
   const eyebrowTone = tone === "error" ? "text-md-error" : "text-md-primary";
 
   return (
-    <div className="min-h-screen bg-md-surface flex flex-col justify-center items-center p-6 animate-fade-in">
+    <div className="min-h-screen bg-md-surface flex flex-col justify-center items-center p-4 short:p-3 animate-fade-in">
       <div className="flex flex-col items-center text-center max-w-xl">
         {/* Status disc */}
         <div
-          className={`w-[104px] h-[104px] rounded-full flex items-center justify-center mb-10 ${discTone}`}
+          className={`w-[104px] h-[104px] short:w-[64px] short:h-[64px] rounded-full flex items-center justify-center mb-10 short:mb-4 ${discTone} [&>svg]:short:w-6 [&>svg]:short:h-6`}
         >
           {icon}
         </div>
 
         {eyebrow && (
           <p
-            className={`mb-5 text-[11px] font-semibold uppercase tracking-[0.28em] ${eyebrowTone}`}
+            className={`mb-5 short:mb-2 text-[11px] short:text-[9px] font-semibold uppercase tracking-[0.28em] ${eyebrowTone}`}
           >
             {eyebrow}
           </p>
         )}
 
-        <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight text-md-on-surface mb-5 text-balance">
+        <h1 className="font-display text-5xl md:text-6xl short:text-2xl font-bold tracking-tight text-md-on-surface mb-5 short:mb-2 text-balance">
           {title}
         </h1>
 
-        <p className="text-lg text-md-on-surface-variant leading-relaxed mb-11 max-w-md text-balance">
+        <p className="text-lg short:text-sm text-md-on-surface-variant leading-relaxed mb-11 short:mb-4 max-w-md text-balance">
           {description}
         </p>
 
-        <div className="w-full max-w-sm flex flex-col items-center gap-4">{children}</div>
+        <div className="w-full max-w-sm flex flex-col items-center gap-4 short:gap-2">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -394,13 +396,13 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
 
   if (gateStatus === GateStatus.VERIFYING) {
     return (
-      <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in p-6">
+      <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in p-6 short:p-4">
         <div className="flex flex-col items-center">
-          <Loader2 className="w-10 h-10 text-md-primary animate-spin mb-8" />
-          <h1 className="font-display text-4xl font-bold tracking-tight text-md-on-surface mb-3">
+          <Loader2 className="w-10 h-10 short:w-6 short:h-6 text-md-primary animate-spin mb-8 short:mb-4" />
+          <h1 className="font-display text-4xl short:text-xl font-bold tracking-tight text-md-on-surface mb-3 short:mb-2">
             Checking your access...
           </h1>
-          <p className="text-md-on-surface-variant text-base">
+          <p className="text-md-on-surface-variant text-base short:text-sm">
             Just a moment while we confirm access.
           </p>
         </div>
@@ -413,13 +415,13 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       <GateScreen
         eyebrow="Invite only"
         tone="error"
-        icon={<Lock className="w-10 h-10" />}
+        icon={<Lock className="w-10 h-10 short:w-6 short:h-6" />}
         title="This door is locked"
         description="Your link is missing a valid access token. Ask the host for a fresh invite and you'll be right in."
       >
         <Link
           href="/"
-          className="btn-press md-state-layer inline-flex items-center justify-center rounded-md-full border border-md-outline px-7 py-3 text-sm font-medium text-md-primary"
+          className="btn-press md-state-layer inline-flex items-center justify-center rounded-md-full border border-md-outline px-7 py-3 short:px-5 short:py-2 text-sm short:text-xs font-medium text-md-primary"
         >
           Go back home
         </Link>
@@ -432,16 +434,16 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
       <GateScreen
         eyebrow="Something went wrong"
         tone="error"
-        icon={<Clock className="w-10 h-10" />}
+        icon={<Clock className="w-10 h-10 short:w-6 short:h-6" />}
         title="We couldn't get you in"
         description={gateMessage}
       >
         <button
           type="button"
           onClick={verifyToken}
-          className="btn-press inline-flex w-full items-center justify-center gap-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 rounded-md-full text-lg font-medium cursor-pointer"
+          className="btn-press inline-flex w-full items-center justify-center gap-2.5 short:gap-1.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 short:px-5 short:py-2.5 rounded-md-full text-lg short:text-sm font-medium cursor-pointer"
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className="w-5 h-5 short:w-4 short:h-4" />
           Try again
         </button>
       </GateScreen>
@@ -452,12 +454,12 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     return (
       <GateScreen
         eyebrow="Almost there"
-        icon={<Clock className="w-11 h-11" />}
+        icon={<Clock className="w-11 h-11 short:w-6 short:h-6" />}
         title="Waiting in the wings"
         description="The host hasn't opened the room yet. Stay here — you'll be let in the moment they start."
       >
-        <div className="inline-flex items-center justify-center gap-2.5 text-md-on-surface-variant text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" />
+        <div className="inline-flex items-center justify-center gap-2.5 short:gap-1.5 text-md-on-surface-variant text-sm short:text-xs">
+          <Loader2 className="w-4 h-4 short:w-3 short:h-3 animate-spin" />
           Checking for the host...
         </div>
       </GateScreen>
@@ -468,7 +470,7 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
     return (
       <GateScreen
         eyebrow="The floor is yours"
-        icon={<Lightbulb className="w-11 h-11" />}
+        icon={<Lightbulb className="w-11 h-11 short:w-6 short:h-6" />}
         title="Take the stage"
         description={
           meetDetails?.isRecording
@@ -480,9 +482,9 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
           type="button"
           onClick={handleStartMeeting}
           disabled={isStarting}
-          className="btn-press inline-flex w-full items-center justify-center gap-2.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 rounded-md-full text-lg font-medium cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
+          className="btn-press inline-flex w-full items-center justify-center gap-2.5 short:gap-1.5 bg-md-primary hover:bg-md-primary-hover text-md-on-primary px-8 py-4 short:px-5 short:py-2.5 rounded-md-full text-lg short:text-sm font-medium cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
         >
-          {isStarting && <Loader2 className="w-5 h-5 animate-spin" />}
+          {isStarting && <Loader2 className="w-5 h-5 short:w-4 short:h-4 animate-spin" />}
           {isStarting ? "Starting..." : "Start meeting"}
         </button>
       </GateScreen>
@@ -492,10 +494,14 @@ export default function MeetingPageClient({ roomId, token }: MeetingPageClientPr
   if (hasEntered) {
     if (isConnecting && !isConnected) {
       return (
-        <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in">
-          <Loader2 className="w-12 h-12 text-md-primary animate-spin mb-4" />
-          <h3 className="text-xl font-bold text-md-on-surface mb-2">Connecting to Room</h3>
-          <p className="text-md-on-surface-variant text-sm">Securing your peer connection...</p>
+        <div className="min-h-screen bg-md-surface flex flex-col items-center justify-center text-center animate-fade-in p-4">
+          <Loader2 className="w-12 h-12 short:w-8 short:h-8 text-md-primary animate-spin mb-4 short:mb-2" />
+          <h3 className="text-xl short:text-base font-bold text-md-on-surface mb-2 short:mb-1">
+            Connecting to Room
+          </h3>
+          <p className="text-md-on-surface-variant text-sm short:text-xs">
+            Securing your peer connection...
+          </p>
         </div>
       );
     }

@@ -92,6 +92,26 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLoading, setIsRecordingLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Compact view mode based on viewport dimensions (width < 750 OR height < 550)
+  const [isCompactView, setIsCompactView] = useState(false);
+
+  // Track viewport dimensions for compact mode
+  useEffect(() => {
+    const checkCompactMode = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      // Compact mode if width < 750 OR height < 550
+      const shouldBeCompact = width < 750 || height < 550;
+      setIsCompactView(shouldBeCompact);
+      // Close menu when switching out of compact view
+      if (!shouldBeCompact) setMobileMenuOpen(false);
+    };
+
+    checkCompactMode();
+    window.addEventListener("resize", checkCompactMode);
+    return () => window.removeEventListener("resize", checkCompactMode);
+  }, []);
+
   // Keeps the sidebar mounted briefly after close so it can slide out.
   const [renderedSidebar, setRenderedSidebar] = useState<typeof activeSidebar>(null);
   const isPanelClosing = !activeSidebar && !!renderedSidebar;
@@ -258,7 +278,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
     <div className="h-screen w-screen flex flex-col justify-between bg-md-surface text-md-on-surface overflow-hidden relative font-sans animate-screen-in">
       {audienceAudio}
       <ReactionOverlay reactions={reactions} />
-      <header className="px-6 py-4 flex items-center justify-between z-10">
+      <header className="flex-shrink-0 px-4 py-2 sm:px-6 sm:py-4 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-xs text-md-on-surface-variant font-mono">
             <Clock className="w-3.5 h-3.5 text-md-primary" />
@@ -279,8 +299,8 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Desktop: Show all buttons */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Desktop/Large view: Show all buttons */}
+          <div className={`${isCompactView ? "hidden" : "flex"} items-center gap-2`}>
             {/* Participants Sidebar Toggle */}
             {isAdmin && (
               <button
@@ -328,10 +348,10 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
             </button>
           </div>
 
-          {/* Mobile: Show menu icon */}
+          {/* Compact view: Show menu icon */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden control-btn p-3.5 rounded-full border bg-transparent border-transparent hover:bg-md-surface-container text-md-on-surface-variant hover:text-md-on-surface relative"
+            className={`${isCompactView ? "block" : "hidden"} control-btn p-3.5 rounded-full border bg-transparent border-transparent hover:bg-md-surface-container text-md-on-surface-variant hover:text-md-on-surface relative`}
             title="Menu"
           >
             <LayoutGrid className="w-5 h-5" />
@@ -344,9 +364,9 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center">
+      {/* Compact View Menu Overlay */}
+      {mobileMenuOpen && isCompactView && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileMenuOpen(false)} />
           {/* Menu Panel */}
@@ -406,9 +426,9 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       )}
 
       {/* Main Area */}
-      <div className="flex-1 flex overflow-hidden relative mx-2 sm:mx-4 md:mx-10 gap-4">
+      <div className="flex-1 min-h-0 flex overflow-hidden relative mx-2 sm:mx-4 md:mx-10 gap-4">
         {/* Main Video Area */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
           <LayoutManager
             updateKey={updateKey}
             localParticipant={stageLocalParticipant}
@@ -419,27 +439,36 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
           {/* Real-time Captions Overlay */}
           <CaptionOverlay room={room} />
         </div>
-        {/* Sidebar panel - desktop: inline, mobile: overlay */}
+        {/* Sidebar panel - inline on large screens, overlay on compact view */}
         {renderedSidebar && (renderedSidebar !== "participants" || isAdmin) && (
           <>
-            {/* Mobile overlay backdrop */}
-            <div
-              className="md:hidden fixed inset-0 bg-black/50 z-40"
-              onClick={() => toggleSidebar(renderedSidebar)}
-            />
+            {/* Overlay backdrop for compact view */}
+            {isCompactView && (
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => toggleSidebar(renderedSidebar)}
+              />
+            )}
             <div
               key={renderedSidebar}
               className={`
-                md:h-full md:relative md:z-auto
-                fixed inset-0 z-50 md:inset-auto
+                ${isCompactView ? "fixed inset-0 z-50" : "h-full relative z-auto"}
                 ${isPanelClosing ? "panel-slide-out" : "panel-slide-in"}
               `}
             >
               {renderedSidebar === "chat" && (
-                <ChatPanel room={room} onClose={() => toggleSidebar("chat")} />
+                <ChatPanel
+                  room={room}
+                  onClose={() => toggleSidebar("chat")}
+                  isFullScreen={isCompactView}
+                />
               )}
               {renderedSidebar === "participants" && isAdmin && (
-                <ParticipantsPanel room={room} onClose={() => toggleSidebar("participants")} />
+                <ParticipantsPanel
+                  room={room}
+                  onClose={() => toggleSidebar("participants")}
+                  isFullScreen={isCompactView}
+                />
               )}
               {renderedSidebar === "settings" && (
                 <SettingsPanel
@@ -448,6 +477,7 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
                   isHost={isHost}
                   handleEndMeeting={handleEndMeeting}
                   setShowLeaveModal={setShowLeaveModal}
+                  isFullScreen={isCompactView}
                 />
               )}
             </div>
@@ -456,8 +486,8 @@ export default function ConferenceRoom({ room }: ConferenceRoomProps) {
       </div>
 
       {/* Controls Bar — M3 toolbar on a tonal surface container */}
-      <footer className="py-2 px-2 sm:px-6 flex items-center justify-center z-10 mb-2 sm:mb-4">
-        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40">
+      <footer className="flex-shrink-0 py-1 px-2 sm:px-6 flex items-center justify-center z-10 mb-1 sm:mb-4">
+        <div className="flex items-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 rounded-md-full bg-md-surface-container-high border border-md-outline-variant/40 overflow-x-auto max-w-full">
           <ReactionControls
             sendReaction={sendReaction}
             disabled={

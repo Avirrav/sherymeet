@@ -1,6 +1,693 @@
 @import "tailwindcss";
 
 /* ============================================================
+   Custom height-based responsive variants for small viewports
+   ============================================================ */
+@variant short {
+  @media (max-height: 460px) {
+    @slot;
+  }
+}
+
+@variant midh {
+  @media (max-height: 750px) {
+    @slot;
+  }
+}
+
+/* ============================================================
+   PreJoin screen height-responsive overrides (max-height: 750px)
+   ============================================================ */
+@media (max-height: 750px) {
+  .prejoin-container {
+    padding: 1.5rem 1.5rem !important;
+    min-height: 100vh !important;
+    justify-content: center !important;
+  }
+  .prejoin-room-label {
+    margin-bottom: 0.75rem !important;
+  }
+  .prejoin-room-label span:nth-child(2) {
+    font-size: 9px !important;
+  }
+  .prejoin-room-label span:last-child {
+    font-size: 11px !important;
+  }
+  .prejoin-grid {
+    gap: 0.5rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 0.5rem !important;
+  }
+  .prejoin-avatar {
+    width: 72px !important;
+    height: 72px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    margin-bottom: 0.375rem !important;
+  }
+  .prejoin-loading-text {
+    font-size: 10px !important;
+  }
+  .prejoin-live-chip {
+    top: 0.375rem !important;
+    left: 0.375rem !important;
+    padding: 0.2rem 0.4rem !important;
+    gap: 0.25rem !important;
+  }
+  .prejoin-live-chip span:last-child {
+    font-size: 7px !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.375rem !important;
+    gap: 0.375rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .prejoin-device-pickers {
+    gap: 0.375rem !important;
+  }
+  .prejoin-device-picker {
+    gap: 0.125rem !important;
+  }
+  .prejoin-device-label {
+    font-size: 8px !important;
+  }
+  .prejoin-device-select {
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+    font-size: 11px !important;
+  }
+  .prejoin-device-icon {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-form-section {
+    padding-top: 0 !important;
+  }
+  .prejoin-form {
+    gap: 0.5rem !important;
+  }
+  .prejoin-name-field {
+    gap: 0.125rem !important;
+  }
+  .prejoin-name-label {
+    font-size: 8px !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.625rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.5rem 0.75rem 0.5rem 2rem !important;
+    font-size: 13px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.375rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.5rem 1.25rem !important;
+    font-size: 13px !important;
+    gap: 0.375rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .prejoin-hint {
+    font-size: 11px !important;
+  }
+}
+
+/* PreJoin screen tighter overrides (max-height: 600px) */
+@media (max-height: 600px) {
+  .prejoin-container {
+    padding: 1.25rem 1.25rem !important;
+  }
+  .prejoin-room-label {
+    margin-bottom: 0.5rem !important;
+  }
+  .prejoin-room-label span:nth-child(2) {
+    font-size: 8px !important;
+  }
+  .prejoin-room-label span:last-child {
+    font-size: 10px !important;
+  }
+  .prejoin-grid {
+    gap: 0.375rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 0.375rem !important;
+  }
+  .prejoin-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 1rem !important;
+    height: 1rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .prejoin-loading-text {
+    font-size: 9px !important;
+  }
+  .prejoin-live-chip {
+    top: 0.25rem !important;
+    left: 0.25rem !important;
+    padding: 0.125rem 0.3rem !important;
+    gap: 0.2rem !important;
+  }
+  .prejoin-live-chip span:last-child {
+    font-size: 6px !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.25rem !important;
+    gap: 0.3rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1.875rem !important;
+    height: 1.875rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .prejoin-device-pickers {
+    gap: 0.25rem !important;
+  }
+  .prejoin-device-picker {
+    gap: 0.0625rem !important;
+  }
+  .prejoin-device-label {
+    font-size: 7px !important;
+  }
+  .prejoin-device-select {
+    padding: 0.3rem 1.5rem 0.3rem 0.5rem !important;
+    font-size: 10px !important;
+  }
+  .prejoin-device-icon {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-form {
+    gap: 0.375rem !important;
+  }
+  .prejoin-name-field {
+    gap: 0.0625rem !important;
+  }
+  .prejoin-name-label {
+    font-size: 7px !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.5rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.4rem 0.5rem 0.4rem 1.75rem !important;
+    font-size: 12px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.25rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.4rem 1rem !important;
+    font-size: 12px !important;
+    gap: 0.3rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .prejoin-hint {
+    font-size: 10px !important;
+  }
+}
+
+/* PreJoin screen ultra-compact (max-height: 520px) */
+@media (max-height: 520px) {
+  .prejoin-container {
+    padding: 1rem 1rem !important;
+  }
+  .prejoin-room-label {
+    margin-bottom: 0.375rem !important;
+    gap: 0.25rem !important;
+  }
+  .prejoin-room-label span:nth-child(2) {
+    font-size: 7px !important;
+  }
+  .prejoin-room-label span:last-child {
+    font-size: 9px !important;
+  }
+  .prejoin-grid {
+    gap: 0.25rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 0.25rem !important;
+  }
+  .prejoin-avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+    margin-bottom: 0.125rem !important;
+  }
+  .prejoin-loading-text {
+    font-size: 8px !important;
+  }
+  .prejoin-live-chip {
+    display: none !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.2rem !important;
+    gap: 0.2rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1.625rem !important;
+    height: 1.625rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-device-pickers {
+    gap: 0.2rem !important;
+  }
+  .prejoin-device-picker {
+    gap: 0 !important;
+  }
+  .prejoin-device-label {
+    font-size: 6px !important;
+  }
+  .prejoin-device-select {
+    padding: 0.2rem 1.25rem 0.2rem 0.375rem !important;
+    font-size: 9px !important;
+  }
+  .prejoin-device-icon {
+    width: 0.4375rem !important;
+    height: 0.4375rem !important;
+  }
+  .prejoin-form {
+    gap: 0.2rem !important;
+  }
+  .prejoin-name-field {
+    gap: 0 !important;
+  }
+  .prejoin-name-label {
+    font-size: 6px !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.375rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.3rem 0.5rem 0.3rem 1.5rem !important;
+    font-size: 10px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.2rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.3rem 0.75rem !important;
+    font-size: 10px !important;
+    gap: 0.2rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-hint {
+    font-size: 9px !important;
+  }
+}
+
+/* PreJoin screen micro (max-height: 480px) - hide device pickers */
+@media (max-height: 480px) {
+  .prejoin-container {
+    padding: 0.875rem 0.875rem !important;
+  }
+  .prejoin-room-label {
+    display: none !important;
+  }
+  .prejoin-grid {
+    gap: 0.2rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 0.2rem !important;
+  }
+  .prejoin-avatar {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    margin-bottom: 0 !important;
+  }
+  .prejoin-loading-text {
+    display: none !important;
+  }
+  .prejoin-live-chip {
+    display: none !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.125rem !important;
+    gap: 0.125rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-device-pickers {
+    display: none !important;
+  }
+  .prejoin-form {
+    gap: 0.2rem !important;
+  }
+  .prejoin-name-field {
+    gap: 0 !important;
+  }
+  .prejoin-name-label {
+    font-size: 6px !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.375rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.25rem 0.5rem 0.25rem 1.25rem !important;
+    font-size: 10px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.125rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.25rem 0.625rem !important;
+    font-size: 10px !important;
+    gap: 0.125rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-hint {
+    font-size: 8px !important;
+  }
+}
+
+/* PreJoin screen compact horizontal (max-height: 450px) */
+@media (max-height: 450px) {
+  .prejoin-container {
+    padding: 2rem 2rem !important;
+    min-height: 100vh !important;
+    justify-content: center !important;
+  }
+  .prejoin-room-label {
+    display: none !important;
+  }
+  .prejoin-grid {
+    gap: 0.5rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 1.5rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .prejoin-video-container {
+    width: 45% !important;
+    min-width: 150px !important;
+    max-width: 280px !important;
+    flex-shrink: 0 !important;
+  }
+  .prejoin-avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 1rem !important;
+    height: 1rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .prejoin-loading-text {
+    font-size: 8px !important;
+  }
+  .prejoin-live-chip {
+    display: none !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.25rem !important;
+    gap: 0.25rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-device-pickers {
+    display: none !important;
+  }
+  .prejoin-form-section {
+    flex: 1 !important;
+    padding-top: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  .prejoin-form {
+    gap: 0.5rem !important;
+  }
+  .prejoin-name-field {
+    gap: 0.125rem !important;
+  }
+  .prejoin-name-label {
+    font-size: 7px !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.5rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.375rem 0.5rem 0.375rem 1.5rem !important;
+    font-size: 11px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.25rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 11px !important;
+    gap: 0.25rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .prejoin-hint {
+    font-size: 9px !important;
+  }
+}
+
+/* PreJoin screen ultra-compact horizontal (max-height: 350px) */
+@media (max-height: 350px) {
+  .prejoin-container {
+    padding: 1.5rem 1.5rem !important;
+  }
+  .prejoin-grid {
+    gap: 0.25rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 1rem !important;
+  }
+  .prejoin-video-container {
+    width: 40% !important;
+    min-width: 120px !important;
+    max-width: 200px !important;
+  }
+  .prejoin-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .prejoin-loading-spinner {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .prejoin-loading-text {
+    display: none !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-form {
+    gap: 0.375rem !important;
+  }
+  .prejoin-name-label {
+    display: none !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.25rem 0.5rem 0.25rem 1.25rem !important;
+    font-size: 10px !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 10px !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+  }
+  .prejoin-hint {
+    display: none !important;
+  }
+}
+
+/* PreJoin screen micro (max-height: 280px) */
+@media (max-height: 280px) {
+  .prejoin-container {
+    padding: 1rem 1rem !important;
+  }
+  .prejoin-preview-section {
+    gap: 0.75rem !important;
+  }
+  .prejoin-video-container {
+    width: 35% !important;
+    min-width: 100px !important;
+    max-width: 150px !important;
+  }
+  .prejoin-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .prejoin-toggle-bar {
+    bottom: 0.125rem !important;
+    gap: 0.125rem !important;
+  }
+  .prejoin-toggle-btn {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+  .prejoin-toggle-btn svg {
+    width: 0.375rem !important;
+    height: 0.375rem !important;
+  }
+  .prejoin-form {
+    gap: 0.25rem !important;
+  }
+  .prejoin-name-input-wrapper span {
+    padding-left: 0.25rem !important;
+  }
+  .prejoin-name-input-wrapper svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+  .prejoin-name-input {
+    padding: 0.125rem 0.375rem 0.125rem 1rem !important;
+    font-size: 9px !important;
+  }
+  .prejoin-submit-section {
+    gap: 0.125rem !important;
+  }
+  .prejoin-submit-btn {
+    padding: 0.125rem 0.375rem !important;
+    font-size: 9px !important;
+    gap: 0.125rem !important;
+  }
+  .prejoin-submit-btn svg {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+}
+
+/* ============================================================
+   Meeting room controls - height responsive
+   ============================================================ */
+@media (max-height: 500px) {
+  .control-btn {
+    padding: 0.5rem !important;
+  }
+  .control-btn svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .screenshare-controls {
+    padding: 0.375rem 0.5rem !important;
+    opacity: 1 !important;
+  }
+  .screenshare-controls button {
+    padding: 0.25rem !important;
+  }
+  .screenshare-controls svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+  .screenshare-controls span {
+    font-size: 0.625rem !important;
+  }
+}
+
+@media (max-height: 400px) {
+  .control-btn {
+    padding: 0.375rem !important;
+  }
+  .control-btn svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .screenshare-controls {
+    padding: 0.25rem 0.375rem !important;
+  }
+  .screenshare-controls button {
+    padding: 0.125rem !important;
+  }
+  .screenshare-controls svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+  .screenshare-controls span {
+    font-size: 0.5rem !important;
+  }
+}
+
+/* ============================================================
    Material Design 3 (Material You) — dark scheme
    ------------------------------------------------------------
    Color roles follow the M3 baseline palette. Every role has an

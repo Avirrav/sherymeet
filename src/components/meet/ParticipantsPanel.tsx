@@ -27,9 +27,14 @@ import { getAvatarUrl } from "@/lib/avatar";
 interface ParticipantsPanelProps {
   room: Room;
   onClose: () => void;
+  isFullScreen?: boolean;
 }
 
-export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelProps) {
+export default function ParticipantsPanel({
+  room,
+  onClose,
+  isFullScreen = false,
+}: ParticipantsPanelProps) {
   const { localParticipant, remoteParticipants } = useParticipants(room);
   const qualities = useConnectionQuality(room);
   const raisedHands = useMeetingStore((state) => state.raisedHands);
@@ -70,7 +75,9 @@ export default function ParticipantsPanel({ room, onClose }: ParticipantsPanelPr
   };
 
   return (
-    <div className="w-full md:w-80 h-full bg-md-surface-container-low border border-md-outline-variant/30 rounded-none md:rounded-2xl flex flex-col overflow-hidden relative z-20">
+    <div
+      className={`${isFullScreen ? "w-full rounded-none" : "w-80 rounded-2xl"} h-full bg-md-surface-container-low border border-md-outline-variant/30 flex flex-col overflow-hidden relative z-20`}
+    >
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3.5 border-b border-md-outline-variant/30 bg-md-surface-container/50">
         <div className="flex items-center justify-between mb-3">

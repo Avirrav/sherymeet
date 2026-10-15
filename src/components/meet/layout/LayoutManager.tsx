@@ -189,7 +189,7 @@ export const LayoutManager: React.FC<LayoutManagerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative overflow-hidden bg-md-surface/40 rounded-3xl min-h-[450px]"
+      className="w-full h-full relative overflow-hidden bg-md-surface/40 rounded-3xl"
     >
       {virtualizedItems.map((item) => {
         if (item.type === "screen") {
